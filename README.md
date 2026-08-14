@@ -13,7 +13,6 @@
 ## Sobre o projeto:
 Projeto de PFC para Engenharia de Software, voltado como site fonte de estudo para estudantes de direito e advocacia .
 
-<div alingn="center">
   
  ## Desenvolvedores:
 
@@ -22,5 +21,24 @@ Projeto desenvolvido em dupla para o Projeto de Conclusão de Curso (PFC) de Eng
 - **Pedro Henrique Harada Pecegueiro** — [GitHub](https://github.com/Diego251Fagundes)
 - **Erick Santos Barbosa** — [GitHub](https://github.com/ErickSantosBarbosa04)
 - **Gabriel Agustín Fernández Alves** — [GitHub](https://github.com/Pedro-Pecegueiro)
-</div>
 
+## Tecnologias utilizada:
+
+**Back-end & Banco de Dados**
+- Python 3.12 / 3.13
+- PostgreSQL (via Hospedagem)
+
+**Front-end**
+- JavaScript puro
+- HTML5
+- Tailwind CSS
+
+**Ferramentas de Apoio**
+- Git e GitHub
+- Figma
+- Notion
+- Teams
+
+## Orientadores:
+  **Principal:** (futurmante)
+  **Coorientador:** Alessandro Aparecido da Silva Horas
