@@ -16,7 +16,7 @@ Projeto de PFC para Engenharia de Software, voltado como site fonte de estudo pa
   
  ## Desenvolvedores:
 
-Projeto desenvolvido em dupla para o Projeto de Conclusão de Curso (PFC) de Engenharia de Software da Universidade de Mogi das Cruzes (UMC):
+Projeto desenvolvido em trio para o Projeto de Conclusão de Curso (PFC) de Engenharia de Software da Universidade de Mogi das Cruzes (UMC):
 
 - **Pedro Henrique Harada Pecegueiro** — [GitHub](https://github.com/Diego251Fagundes)
 - **Erick Santos Barbosa** — [GitHub](https://github.com/ErickSantosBarbosa04)
