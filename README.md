@@ -8,4 +8,19 @@
   <img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" />
 </div>
 
+<br/>
+
+## Sobre o projeto:
 Projeto de PFC para Engenharia de Software, voltado como site fonte de estudo para estudantes de direito e advocacia .
+
+<div alingn="center">
+  
+ ## Desenvolvedores:
+
+Projeto desenvolvido em dupla para o Projeto de Conclusão de Curso (PFC) de Engenharia de Software da Universidade de Mogi das Cruzes (UMC):
+
+- **Pedro Henrique Harada Pecegueiro** — [GitHub](https://github.com/Diego251Fagundes)
+- **Erick Santos Barbosa** — [GitHub](https://github.com/ErickSantosBarbosa04)
+- **Gabriel Agustín Fernández Alves** — [GitHub](https://github.com/Pedro-Pecegueiro)
+</div>
+
