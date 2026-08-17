@@ -10,10 +10,16 @@
 
 <br/>
 
-## Sobre o projeto:
-Projeto de PFC para Engenharia de Software, voltado como site para auxiliar estudantes de direito e advocacia .
-
+<details><summary><b>Sobre o projeto:</b></summary>
   
+ ## Sobre o projeto:
+
+  Projeto de PFC para Engenharia de Software, voltado como site para auxiliar estudantes de direito e advocacia .
+
+</details>
+
+<details><summary><b>Desenvolvedores:</b></summary>
+
  ## Desenvolvedores:
 
 Projeto desenvolvido em trio para o Projeto de Conclusão de Curso (PFC) de Engenharia de Software da Universidade de Mogi das Cruzes (UMC):
@@ -21,6 +27,8 @@ Projeto desenvolvido em trio para o Projeto de Conclusão de Curso (PFC) de Enge
 - **Pedro Henrique Harada Pecegueiro** — [GitHub](https://github.com/Diego251Fagundes)
 - **Erick Santos Barbosa** — [GitHub](https://github.com/ErickSantosBarbosa04)
 - **Gabriel Agustín Fernández Alves** — [GitHub](https://github.com/Pedro-Pecegueiro)
+</details>
+<details><summary><b>Tecnologias utilizada:</b></summary>
 
 ## Tecnologias utilizada:
 
@@ -38,7 +46,13 @@ Projeto desenvolvido em trio para o Projeto de Conclusão de Curso (PFC) de Enge
 - Figma
 - Notion
 - Teams
+</details>
 
+<details><summary><b>Orientadores: </b></summary>
+  
 ## Orientadores:
+
   **Principal:** (futurmante)
+  
   **Coorientador:** Alessandro Aparecido da Silva Horas
+</details>
