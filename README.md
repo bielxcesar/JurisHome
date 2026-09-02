@@ -18,16 +18,6 @@
 
 </details>
 
-<details><summary><b>Desenvolvedores:</b></summary>
-
- ## Desenvolvedores:
-
-Projeto desenvolvido em trio para o Projeto de Conclusão de Curso (PFC) de Engenharia de Software da Universidade de Mogi das Cruzes (UMC):
-
-- **Pedro Henrique Harada Pecegueiro** — [GitHub](https://github.com/Diego251Fagundes)
-- **Erick Santos Barbosa** — [GitHub](https://github.com/ErickSantosBarbosa04)
-- **Gabriel Agustín Fernández Alves** — [GitHub](https://github.com/Pedro-Pecegueiro)
-</details>
 <details><summary><b>Tecnologias utilizada:</b></summary>
 
 ## Tecnologias utilizada:
@@ -48,11 +38,21 @@ Projeto desenvolvido em trio para o Projeto de Conclusão de Curso (PFC) de Enge
 - Teams
 </details>
 
+<details><summary><b>Desenvolvedores:</b></summary>
+
+ ## Desenvolvedores:
+
+Projeto desenvolvido em trio para o Projeto de Conclusão de Curso (PFC) de Engenharia de Software da Universidade de Mogi das Cruzes (UMC):
+
+- **Pedro Henrique Harada Pecegueiro** — [GitHub](https://github.com/Diego251Fagundes)
+- **Erick Santos Barbosa** — [GitHub](https://github.com/ErickSantosBarbosa04)
+- **Gabriel Agustín Fernández Alves** — [GitHub](https://github.com/Pedro-Pecegueiro)
+</details>
 <details><summary><b>Orientadores: </b></summary>
   
 ## Orientadores:
 
   Orientador: Alessandro Aparecido da Silva Horas
   
-  Coorientador:Leandro Miranda de Almeida
+  Coorientador: Leandro Miranda de Almeida
 </details>
