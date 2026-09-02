@@ -52,7 +52,7 @@ Projeto desenvolvido em trio para o Projeto de Conclusão de Curso (PFC) de Enge
   
 ## Orientadores:
 
-  **Principal:** (futurmante)
+  **Principal:** Alessandro Aparecido da Silva Horas
   
-  **Coorientador:** Alessandro Aparecido da Silva Horas
+  **Coorientador:Leandro Miranda de Almeida
 </details>
