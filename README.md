@@ -14,7 +14,25 @@
   
  ## Sobre o projeto:
 
-  Projeto de PFC para Engenharia de Software, voltado como site para auxiliar estudantes de direito e advocacia .
+  Projeto de PFC para Engenharia de Software, voltado como site para auxiliar estudantes de direito e advocacia.
+
+---
+
+**Objetivo do projeto:**
+
+Desenvolver um ambiente web funcional que concentre informações jurídicas de procedência garantida, facilitando a rotina de estudo e pesquisa dos acadêmicos de Direito.
+
+</details>
+
+<details><summary><b>Problematica: </b></summary>
+  
+ ## Problematica:
+
+  Estudar Direito exige pesquisa quase que diária. Seja para dar conta de uma prova, montar uma peça prática ou simplesmente acompanhar uma lei que mudou ontem, o estudante passa boa parte da semana caçando conteúdo. A questão é que encontrar material realmente seguro e atualizado virou um gargalo. Ao conversarmos com os próprios alunos por meio de um questionário, isso ficou evidente: quase todo mundo esbarra na dificuldade de filtrar o que presta em meio a tanta coisa jogada na web. 
+
+Os relatos se repetem: excesso de abas abertas, incerteza se aquele artigo ainda vale, sites com layout confuso e um vocabulário rebuscado que parece feito para afastar quem ainda está no início do curso. 
+
+Foi desse diagnóstico que nasceu o JurisHome. O projeto foca em montar uma plataforma web que centralize fontes jurídicas selecionadas, organizando tudo por área de interesse e com uma linguagem mais palatável, sem rodeios.
 
 </details>
 
@@ -36,6 +54,13 @@
 - Figma
 - Notion
 - Teams
+
+---
+
+**Serviços Externos Integrados**
+- Google OAuth 2.0: Atua na verificação de segurança adicional (segundo fator de autenticação), garantindo a validação da conta do estudante ou administrador antes de liberar o acesso às funcionalidades restritas do sistema. 
+- Cloudinary (CDN): Servidor em nuvem que guarda as imagens do sistema, enviando de volta apenas os links de acesso para manter o banco PostgreSQL leve.  
+
 </details>
 
 <details><summary><b>Desenvolvedores:</b></summary>
