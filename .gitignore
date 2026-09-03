@@ -1,55 +1,22 @@
-# Prerequisites
-*.d
+# Arquivos de Configuração e Segredos
+.env
+.env.*
+!.env.example
 
-# Object files
-*.o
-*.ko
-*.obj
-*.elf
+# Ambiente Virtual e Cache do Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
 
-# Linker output
-*.ilk
-*.map
-*.exp
+# Banco de dados local de teste (se houver)
+*.db
+*.sqlite3
 
-# Precompiled Headers
-*.gch
-*.pch
+# Pastas de IDE e Sistema Operacional
+.vscode/
+.idea/
+.DS_Store
 
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
-
-# Debug files
-*.dSYM/
-*.su
-*.idb
-*.pdb
-
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
-
-# debug information files
-*.dwo
+# Ocultar o script de criação do administrador principal
+scripts/

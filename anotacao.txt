@@ -1,0 +1,9 @@
+Cuidados importantes ao adotar essa estratégia
+
+Senhas fora do código: A regra mais importante para o código não vazado é nunca deixar a 
+e-mail e a senha digitados diretamente dentro do texto do script. O script deve sempre ler 
+esses dados do arquivo secreto de configurações (o .env).
+
+Como rodar na nuvem (Railway): Quando for colocar o JurisHome no ar pela primeira vez, 
+você executará esse comando de criação direto do seu computador conectado ao banco de dados 
+da nuvem, ou rodará um comando no painel da hospedagem.
