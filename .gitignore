@@ -19,4 +19,4 @@ __pycache__/
 .DS_Store
 
 # Ocultar o script de criação do administrador principal
-scripts/
+script/
