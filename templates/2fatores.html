@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JurisHome - Autenticação</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/login.css">
+</head>
+<body class="bg-2fatores">
+
+    <div class="overlay-login"></div>
+
+    <main class="card-2fatores">
+        <header class="header-2fatores">
+            <a href="/" class="btn-voltar-circle">
+                <i class="fa-regular fa-circle-left"></i>
+            </a>
+            <h2>Duas etapas</h2>
+        </header>
+
+        <div class="linha-divisoria"></div>
+
+        <p class="texto-instrucao">
+            Para acesso a recuperação enviamos uma confirmação pelo seu autenticator no seu celular.
+        </p>
+
+        <form id="form-2fatores" class="form-2fatores">
+            <label for="code">Code</label>
+            <input type="text" id="code" placeholder="XXXXX" maxlength="6" required>
+
+            <button type="submit" class="btn-proximo">Proximo</button>
+        </form>
+    </main>
+
+    <script>
+        document.getElementById('form-2fatores').addEventListener('submit', function(e) {
+            e.preventDefault();
+            window.location.href = '/home_admin';
+        });
+    </script>
+</body>
+</html>

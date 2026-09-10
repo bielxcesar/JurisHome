@@ -1,0 +1,268 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #121212;
+    color: #ffffff;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+}
+
+/* Moldura externa com borda dourada/alaranjada */
+.conf-box {
+    width: 100%;
+    max-width: 900px;
+    background-color: #1a1a1a;
+    border: 3px solid #d97706;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+}
+
+/* Header */
+.conf-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #b45309;
+}
+
+.conf-header h1 {
+    font-size: 1.8rem;
+    font-weight: 400;
+}
+
+.btn-back, .btn-theme {
+    background: #333333;
+    border: none;
+    color: #cccccc;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.btn-back:hover, .btn-theme:hover {
+    background: #444444;
+    color: #ffffff;
+}
+
+.btn-theme {
+    background: transparent;
+    font-size: 1.8rem;
+}
+
+/* Corpo Principal */
+.conf-body {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    min-height: 480px;
+}
+
+/* Sidebar */
+.conf-sidebar {
+    border-right: 1px solid #b45309;
+    padding: 1.5rem 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.sidebar-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    color: #d1d5db;
+    text-decoration: none;
+    padding: 0.7rem 0.8rem;
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.sidebar-item i {
+    width: 20px;
+    font-size: 1.1rem;
+}
+
+.sidebar-item:hover {
+    background-color: #262626;
+}
+
+.sidebar-item.active {
+    background-color: #2e261f;
+    color: #f97316;
+}
+
+.sidebar-item.active i {
+    color: #f97316;
+}
+
+/* Rodapé Sidebar */
+.sidebar-footer {
+    border-top: 1px solid #404040;
+    padding-top: 1rem;
+}
+
+.btn-desconectar-side {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 1rem;
+}
+
+.btn-desconectar-side i {
+    background-color: #ef4444;
+    color: #ffffff;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+}
+
+/* Area de Conteudo */
+.conf-content {
+    padding: 2rem 2.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Card de Alerta */
+.alert-success {
+    display: none;
+    background-color: #86efac;
+    color: #14532d;
+    padding: 0.8rem 1.2rem;
+    border-radius: 12px;
+    font-weight: 500;
+    font-size: 1.2rem;
+    margin-bottom: 1.5rem;
+    width: fit-content;
+}
+
+.alert-success.exibir {
+    display: block;
+}
+
+/* Formulário */
+.form-senha {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    max-width: 420px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.form-group label {
+    font-size: 1.2rem;
+    color: #ffffff;
+}
+
+.form-group input {
+    background-color: #121212;
+    border: 2px solid #b45309;
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    color: #f97316;
+    font-size: 1.1rem;
+    outline: none;
+}
+
+.form-group input::placeholder {
+    color: #9a3412;
+}
+
+.form-group input:focus {
+    border-color: #f97316;
+}
+
+.btn-salvar {
+    background-color: #d97706;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.7rem 1.2rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    cursor: pointer;
+    width: fit-content;
+    margin-top: 0.5rem;
+    transition: background-color 0.2s;
+}
+
+.btn-salvar:hover {
+    background-color: #ea580c;
+}
+
+/* Modo Claro - Configurações */
+body.modo-claro {
+    background-color: #e5e7eb;
+    color: #1f2937;
+}
+
+body.modo-claro .conf-box {
+    background-color: #ffffff;
+    border-color: #d97706;
+}
+
+body.modo-claro .conf-header h1,
+body.modo-claro .form-group label {
+    color: #111827;
+}
+
+body.modo-claro .sidebar-item {
+    color: #4b5563;
+}
+
+body.modo-claro .sidebar-item:hover {
+    background-color: #f3f4f6;
+}
+
+body.modo-claro .sidebar-item.active {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+body.modo-claro .form-group input {
+    background-color: #f9fafb;
+    color: #b45309;
+    border-color: #d97706;
+}
+
+body.modo-claro .btn-back {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+body.modo-claro .btn-theme {
+    color: #d97706;
+}

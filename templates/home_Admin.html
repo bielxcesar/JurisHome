@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JurisHome</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/homeAdmin.css">
+</head>
+<body>
+
+    <!-- Barra de Navegação -->
+    <header class="navbar">
+        <div class="nav-data" id="data-atual">--/--/----</div>
+        
+        <nav class="nav-menu">
+            <a href="/" class="nav-link active"><i class="fa-solid fa-house"></i> Home</a>
+            <a href="#" class="nav-link"><i class="fa-solid fa-square-plus"></i> Exibir mais</a>
+            <a href="#" class="nav-link"><i class="fa-solid fa-headset"></i> Suporte</a>
+            <a href="#" class="nav-link"><i class="fa-solid fa-user-group"></i> Sobre nós</a>
+            <a href="#" class="nav-link"><i class="fa-solid fa-newspaper"></i> Categoria</a>
+            <a href="#" class="nav-link"><i class="fa-solid fa-magnifying-glass"></i> Pesquisa</a>
+        </nav>
+
+        <div class="nav-perfil">
+    <div class="avatar-icon" id="btn-perfil">
+        <i class="fa-solid fa-user-group"></i>
+    </div>
+
+    <div class="menu-perfil-dropdown" id="dropdown-perfil">
+        <a href="/configuracao" class="dropdown-item">Configuração <i class="fa-solid fa-gear"></i></a>
+        <a href="#" class="dropdown-item">Perfil <i class="fa-solid fa-user"></i></a>
+        <a href="#" class="dropdown-item">Adicionar materia</a>
+        <a href="/" class="dropdown-item btn-desconectar">Desconectar <i class="fa-solid fa-power-off"></i></a>
+    </div>
+</div>
+    </header>
+
+    <main class="container">
+        
+        <section class="hero-grid">
+            <article class="card-hero-principal" id="card-destaque-principal">
+                <div class="card-header-info">
+                    <span class="categoria-tag" id="hero-cat-1">Carregando...</span>
+                    <div class="indicadores-carrossel">
+                        <span class="dot active"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    </div>
+                </div>
+                
+                <button class="btn-next-hero"><i class="fa-solid fa-arrow-right"></i></button>
+
+                <div class="card-footer-info">
+                    <h2 id="hero-titulo-1">...</h2>
+                    <div class="progresso-bar">
+                        <div class="progresso-fill"></div>
+                    </div>
+                </div>
+            </article>
+
+            <div class="coluna-destaques-secundarios">
+                <article class="card-hero-secundario" id="card-destaque-2">
+                    <span class="categoria-tag" id="hero-cat-2">...</span>
+                    <h3 id="hero-titulo-2">...</h3>
+                </article>
+
+                <article class="card-hero-secundario" id="card-destaque-3">
+                    <span class="categoria-tag" id="hero-cat-3">...</span>
+                    <h3 id="hero-titulo-3">...</h3>
+                </article>
+            </div>
+        </section>
+
+        <section class="secao-recomendados">
+            <h2>Você pode gostar</h2>
+            <div class="grid-cards" id="grid-voce-pode-gostar">
+            </div>
+        </section>
+
+    </main>
+
+    <button class="fab-btn" title="Adicionar">
+        <i class="fa-solid fa-plus"></i>
+    </button>
+
+    <script src="/static/js/homeAdmin.js"></script>
+</body>
+</html>

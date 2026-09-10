@@ -23,9 +23,9 @@ def criar_admin_inicial():
         )
         db.add(admin)
         db.commit()
-        print(f"✅ Admin inicial ({admin_email}) criado com sucesso!")
+        print(f"Admin inicial ({admin_email}) criado com sucesso!")
     else:
-        print("ℹ️ Admin inicial já existe no banco de dados.")
+        print("Admin inicial já existe no banco de dados.")
         
     db.close()
 

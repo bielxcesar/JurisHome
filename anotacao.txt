@@ -7,3 +7,9 @@ esses dados do arquivo secreto de configurações (o .env).
 Como rodar na nuvem (Railway): Quando for colocar o JurisHome no ar pela primeira vez, 
 você executará esse comando de criação direto do seu computador conectado ao banco de dados 
 da nuvem, ou rodará um comando no painel da hospedagem.
+
+
+routers/
+  paginas.py       -> "/", "/2fatores"          (rotas públicas de tela)
+  admin.py         -> "/home_admin", "/configuracao"  (rotas de admin)
+  conteudos.py     -> "/api/conteudos" e futuro CRUD de conteúdo

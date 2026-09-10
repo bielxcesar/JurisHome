@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JurisHome - Login</title>
+    <link rel="stylesheet" href="/static/css/login.css">
+</head>
+<body class="bg-login">
+
+    <div class="overlay-login"></div>
+
+    <main class="login-container">
+        <div class="logo-box">
+            <img src="/static/images/logo.png" alt="JurisHome Logo" class="logo-img">
+        </div>
+
+        <h1 class="titulo-bemvindo">Bem-vindo de volta!</h1>
+        <p class="subtitulo">Informe seus dados para continuar</p>
+
+        <form id="form-login" class="form-login">
+            <div class="input-group">
+                <label for="email">E-mail</label>
+                <input type="email" id="email" placeholder="Digite seu e-mail.." required>
+            </div>
+
+            <div class="input-group">
+                <label for="senha">Senha</label>
+                <input type="password" id="senha" placeholder="Digite sua senha.." required>
+            </div>
+
+            <a href="#" class="link-esqueceu">Esqueceu a Senha</a>
+
+            <button type="submit" class="btn-entrar">Entrar</button>
+        </form>
+
+        <p class="texto-cadastro">
+            Não tem uma conta? <a href="#">Crie agora!</a>
+        </p>
+    </main>
+
+    <script>
+        document.getElementById('form-login').addEventListener('submit', function(e) {
+            e.preventDefault();
+            window.location.href = '/2fatores';
+        });
+    </script>
+</body>
+</html>

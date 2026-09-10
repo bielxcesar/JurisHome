@@ -6,17 +6,32 @@
 # Ambiente Virtual e Cache do Python
 venv/
 .venv/
-__pycache__/
+env/
+ENV/
+**/__pycache__/
 *.py[cod]
+*$py.class
 
-# Banco de dados local de teste (se houver)
+# Banco de dados local de teste
 *.db
 *.sqlite3
+juris_home.db
+
+# Rascunhos e Arquivos Pessoais
+anotacao.txt
+*.tmp
+
+# Registros de Erros e Logs
+*.log
+logs/
 
 # Pastas de IDE e Sistema Operacional
 .vscode/
 .idea/
 .DS_Store
+Thumbs.db
+desktop.ini
 
-# Ocultar o script de criação do administrador principal
-scripts/
+# Scripts de Administração
+script/
+model/script/
