@@ -32,6 +32,5 @@ logs/
 Thumbs.db
 desktop.ini
 
-# Scripts de Administração
-script/
-model/script/
+# Ocultar o script de criação do administrador principal
+scripts/

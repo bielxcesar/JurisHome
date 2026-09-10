@@ -69,7 +69,7 @@ Em pesquisa realizada com acadêmicos de Direito, evidenciou-se a frustração c
 
 **Clone o repositório:**
    ```bash
-   git clone [https://github.com/ErickSantosBarbosa04/jurisai-auth-api.git](https://github.com/ErickSantosBarbosa04/jurisai-auth-api.git)
+   git clone [https://github.com/bielxcesar/JurisHome.git](https://github.com/bielxcesar/JurisHome.git)
    cd jurisai-auth-api
 ````
 Crie e ative o ambiente virtual:
