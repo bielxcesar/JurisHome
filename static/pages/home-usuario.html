@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Página inicial do usuário JurisHome">
+    <title>Início | JurisHome</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/homeAdmin.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-data" id="data-atual" aria-label="Data atual">--/--/----</div>
+
+        <nav class="nav-menu" aria-label="Navegação do usuário">
+            <a href="/static/pages/home-usuario.html" class="nav-link active" aria-current="page"><i class="fa-solid fa-house" aria-hidden="true"></i> Início</a>
+            <a href="#mais-conteudos" class="nav-link"><i class="fa-solid fa-square-plus" aria-hidden="true"></i> Exibir mais</a>
+            <a href="/static/pages/feedback-suporte.html" class="nav-link"><i class="fa-solid fa-headset" aria-hidden="true"></i> Feedback e suporte</a>
+            <a href="#" class="nav-link"><i class="fa-solid fa-user-group" aria-hidden="true"></i> Sobre nós</a>
+            <a href="#" class="nav-link"><i class="fa-solid fa-newspaper" aria-hidden="true"></i> Categorias</a>
+            <a href="#" class="nav-link"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Pesquisa</a>
+        </nav>
+
+        <div class="nav-perfil">
+            <button class="avatar-icon" id="btn-perfil" type="button" aria-label="Abrir menu do perfil" aria-expanded="false" aria-controls="dropdown-perfil">
+                <i class="fa-solid fa-user" aria-hidden="true"></i>
+            </button>
+            <div class="menu-perfil-dropdown" id="dropdown-perfil">
+                <a href="#" class="dropdown-item">Perfil <i class="fa-solid fa-user" aria-hidden="true"></i></a>
+                <a href="/static/pages/feedback-suporte.html" class="dropdown-item">Feedback e suporte <i class="fa-solid fa-headset" aria-hidden="true"></i></a>
+                <a href="/" class="dropdown-item btn-desconectar">Sair <i class="fa-solid fa-power-off" aria-hidden="true"></i></a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container" id="conteudo-principal">
+        <h1 class="home-user-sr-only">Página inicial do JurisHome</h1>
+        <section class="hero-grid" aria-label="Matérias em destaque">
+            <article class="card-hero-principal" id="card-destaque-principal" tabindex="0">
+                <div class="card-header-info">
+                    <span class="categoria-tag" id="hero-cat-1">Carregando...</span>
+                    <div class="indicadores-carrossel" aria-hidden="true">
+                        <span class="dot active"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                    </div>
+                </div>
+                <span class="btn-next-hero" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></span>
+                <div class="card-footer-info">
+                    <h2 id="hero-titulo-1">Carregando matéria...</h2>
+                    <div class="progresso-bar" aria-hidden="true"><div class="progresso-fill"></div></div>
+                </div>
+            </article>
+
+            <div class="coluna-destaques-secundarios">
+                <article class="card-hero-secundario" id="card-destaque-2" tabindex="0">
+                    <span class="categoria-tag" id="hero-cat-2">Carregando...</span>
+                    <h3 id="hero-titulo-2">Carregando matéria...</h3>
+                </article>
+                <article class="card-hero-secundario" id="card-destaque-3" tabindex="0">
+                    <span class="categoria-tag" id="hero-cat-3">Carregando...</span>
+                    <h3 id="hero-titulo-3">Carregando matéria...</h3>
+                </article>
+            </div>
+        </section>
+
+        <section class="secao-recomendados" id="mais-conteudos" aria-labelledby="titulo-recomendados">
+            <h2 id="titulo-recomendados">Você pode gostar</h2>
+            <div class="grid-cards" id="grid-voce-pode-gostar"></div>
+        </section>
+    </main>
+
+    <script src="/static/js/homeUsuario.js"></script>
+</body>
+</html>

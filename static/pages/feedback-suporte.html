@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Canal direto de opiniões e suporte do JurisHome">
+    <title>Feedback e Suporte | JurisHome</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/homeAdmin.css">
+    <link rel="stylesheet" href="/static/css/feedbacks.css">
+</head>
+<body class="feedback-shell">
+    <a class="feedback-skip-link" href="#conteudo-principal">Ir para o conteúdo</a>
+
+    <header class="navbar feedback-navbar">
+        <div class="nav-data" id="data-atual" aria-label="Data atual">--/--/----</div>
+
+        <nav class="nav-menu" aria-label="Navegação principal">
+            <a href="/static/pages/home-usuario.html" class="nav-link"><i class="fa-solid fa-house" aria-hidden="true"></i> Início</a>
+            <a href="/static/pages/feedback-suporte.html" class="nav-link active" aria-current="page"><i class="fa-solid fa-headset" aria-hidden="true"></i> Feedback e Suporte</a>
+            <a href="#" class="nav-link"><i class="fa-solid fa-user-group" aria-hidden="true"></i> Sobre nós</a>
+            <a href="#" class="nav-link"><i class="fa-solid fa-newspaper" aria-hidden="true"></i> Categoria</a>
+            <a href="#" class="nav-link"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Pesquisa</a>
+        </nav>
+
+        <div class="nav-perfil">
+            <button class="avatar-icon feedback-avatar-button" id="btn-perfil" type="button" aria-label="Abrir menu do perfil" aria-expanded="false" aria-controls="dropdown-perfil">
+                <i class="fa-solid fa-user" aria-hidden="true"></i>
+            </button>
+            <div class="menu-perfil-dropdown" id="dropdown-perfil">
+                <a href="/" class="dropdown-item btn-desconectar">Desconectar <i class="fa-solid fa-power-off" aria-hidden="true"></i></a>
+            </div>
+        </div>
+    </header>
+
+    <main class="feedback-page" id="conteudo-principal">
+        <header class="feedback-page-heading">
+            <div>
+                <span class="feedback-eyebrow"><i class="fa-regular fa-comments" aria-hidden="true"></i> Fale com a gente</span>
+                <h1>Feedback e Suporte</h1>
+                <p>Conte o que aconteceu ou envie uma sugestão. Acompanhe a resposta por aqui.</p>
+            </div>
+        </header>
+
+        <div class="feedback-user-layout feedback-user-form-only">
+            <section class="feedback-panel feedback-form-panel" aria-labelledby="titulo-formulario">
+                <div class="feedback-section-heading">
+                    <span class="feedback-section-icon"><i class="fa-regular fa-paper-plane" aria-hidden="true"></i></span>
+                    <div>
+                        <h2 id="titulo-formulario">Enviar feedback</h2>
+                        <p>Preencha os campos obrigatórios.</p>
+                    </div>
+                </div>
+
+                <div class="feedback-alert feedback-alert-success" id="feedback-sucesso" role="status" aria-live="polite" hidden></div>
+                <div class="feedback-alert feedback-alert-error" id="feedback-erro-geral" role="alert" hidden></div>
+
+                <form id="feedback-form" novalidate>
+                    <div class="feedback-field">
+                        <label for="feedback-tipo">Motivo do contato <span aria-hidden="true">*</span></label>
+                        <select id="feedback-tipo" name="tipo" required aria-describedby="erro-tipo">
+                            <option value="">Escolha o motivo</option>
+                            <option>Reclamação</option>
+                            <option>Dificuldade de acesso</option>
+                            <option>Problema técnico</option>
+                            <option>Sugestão</option>
+                            <option>Dúvida</option>
+                            <option>Elogio</option>
+                            <option>Outro</option>
+                        </select>
+                        <p class="feedback-field-error" id="erro-tipo"></p>
+                    </div>
+
+                    <div class="feedback-field">
+                        <div class="feedback-label-row">
+                            <label for="feedback-assunto">Assunto <span aria-hidden="true">*</span></label>
+                            <span class="feedback-counter" id="contador-assunto">0/120</span>
+                        </div>
+                        <input id="feedback-assunto" name="assunto" type="text" minlength="5" maxlength="120" placeholder="Resuma sua mensagem" required aria-describedby="ajuda-assunto erro-assunto">
+                        <small id="ajuda-assunto">Use entre 5 e 120 caracteres.</small>
+                        <p class="feedback-field-error" id="erro-assunto"></p>
+                    </div>
+
+                    <div class="feedback-field">
+                        <div class="feedback-label-row">
+                            <label for="feedback-mensagem">Mensagem <span aria-hidden="true">*</span></label>
+                            <span class="feedback-counter" id="contador-mensagem">0/2000</span>
+                        </div>
+                        <textarea id="feedback-mensagem" name="mensagem" rows="7" minlength="10" maxlength="2000" placeholder="Explique sua dúvida, problema ou sugestão" required aria-describedby="ajuda-mensagem erro-mensagem"></textarea>
+                        <small id="ajuda-mensagem">Use entre 10 e 2.000 caracteres.</small>
+                        <p class="feedback-field-error" id="erro-mensagem"></p>
+                    </div>
+
+                    <fieldset class="feedback-rating" id="feedback-avaliacao">
+                        <legend>Sua avaliação <span>(opcional)</span></legend>
+                        <div class="feedback-stars" role="radiogroup" aria-label="Avaliação de 1 a 5 estrelas">
+                            <label><input type="radio" name="avaliacao" value="1"><span aria-hidden="true">★</span><span class="feedback-sr-only">1 estrela</span></label>
+                            <label><input type="radio" name="avaliacao" value="2"><span aria-hidden="true">★</span><span class="feedback-sr-only">2 estrelas</span></label>
+                            <label><input type="radio" name="avaliacao" value="3"><span aria-hidden="true">★</span><span class="feedback-sr-only">3 estrelas</span></label>
+                            <label><input type="radio" name="avaliacao" value="4"><span aria-hidden="true">★</span><span class="feedback-sr-only">4 estrelas</span></label>
+                            <label><input type="radio" name="avaliacao" value="5"><span aria-hidden="true">★</span><span class="feedback-sr-only">5 estrelas</span></label>
+                        </div>
+                    </fieldset>
+
+                    <button class="feedback-primary-button" id="feedback-enviar" type="submit">
+                        <span class="feedback-button-spinner" aria-hidden="true"></span>
+                        <i class="fa-regular fa-paper-plane" aria-hidden="true"></i>
+                        <span class="feedback-button-text">Enviar feedback</span>
+                    </button>
+                </form>
+            </section>
+
+        </div>
+    </main>
+
+    <div class="feedback-toast" id="feedback-user-toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="/static/js/feedbackMockService.js"></script>
+    <script src="/static/js/feedbackUsuario.js"></script>
+</body>
+</html>

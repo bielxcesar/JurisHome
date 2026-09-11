@@ -29,9 +29,9 @@
     
     <!-- Lado Esquerdo: Seta de Retorno + Data Dinâmica -->
     <div style="display: flex; align-items: center; gap: 1rem;">
-      <a href="/home_Admin.html" class="btn-voltar">
+      <a href="/static/pages/home-usuario.html" class="btn-voltar">
         <i class="fa-solid fa-arrow-left"></i>
-        <span>Voltar ao Painel</span>
+        <span>Voltar ao início</span>
       </a>
 
       <span id="data-atual" class="nav-data">--/--/----</span>
@@ -39,9 +39,9 @@
 
     <!-- Menu Principal da Navbar -->
     <nav class="nav-menu">
-      <a href="/home_Admin.html" class="nav-link"><i class="fa-solid fa-house"></i> Home</a>
+      <a href="/static/pages/home-usuario.html" class="nav-link"><i class="fa-solid fa-house"></i> Início</a>
       <a href="#" class="nav-link"><i class="fa-solid fa-square-plus"></i> Exibir mais</a>
-      <a href="#" class="nav-link"><i class="fa-solid fa-headset"></i> Suporte</a>
+      <a href="/static/pages/feedback-suporte.html" class="nav-link"><i class="fa-solid fa-headset"></i> Feedback e Suporte</a>
       <a href="#" class="nav-link"><i class="fa-solid fa-user-group"></i> Sobre nós</a>
       <a href="#" class="nav-link active"><i class="fa-solid fa-newspaper"></i> Categoria</a>
       <a href="#" class="nav-link"><i class="fa-solid fa-magnifying-glass"></i> Pesquisa</a>
@@ -55,9 +55,8 @@
 
       <!-- Menu Suspenso (Dropdown) -->
       <div id="dropdown-perfil" class="menu-perfil-dropdown hidden">
-        <a href="/configuracao" class="dropdown-item">Configuração <i class="fa-solid fa-gear"></i></a>
         <a href="#" class="dropdown-item">Perfil <i class="fa-solid fa-user"></i></a>
-        <a href="#" class="dropdown-item">Adicionar matéria <i class="fa-solid fa-plus"></i></a>
+        <a href="/static/pages/feedback-suporte.html" class="dropdown-item">Feedback e suporte <i class="fa-solid fa-headset"></i></a>
         <a href="/" class="dropdown-item btn-desconectar">Desconectar <i class="fa-solid fa-power-off"></i></a>
       </div>
     </div>
