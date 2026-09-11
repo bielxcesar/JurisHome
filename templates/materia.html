@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ materia.titulo }} - JurisHome</title>
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="{{ url_for('static', path='/css/materia.css') }}" />
+
+  <!-- Verificação imediata do tema para evitar o Flash White -->
+  <script>
+    (function() {
+      const temaSalvo = localStorage.getItem("tema_juris");
+      if (temaSalvo === "claro") {
+        document.documentElement.classList.remove("dark");
+        document.documentElement.setAttribute("data-theme", "light");
+      } else {
+        document.documentElement.classList.add("dark");
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- Barra de Navegação / Cabeçalho alinhada com a navbar do Admin -->
+  <header class="navbar">
+    
+    <!-- Lado Esquerdo: Seta de Retorno + Data Dinâmica -->
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <a href="/home_Admin.html" class="btn-voltar">
+        <i class="fa-solid fa-arrow-left"></i>
+        <span>Voltar ao Painel</span>
+      </a>
+
+      <span id="data-atual" class="nav-data">--/--/----</span>
+    </div>
+
+    <!-- Menu Principal da Navbar -->
+    <nav class="nav-menu">
+      <a href="/home_Admin.html" class="nav-link"><i class="fa-solid fa-house"></i> Home</a>
+      <a href="#" class="nav-link"><i class="fa-solid fa-square-plus"></i> Exibir mais</a>
+      <a href="#" class="nav-link"><i class="fa-solid fa-headset"></i> Suporte</a>
+      <a href="#" class="nav-link"><i class="fa-solid fa-user-group"></i> Sobre nós</a>
+      <a href="#" class="nav-link active"><i class="fa-solid fa-newspaper"></i> Categoria</a>
+      <a href="#" class="nav-link"><i class="fa-solid fa-magnifying-glass"></i> Pesquisa</a>
+    </nav>
+
+    <!-- Área de Perfil e Menu Dropdown -->
+    <div class="nav-perfil">
+      <div id="btn-perfil" class="avatar-icon">
+        <i class="fa-solid fa-user-group"></i>
+      </div>
+
+      <!-- Menu Suspenso (Dropdown) -->
+      <div id="dropdown-perfil" class="menu-perfil-dropdown hidden">
+        <a href="/configuracao" class="dropdown-item">Configuração <i class="fa-solid fa-gear"></i></a>
+        <a href="#" class="dropdown-item">Perfil <i class="fa-solid fa-user"></i></a>
+        <a href="#" class="dropdown-item">Adicionar matéria <i class="fa-solid fa-plus"></i></a>
+        <a href="/" class="dropdown-item btn-desconectar">Desconectar <i class="fa-solid fa-power-off"></i></a>
+      </div>
+    </div>
+
+  </header>
+
+  <!-- Conteúdo Principal da Matéria -->
+  <main class="main-content">
+    
+    <!-- Título & Subtítulo -->
+    <h1 class="titulo-materia">
+      {{ materia.titulo }}
+    </h1>
+
+    {% if materia.sub_titulo %}
+      <h2 class="subtitulo-materia">
+        {{ materia.sub_titulo }}
+      </h2>
+    {% endif %}
+
+    <!-- Metadados (Autor, Data, Fonte) -->
+    <div class="meta-info">
+      <div>
+        <span>Divulgado por: <strong class="autor-destaque">{{ materia.autor.nome if materia.autor else 'Redação' }}</strong></span>
+        <span style="margin: 0 0.5rem;">•</span>
+        <span>{{ materia.criado_em.strftime('%d/%m/%Y %H:%M') if materia.criado_em else '' }}</span>
+      </div>
+
+      {% if materia.fonte_original %}
+        <div>
+          <span>Fonte original: </span>
+          <a href="{{ materia.fonte_original }}" target="_blank" rel="noopener noreferrer">
+            {{ materia.fonte_original }}
+          </a>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Imagem de Capa/Corpo -->
+    {% if materia.imagem_corpo or materia.imagem_miniatura %}
+      <figure class="figura-materia">
+        <img 
+          src="{{ materia.imagem_corpo or materia.imagem_miniatura }}" 
+          alt="{{ materia.titulo }}" 
+        />
+        {% if materia.fonte_imagem %}
+          <figcaption class="legenda-imagem">
+            Imagem proporcionada por: {{ materia.fonte_imagem }}
+          </figcaption>
+        {% endif %}
+      </figure>
+    {% endif %}
+
+    <!-- Corpo da Notícia -->
+    <article class="corpo-artigo">
+      {{ materia.corpo_texto }}
+    </article>
+    <!-- Botões de Compartilhamento -->
+<div class="share-container">
+  <span class="share-title">Compartilhar:</span>
+  
+  <div class="share-buttons">
+    <!-- WhatsApp -->
+    <a href="https://api.whatsapp.com/send?text={{ materia.titulo|urlencode }}%20{{ request.url }}" 
+       target="_blank" 
+       rel="noopener noreferrer" 
+       class="btn-share btn-whatsapp" 
+       title="Compartilhar no WhatsApp">
+      <i class="fa-brands fa-whatsapp"></i>
+    </a>
+
+    <!-- Email -->
+    <a href="mailto:?subject={{ materia.titulo|urlencode }}&body=Confira%20esta%20mat%C3%A9ria:%20{{ request.url }}" 
+       class="btn-share btn-email" 
+       title="Compartilhar por E-mail">
+      <i class="fa-solid fa-envelope"></i>
+    </a>
+
+    <!-- Copiar Link com aviso -->
+    <button type="button" id="btn-copiar-link" class="btn-share btn-copiar" title="Copiar Link">
+      <i class="fa-solid fa-share-nodes"></i>
+    </button>
+  </div>
+
+  <!-- Span de confirmação oculto -->
+  <span id="msg-copiado" class="msg-copiado hidden">
+    <i class="fa-solid fa-check"></i> Link copiado com sucesso!
+  </span>
+</div>
+
+    <!-- Rodapé da Notícia / Tags -->
+    <footer>
+      {% if tags %}
+        <div class="tags-container">
+          <span style="font-weight: 700; font-size: 0.9rem;">Tags:</span>
+          {% for tag in tags %}
+            <span class="tag-item">
+              {{ tag }}
+            </span>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {% if materia.fonte_original %}
+        <p style="font-size: 0.8rem; color: var(--text-muted);">
+          Consulte a matéria fonte original: 
+          <a href="{{ materia.fonte_original }}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color);">
+            {{ materia.fonte_original }}
+          </a>
+        </p>
+      {% endif %}
+    </footer>
+
+  </main>
+
+  <script src="{{ url_for('static', path='/js/materia.js') }}"></script>
+</body>
+</html>

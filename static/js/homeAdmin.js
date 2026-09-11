@@ -90,3 +90,114 @@ function configurarMenuPerfil() {
         }
     });
 }
+document.addEventListener("DOMContentLoaded", () => {
+    // Atualiza a data atual no cabeçalho
+    const dataElemento = document.getElementById("data-atual");
+    if (dataElemento) {
+        const hoje = new Date();
+        dataElemento.textContent = hoje.toLocaleDateString("pt-BR");
+    }
+
+    // Lógica para toggle do menu de perfil
+    const btnPerfil = document.getElementById("btn-perfil");
+    const dropdownPerfil = document.getElementById("dropdown-perfil");
+
+    if (btnPerfil && dropdownPerfil) {
+        btnPerfil.addEventListener("click", (e) => {
+            e.stopPropagation();
+            dropdownPerfil.classList.toggle("active");
+        });
+
+        document.addEventListener("click", () => {
+            dropdownPerfil.classList.remove("active");
+        });
+    }
+
+    // Carrega o conteúdo das notícias
+    carregarConteudos();
+});
+
+async function carregarConteudos() {
+    try {
+        const response = await fetch("/api/conteudos");
+        if (!response.ok) throw new Error("Erro ao carregar matérias");
+
+        const materias = await response.json();
+        if (!materias || materias.length === 0) return;
+
+        // 1. Notícia Destaque Principal (Card Grande Esquerda)
+        if (materias[0]) {
+            const card1 = document.getElementById("card-destaque-principal");
+            const cat1 = document.getElementById("hero-cat-1");
+            const titulo1 = document.getElementById("hero-titulo-1");
+
+            cat1.textContent = materias[0].categoria;
+            titulo1.textContent = materias[0].titulo;
+            
+            // Define a imagem de fundo e redirecionamento
+            card1.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.85) 100%), url('${materias[0].imagem_miniatura}')`;
+            card1.style.backgroundSize = "cover";
+            card1.style.backgroundPosition = "center";
+            card1.style.cursor = "pointer";
+            card1.onclick = () => window.location.href = `/materia/${materias[0].uuid}`;
+        }
+
+        // 2. Notícia Secundária Topo (Direita)
+        if (materias[1]) {
+            const card2 = document.getElementById("card-destaque-2");
+            const cat2 = document.getElementById("hero-cat-2");
+            const titulo2 = document.getElementById("hero-titulo-2");
+
+            cat2.textContent = materias[1].categoria;
+            titulo2.textContent = materias[1].titulo;
+
+            card2.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.85) 100%), url('${materias[1].imagem_miniatura}')`;
+            card2.style.backgroundSize = "cover";
+            card2.style.backgroundPosition = "center";
+            card2.style.cursor = "pointer";
+            card2.onclick = () => window.location.href = `/materia/${materias[1].uuid}`;
+        }
+
+        // 3. Notícia Secundária Base (Direita)
+        if (materias[2]) {
+            const card3 = document.getElementById("card-destaque-3");
+            const cat3 = document.getElementById("hero-cat-3");
+            const titulo3 = document.getElementById("hero-titulo-3");
+
+            cat3.textContent = materias[2].categoria;
+            titulo3.textContent = materias[2].titulo;
+
+            card3.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.85) 100%), url('${materias[2].imagem_miniatura}')`;
+            card3.style.backgroundSize = "cover";
+            card3.style.backgroundPosition = "center";
+            card3.style.cursor = "pointer";
+            card3.onclick = () => window.location.href = `/materia/${materias[2].uuid}`;
+        }
+
+        // 4. Renderiza matérias extras na seção "Você pode gostar"
+        const gridGostar = document.getElementById("grid-voce-pode-gostar");
+        if (gridGostar) {
+            gridGostar.innerHTML = ""; // Limpa os placeholders
+
+            const recomendados = materias.slice(3);
+            recomendados.forEach(item => {
+                const card = document.createElement("article");
+                card.className = "card-recomendado";
+                card.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.85) 100%), url('${item.imagem_miniatura}')`;
+                card.style.backgroundSize = "cover";
+                card.style.backgroundPosition = "center";
+                card.style.cursor = "pointer";
+                card.onclick = () => window.location.href = `/materia/${item.uuid}`;
+
+                card.innerHTML = `
+                    <span class="categoria-tag">${item.categoria}</span>
+                    <h4>${item.titulo}</h4>
+                `;
+                gridGostar.appendChild(card);
+            });
+        }
+
+    } catch (err) {
+        console.error("Falha ao buscar dados das notícias:", err);
+    }
+}

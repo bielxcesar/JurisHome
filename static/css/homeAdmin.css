@@ -332,3 +332,27 @@ body.modo-claro .nav-data {
     justify-content: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
+.card-hero-principal,
+.card-hero-secundario,
+.card-recomendado {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hero-principal:hover,
+.card-hero-secundario:hover,
+.card-recomendado:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.card-recomendado {
+    min-height: 140px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    color: #ffffff;
+}

@@ -11,14 +11,21 @@ templates = Jinja2Templates(directory="templates")
 
 @router.get("/api/conteudos")
 def buscar_conteudos(db: Session = Depends(get_db)):
-    conteudos = db.query(Conteudo).filter(Conteudo.status == StatusConteudo.APROVADO).all()
+    conteudos = (
+        db.query(Conteudo)
+        .filter(Conteudo.status == StatusConteudo.APROVADO)
+        .order_by(Conteudo.criado_em.desc())
+        .all()
+    )
+    
     return [
         {
-            "id": c.id,
+            "uuid": c.uuid,
             "titulo": c.titulo,
             "sub_titulo": c.sub_titulo,
             "resumo_home": c.resumo_home,
-            "imagem_miniatura": c.imagem_miniatura,
+            "categoria": c.categoria.nome if c.categoria else "Direito",
+            "imagem_miniatura": c.imagem_miniatura or "/static/img/default.jpg",
             "criado_em": c.criado_em.strftime("%d/%m/%Y") if c.criado_em else ""
         }
         for c in conteudos

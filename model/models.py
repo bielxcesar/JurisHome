@@ -7,9 +7,13 @@ from sqlalchemy import (
     CheckConstraint, UniqueConstraint, func
 )
 from sqlalchemy.dialects.mysql import CHAR
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import relationship
 
-Base = declarative_base()
+# Importa o Base oficial do database.py
+from database import Base
+
+# REMOVIDO: Base = declarative_base() 
+# (Sobrescrever o Base aqui fazia o Base.metadata de database.py ficar sem tabelas)
 
 
 class TipoUsuario(str, enum.Enum):
@@ -36,8 +40,7 @@ def gerar_uuid() -> str:
 class Usuario(Base):
     __tablename__ = "usuarios"
 
-    id = Column(Integer, primary_key=True, index=True)
-    uuid = Column(CHAR(36), unique=True, index=True, nullable=False, default=gerar_uuid)
+    uuid = Column(CHAR(36), primary_key=True, default=gerar_uuid)
 
     nome = Column(String(100), nullable=False)
     email = Column(String(150), unique=True, index=True, nullable=False)
@@ -50,11 +53,6 @@ class Usuario(Base):
         default=TipoUsuario.ESTUDANTE,
         index=True,
     )
-    # Só é relevante quando tipo_usuario == ADMINISTRADOR.
-    # Esse é o único admin que não pode ser removido nem rebaixado — é a
-    # conta semeada manualmente pelo dev, e a partir dela outros usuários
-    # são promovidos a admin. A checagem de "não pode deletar/rebaixar"
-    # fica na camada de rotas/CRUD, não dá pra garantir só com o schema.
     e_root_admin = Column(Boolean, default=False, nullable=False)
 
     # Campos específicos de aluno — ficam nulos para admins.
@@ -88,7 +86,7 @@ class Usuario(Base):
 class Categoria(Base):
     __tablename__ = "categorias"
 
-    id = Column(Integer, primary_key=True, index=True)
+    uuid = Column(CHAR(36), primary_key=True, default=lambda: str(uuid_lib.uuid4()))
     nome = Column(String(100), nullable=False, unique=True)
     descricao = Column(Text, nullable=True)
 
@@ -99,9 +97,9 @@ class Categoria(Base):
 class Subcategoria(Base):
     __tablename__ = "subcategorias"
 
-    id = Column(Integer, primary_key=True, index=True)
+    uuid = Column(CHAR(36), primary_key=True, default=lambda: str(uuid_lib.uuid4()))
     nome = Column(String(100), nullable=False)
-    categoria_id = Column(Integer, ForeignKey("categorias.id"), nullable=False)
+    categoria_id = Column(CHAR(36), ForeignKey("categorias.uuid"), nullable=False)
 
     categoria = relationship("Categoria", back_populates="subcategorias")
     conteudos = relationship("Conteudo", back_populates="subcategoria")
@@ -114,14 +112,15 @@ class Subcategoria(Base):
 class Conteudo(Base):
     __tablename__ = "conteudos"
 
-    id = Column(Integer, primary_key=True, index=True)
-    uuid = Column(CHAR(36), unique=True, index=True, nullable=False, default=gerar_uuid)
+    uuid = Column(CHAR(36), unique=True, primary_key=True, index=True, nullable=False, default=gerar_uuid)
 
     titulo = Column(String(200), nullable=False)
     sub_titulo = Column(String(200), nullable=True)
     resumo_home = Column(String(500), nullable=False)
     corpo_texto = Column(Text, nullable=False)
     fonte_original = Column(String(500), nullable=True)
+    
+    tags = Column(String(255), nullable=True)
 
     imagem_miniatura = Column(String(500), nullable=True)
     imagem_corpo = Column(String(500), nullable=True)
@@ -138,9 +137,9 @@ class Conteudo(Base):
         index=True,
     )
 
-    categoria_id = Column(Integer, ForeignKey("categorias.id"), nullable=False)
-    subcategoria_id = Column(Integer, ForeignKey("subcategorias.id"), nullable=True)
-    autor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    categoria_id = Column(CHAR(36), ForeignKey("categorias.uuid"), nullable=False)
+    subcategoria_id = Column(CHAR(36), ForeignKey("subcategorias.uuid"), nullable=True)
+    autor_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), nullable=False)
 
     criado_em = Column(DateTime, server_default=func.now(), nullable=False)
 
@@ -157,8 +156,8 @@ class Feedback(Base):
     mensagem = Column(Text, nullable=False)
     tipo = Column(String(50), nullable=True)
 
-    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
-    conteudo_id = Column(Integer, ForeignKey("conteudos.id"), nullable=True)
+    usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), nullable=True)
+    conteudo_id = Column(CHAR(36), ForeignKey("conteudos.uuid"), nullable=True)
     criado_em = Column(DateTime, server_default=func.now(), nullable=False)
 
     usuario = relationship("Usuario", back_populates="feedbacks")
