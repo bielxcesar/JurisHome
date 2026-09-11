@@ -70,13 +70,13 @@ Em pesquisa realizada com acadêmicos de Direito, evidenciou-se a frustração c
 **Clone o repositório:**
    ```bash
    git clone [https://github.com/bielxcesar/JurisHome.git](https://github.com/bielxcesar/JurisHome.git)
-   cd jurisai-auth-api
+   cd JurisHome
 ````
 Crie e ative o ambiente virtual:
   # No Windows:
   ```bash
 python -m venv venv
-.\venv\Scripts\activate
+.\venv\Scripts\Activate.ps1
 ````
 # No Linux/macOS:
 ```bash
@@ -85,6 +85,7 @@ source venv/bin/activate
 ````
 Instale as dependências:
 ```bash
+$env:JurisHome_senha="sua_senha_secreta_aqui"
 pip install -r requirements.txt
 ````
 Configure o arquivo de variáveis (.env):
@@ -96,7 +97,7 @@ Crie um arquivo chamado .env na raiz do projeto com o seguinte conteúdo:
 ```
 Inicie o servidor local:
  ```bash
-uvicorn app.main:app --reload
+uvicorn main:app --reload
 ```
 
 ---
