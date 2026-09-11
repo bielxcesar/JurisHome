@@ -1,4 +1,3 @@
-// 1. Aplicação imediata do tema salvo no localStorage para evitar oscilação (flicker)
 (function aplicarTemaInicial() {
   const temaSalvo = localStorage.getItem("tema_juris");
   
@@ -20,9 +19,6 @@ document.addEventListener("DOMContentLoaded", () => {
   configurarLinksExternos();
 });
 
-/**
- * Carrega e aplica o tema configurado ("tema_juris")
- */
 function carregarTemaSalvo() {
   const temaSalvo = localStorage.getItem("tema_juris");
 
@@ -37,9 +33,6 @@ function carregarTemaSalvo() {
   }
 }
 
-/**
- * Exibe a data formatada (DD/MM/AAAA) no elemento com ID "data-atual"
- */
 function exibirDataAtual() {
   const dataElemento = document.getElementById("data-atual");
   if (dataElemento) {
@@ -48,20 +41,15 @@ function exibirDataAtual() {
   }
 }
 
-/**
- * Controla a exibição do dropdown do perfil
- */
 function configurarMenuPerfil() {
   const btnPerfil = document.getElementById("btn-perfil");
   const dropdownPerfil = document.getElementById("dropdown-perfil");
 
   if (!btnPerfil || !dropdownPerfil) return;
 
-  // Alterna visibilidade ao clicar no ícone do perfil
   btnPerfil.addEventListener("click", (e) => {
     e.stopPropagation();
     
-    // Remove o 'hidden' do Tailwind e alterna classes de estado
     const estaOculto = dropdownPerfil.classList.contains("hidden");
 
     if (estaOculto) {
@@ -73,7 +61,6 @@ function configurarMenuPerfil() {
     }
   });
 
-  // Fecha o menu se o usuário clicar fora dele
   document.addEventListener("click", (e) => {
     if (!dropdownPerfil.contains(e.target) && !btnPerfil.contains(e.target)) {
       dropdownPerfil.classList.add("hidden");
@@ -82,9 +69,6 @@ function configurarMenuPerfil() {
   });
 }
 
-/**
- * Configura links externos HTTP/HTTPS para abrir em nova aba
- */
 function configurarLinksExternos() {
   const linksExternos = document.querySelectorAll('a[href^="http"]');
   linksExternos.forEach((link) => {
@@ -92,12 +76,9 @@ function configurarLinksExternos() {
     link.setAttribute("rel", "noopener noreferrer");
   });
 }
-// Adicione dentro de document.addEventListener("DOMContentLoaded", () => { ... })
+
 configurarBotaoCopiarLink();
 
-/**
- * Copia a URL atual para a área de transferência e exibe o aviso
- */
 function configurarBotaoCopiarLink() {
   const btnCopiar = document.getElementById("btn-copiar-link");
   const msgCopiado = document.getElementById("msg-copiado");
@@ -108,10 +89,8 @@ function configurarBotaoCopiarLink() {
     try {
       await navigator.clipboard.writeText(window.location.href);
       
-      // Exibe a mensagem "Link copiado com sucesso"
       msgCopiado.classList.remove("hidden");
 
-      // Esconde o aviso automaticamente após 3 segundos
       setTimeout(() => {
         msgCopiado.classList.add("hidden");
       }, 3000);

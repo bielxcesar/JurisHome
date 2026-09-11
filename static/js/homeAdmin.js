@@ -98,7 +98,6 @@ document.addEventListener("DOMContentLoaded", () => {
         dataElemento.textContent = hoje.toLocaleDateString("pt-BR");
     }
 
-    // Lógica para toggle do menu de perfil
     const btnPerfil = document.getElementById("btn-perfil");
     const dropdownPerfil = document.getElementById("dropdown-perfil");
 
@@ -113,7 +112,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Carrega o conteúdo das notícias
     carregarConteudos();
 });
 
@@ -142,7 +140,6 @@ async function carregarConteudos() {
             card1.onclick = () => window.location.href = `/materia/${materias[0].uuid}`;
         }
 
-        // 2. Notícia Secundária Topo (Direita)
         if (materias[1]) {
             const card2 = document.getElementById("card-destaque-2");
             const cat2 = document.getElementById("hero-cat-2");
@@ -158,7 +155,6 @@ async function carregarConteudos() {
             card2.onclick = () => window.location.href = `/materia/${materias[1].uuid}`;
         }
 
-        // 3. Notícia Secundária Base (Direita)
         if (materias[2]) {
             const card3 = document.getElementById("card-destaque-3");
             const cat3 = document.getElementById("hero-cat-3");
@@ -174,10 +170,9 @@ async function carregarConteudos() {
             card3.onclick = () => window.location.href = `/materia/${materias[2].uuid}`;
         }
 
-        // 4. Renderiza matérias extras na seção "Você pode gostar"
         const gridGostar = document.getElementById("grid-voce-pode-gostar");
         if (gridGostar) {
-            gridGostar.innerHTML = ""; // Limpa os placeholders
+            gridGostar.innerHTML = "";
 
             const recomendados = materias.slice(3);
             recomendados.forEach(item => {

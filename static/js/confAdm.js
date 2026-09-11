@@ -5,7 +5,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnTema = document.querySelector(".btn-theme");
     const iconeTema = btnTema ? btnTema.querySelector("i") : null;
 
-    // Aplica a preferência salva na memória do navegador
     function aplicarTemaSalvo() {
         const temaSalvo = localStorage.getItem("tema_juris");
         if (temaSalvo === "claro") {
@@ -16,7 +15,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Clique no botão para alternar o visual
     if (btnTema) {
         btnTema.addEventListener("click", () => {
             document.body.classList.toggle("modo-claro");
@@ -38,14 +36,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     aplicarTemaSalvo();
 
-    // Botão Voltar
     if (btnVoltar) {
         btnVoltar.addEventListener("click", () => {
             window.location.href = "/home_admin";
         });
     }
 
-    // Envio do formulário
     if (formSenha) {
         formSenha.addEventListener("submit", (e) => {
             e.preventDefault();

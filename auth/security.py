@@ -27,7 +27,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Ajuste o tokenUrl para a rota de login quando ela existir (ex: "/api/login").
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
 
 

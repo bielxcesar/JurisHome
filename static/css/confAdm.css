@@ -15,7 +15,6 @@ body {
     padding: 1.5rem;
 }
 
-/* Moldura externa com borda dourada/alaranjada */
 .conf-box {
     width: 100%;
     max-width: 900px;
@@ -26,7 +25,6 @@ body {
     box-shadow: 0 10px 30px rgba(0,0,0,0.8);
 }
 
-/* Header */
 .conf-header {
     display: flex;
     align-items: center;
@@ -72,7 +70,6 @@ body {
     min-height: 480px;
 }
 
-/* Sidebar */
 .conf-sidebar {
     border-right: 1px solid #b45309;
     padding: 1.5rem 1rem;
@@ -117,7 +114,6 @@ body {
     color: #f97316;
 }
 
-/* Rodapé Sidebar */
 .sidebar-footer {
     border-top: 1px solid #404040;
     padding-top: 1rem;
@@ -144,14 +140,12 @@ body {
     font-size: 0.85rem;
 }
 
-/* Area de Conteudo */
 .conf-content {
     padding: 2rem 2.5rem;
     display: flex;
     flex-direction: column;
 }
 
-/* Card de Alerta */
 .alert-success {
     display: none;
     background-color: #86efac;
@@ -168,7 +162,6 @@ body {
     display: block;
 }
 
-/* Formulário */
 .form-senha {
     display: flex;
     flex-direction: column;
@@ -223,7 +216,6 @@ body {
     background-color: #ea580c;
 }
 
-/* Modo Claro - Configurações */
 body.modo-claro {
     background-color: #e5e7eb;
     color: #1f2937;
