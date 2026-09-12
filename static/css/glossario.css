@@ -1,0 +1,127 @@
+:root {
+    color-scheme: dark;
+    --fundo: #1a1b1e;
+    --superficie: #242529;
+    --campo: #1c1d21;
+    --texto: #f4f4f5;
+    --secundario: #b5b5bf;
+    --borda: #393a40;
+    --acento: #ffa268;
+    --suave: #332920;
+    --botao: #ff8534;
+}
+
+:root[data-tema="claro"] {
+    color-scheme: light;
+    --fundo: #f6f5f2;
+    --superficie: #ffffff;
+    --campo: #faf9f7;
+    --texto: #252629;
+    --secundario: #62616b;
+    --borda: #dddbd5;
+    --acento: #a33d00;
+    --suave: #fff0e5;
+    --botao: #ff8534;
+}
+
+* { box-sizing: border-box; }
+html { scroll-padding-top: 24px; }
+body { margin: 0; background: var(--fundo); color: var(--texto); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; }
+a { color: inherit; }
+button, input { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+[hidden] { display: none !important; }
+a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px solid var(--acento); outline-offset: 5px; }
+.pular-conteudo { position: absolute; top: -100px; left: 16px; z-index: 5; padding: 12px; background: var(--superficie); }
+.pular-conteudo:focus { top: 12px; }
+.cabecalho { display: flex; align-items: center; gap: 40px; min-height: 82px; padding: 0 max(24px, calc((100vw - 1160px) / 2)); background: var(--superficie); border-bottom: 1px solid var(--borda); }
+.marca { display: inline-flex; align-items: center; text-decoration: none; font-weight: 700; font-size: 23px; letter-spacing: -.8px; white-space: nowrap; }
+.marca svg { width: 27px; height: 27px; margin-right: 10px; color: var(--acento); }
+.marca span { color: var(--acento); }
+.navegacao { display: flex; align-self: stretch; gap: 28px; margin-left: auto; }
+.navegacao a { display: flex; align-items: center; text-decoration: none; font-size: 14px; color: var(--secundario); border-bottom: 2px solid transparent; }
+.navegacao a[aria-current] { color: var(--texto); border-bottom-color: var(--acento); }
+.botao-tema { border: 1px solid var(--borda); border-radius: 8px; background: transparent; color: var(--texto); padding: 8px 14px; font-size: 13px; min-height: 42px; }
+.botao-tema:hover { background: var(--suave); }
+.conteudo { max-width: 1160px; margin: auto; padding: 0 24px; }
+.introducao { display: flex; align-items: center; justify-content: space-between; gap: 32px; padding: 62px 0 38px; }
+.sobretitulo { display: flex; align-items: center; gap: 9px; font-size: 11px; letter-spacing: 1.7px; font-weight: 600; color: var(--acento); margin: 0 0 18px; }
+.ponto { width: 6px; height: 6px; border-radius: 50%; background: var(--acento); }
+h1 { font-size: clamp(34px, 4.5vw, 54px); letter-spacing: -2px; line-height: 1.15; margin: 0 0 18px; font-weight: 650; }
+h1 span { color: var(--acento); }
+.descricao { color: var(--secundario); margin: 0; font-size: 16px; line-height: 1.8; }
+.resumo-acervo { border-left: 1px solid var(--borda); padding-left: 32px; min-width: 146px; }
+.resumo-acervo strong { display: block; font-size: 52px; letter-spacing: -2px; font-weight: 400; line-height: 1.1; }
+.resumo-acervo span { display: block; font-size: 13px; line-height: 1.5; color: var(--secundario); margin-top: 9px; }
+.ferramentas { background: var(--superficie); border: 1px solid var(--borda); border-radius: 12px; padding: 26px 28px 22px; }
+form label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+.linha-busca { display: flex; gap: 10px; }
+.campo-busca { display: flex; flex: 1; min-width: 0; align-items: center; position: relative; }
+.campo-busca svg { position: absolute; left: 16px; width: 20px; height: 20px; color: var(--secundario); pointer-events: none; }
+.campo-busca input { width: 100%; min-width: 0; height: 52px; padding: 12px 16px 12px 48px; border: 1px solid var(--borda); border-radius: 7px; color: var(--texto); background: var(--campo); font-size: 16px; }
+.campo-busca input::placeholder { color: var(--secundario); opacity: 1; }
+.botao-buscar { display: inline-flex; align-items: center; justify-content: center; gap: 28px; border: 0; border-radius: 7px; padding: 12px 23px; min-height: 48px; font-size: 14px; font-weight: 650; background: var(--botao); color: #24170d; text-decoration: none; white-space: nowrap; }
+.botao-buscar:hover { filter: brightness(1.08); }
+.botao-buscar span { font-size: 21px; line-height: 1; }
+.dica { color: var(--secundario); font-size: 12px; margin: 10px 0 22px; }
+.alfabeto { display: flex; flex-wrap: wrap; gap: 5px; border-top: 1px solid var(--borda); padding-top: 18px; }
+.letra { display: inline-flex; align-items: center; justify-content: center; width: 29px; min-height: 36px; border-radius: 5px; text-decoration: none; font-size: 12px; color: var(--secundario); }
+.letra.todas { width: auto; padding: 0 12px; margin-right: 7px; }
+.letra[aria-current] { background: var(--botao); color: #24170d; font-weight: 700; }
+a.letra:hover:not([aria-current]) { background: var(--suave); color: var(--acento); }
+.indisponivel { opacity: .35; }
+.resultados { margin-top: 36px; }
+.cabecalho-resultados { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 22px; }
+h2 { font-size: 20px; font-weight: 600; margin: 0; letter-spacing: -.35px; }
+.contador { margin: 4px 0 0; font-size: 13px; color: var(--secundario); overflow-wrap: anywhere; }
+.ordem { color: var(--secundario); font-size: 12px; letter-spacing: 2px; white-space: nowrap; }
+.limpar { font-size: 13px; color: var(--acento); text-decoration: none; flex-shrink: 0; }
+.limpar span { margin-left: 8px; font-size: 19px; }
+.lista-termos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.termo { background: var(--superficie); border: 1px solid var(--borda); border-radius: 10px; padding: 24px 26px 18px; display: flex; flex-direction: column; scroll-margin-top: 24px; }
+.termo:target { border-color: var(--acento); }
+.area { color: var(--acento); font-size: 10px; text-transform: uppercase; letter-spacing: 1.3px; font-weight: 600; margin: 0 0 10px; }
+h3 { font-size: 24px; line-height: 1.3; font-weight: 600; letter-spacing: -.4px; margin: 0 0 12px; }
+.definicao { margin: 0 0 20px; color: var(--secundario); font-size: 14px; line-height: 1.8; }
+.exemplo { margin-top: auto; font-size: 13px; }
+.exemplo summary { cursor: pointer; width: fit-content; color: var(--texto); padding: 5px 0; }
+.exemplo summary::marker { color: var(--acento); }
+.exemplo p { background: var(--suave); border-left: 2px solid var(--acento); margin: 10px 0 0; padding: 12px 14px; line-height: 1.7; color: var(--texto); }
+.referencia { display: flex; align-items: start; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; padding-top: 15px; margin-top: 17px; border-top: 1px solid var(--borda); font-size: 11px; }
+.referencia > span { color: var(--secundario); }
+.referencia a { color: var(--secundario); text-decoration: none; }
+.referencia a:hover { color: var(--acento); text-decoration: underline; }
+.referencia a span { margin-left: 4px; }
+.sem-resultados { border: 1px dashed var(--borda); border-radius: 12px; padding: 48px 24px; text-align: center; }
+.simbolo-vazio { display: inline-flex; padding: 4px 17px; font-family: Georgia, serif; color: var(--acento); background: var(--suave); border-radius: 9px; font-size: 28px; margin-bottom: 20px; }
+.sem-resultados p { color: var(--secundario); font-size: 14px; margin: 0 auto 25px; max-width: 400px; }
+.rodape { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 30px 0 36px; margin-top: 42px; border-top: 1px solid var(--borda); font-size: 12px; }
+.rodape p { margin: 0; }
+.rodape p span { color: var(--secundario); }
+.rodape a { text-decoration: none; flex-shrink: 0; color: var(--secundario); }
+.rodape a:hover { color: var(--acento); }
+
+@media (max-width: 700px) {
+    .cabecalho { min-height: 74px; padding: 14px 20px; gap: 14px; flex-wrap: wrap; }
+    .marca { font-size: 21px; }
+    .navegacao { gap: 18px; }
+    .botao-tema { margin-left: auto; }
+    .conteudo { padding: 0 20px; }
+    .introducao { padding: 36px 0 27px; }
+    .sobretitulo { font-size: 9px; letter-spacing: 1.1px; }
+    h1 { letter-spacing: -1.2px; }
+    .descricao { font-size: 14px; }
+    .quebra-desktop, .resumo-acervo { display: none; }
+    .ferramentas { padding: 20px 16px; }
+    .botao-buscar { padding: 12px 17px; gap: 9px; }
+    .linha-busca { flex-wrap: wrap; }
+    .campo-busca { flex-basis: 100%; }
+    .linha-busca .botao-buscar { width: 100%; }
+    .dica { line-height: 1.7; }
+    .letra { width: 33px; min-height: 40px; }
+    .lista-termos { grid-template-columns: 1fr; gap: 14px; }
+    .termo { padding: 22px; }
+    .cabecalho-resultados { align-items: start; flex-wrap: wrap; }
+    .rodape { flex-direction: column; align-items: start; margin-top: 28px; }
+}
