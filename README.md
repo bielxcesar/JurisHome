@@ -61,6 +61,33 @@ Em pesquisa realizada com acadêmicos de Direito, evidenciou-se a frustração c
 
 ## 💻 Como Executar o Projeto Localmente
 
+### Funcionalidade 4 — Glossário jurídico para estudantes iniciantes
+
+A página `/glossario`, acessível pelo menu da home, apresenta 25 termos introdutórios
+em ordem alfabética, com explicações simples, exemplos expansíveis e referências
+ao Código de Processo Civil e à Constituição Federal. A busca consulta o termo,
+a definição, o exemplo e a área; ignora diferenças de acentuação, maiúsculas e
+espaços. É possível combinar palavras com o filtro por inicial e limpar a consulta.
+
+O glossário funciona sem login, mantém a preferência de tema `tema_juris` e se
+adapta ao celular. O formulário e a navegação por letras funcionam também sem
+JavaScript. A mesma consulta está disponível em `GET /api/glossario?q=acordao&letra=A`
+e documentada em `/docs`.
+
+Os termos ficam em `data/glossario.json`, separados da interface. Para ampliar
+o catálogo, adicione um identificador único, termo, área, definição, exemplo,
+referência legal e identificador de fonte, atualize `revisado_em` e reinicie o
+servidor. As definições são adaptações didáticas; os exemplos são ilustrativos.
+Esta primeira versão usa catálogo editorial em arquivo, sem painel de cadastro.
+
+**Critério de aceitação para a ficha:** o estudante deve conseguir consultar
+termos jurídicos em ordem alfabética, pesquisar palavras com ou sem acentos,
+visualizar definições simples e exemplos e acessar a referência oficial de cada
+termo. Quando não houver resultados, a interface deve informar e permitir limpar
+a busca.
+
+**Validação:** `python -m unittest discover -s tests -v`.
+
 ### Pré-requisitos
 - **Python 3.12+** instalado.
 - Git instalado.
@@ -68,36 +95,49 @@ Em pesquisa realizada com acadêmicos de Direito, evidenciou-se a frustração c
 ### Passo a Passo
 
 **Clone o repositório:**
-   ```bash
-   git clone [https://github.com/bielxcesar/JurisHome.git](https://github.com/bielxcesar/JurisHome.git)
-   cd JurisHome
-````
-Crie e ative o ambiente virtual:
-  # No Windows:
-  ```bash
+```bash
+git clone https://github.com/bielxcesar/JurisHome.git
+cd JurisHome
+```
+
+**Crie e ative o ambiente virtual no Windows:**
+```powershell
 python -m venv venv
 .\venv\Scripts\Activate.ps1
-````
-# No Linux/macOS:
+```
+
+**No Linux ou macOS:**
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-````
-Instale as dependências:
-```bash
-$env:JurisHome_senha="sua_senha_secreta_aqui"
-pip install -r requirements.txt
-````
-Configure o arquivo de variáveis (.env):
-Crie um arquivo chamado .env na raiz do projeto com o seguinte conteúdo:
-   ```bash
-    DATABASE_URL=postgresql://usuario:senha@localhost:5432/jurishome
-    SECRET_KEY=sua_chave_secreta_jwt
-    CLOUDINARY_URL=sua_url_cloudinary
 ```
-Inicie o servidor local:
- ```bash
-uvicorn main:app --reload
+
+**Instale as dependências:**
+```bash
+pip install -r requirements.txt
+```
+
+**Configure o ambiente local:**
+
+Crie um arquivo `.env` na raiz do projeto. `JurisHome_senha` é obrigatória;
+sem `DATABASE_URL`, a aplicação usa automaticamente o SQLite local.
+
+```dotenv
+JurisHome_senha=troque-por-uma-chave-local-segura
+# DATABASE_URL=postgresql://usuario:senha@localhost:5432/jurishome
+# CLOUDINARY_URL=sua_url_cloudinary
+```
+
+**Carregue as matérias e categorias de demonstração:**
+```bash
+python seed.py
+```
+
+O seed pode ser executado novamente sem duplicar os três conteúdos demonstrativos.
+
+**Inicie o servidor local:**
+```bash
+python -m uvicorn main:app --reload
 ```
 
 ---

@@ -1,16 +1,26 @@
-* {
+/* =========================================
+   1. RESET E BASE
+========================================= */
+*, *::before, *::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #1a1b1e;
     color: #e1e1e6;
     min-height: 100vh;
 }
 
+[hidden], .home-user-sr-only {
+    display: none !important;
+}
+
+/* =========================================
+   2. NAVBAR E MENU
+========================================= */
 .navbar {
     background-color: #25262a;
     display: flex;
@@ -20,15 +30,8 @@ body {
     border-bottom: 1px solid #323338;
 }
 
-.nav-data {
-    color: #a8a8b3;
-    font-size: 0.9rem;
-}
-
-.nav-menu {
-    display: flex;
-    gap: 1.8rem;
-}
+.nav-data { color: #a8a8b3; font-size: 0.9rem; }
+.nav-menu { display: flex; gap: 1.8rem; }
 
 .nav-link {
     color: #ffffff;
@@ -41,308 +44,177 @@ body {
     transition: color 0.2s;
 }
 
-.nav-link i {
-    color: #ff6b00;
-}
+.nav-link i { color: #ff6b00; }
+.nav-link:hover { color: #ff6b00; }
+.nav-link.active { border-bottom: 2px solid #ff6b00; font-weight: 600; }
 
-.nav-link.active {
-    border-bottom: 2px solid #ff6b00;
-    font-weight: 600;
-}
+/* Menu de Perfil */
+.nav-perfil { position: relative; }
 
-.nav-link:hover {
-    color: #ff6b00;
-}
-
-.nav-perfil .avatar-icon {
-    width: 42px;
-    height: 42px;
+.avatar-icon {
+    width: 42px; height: 42px;
     border: 2px solid #ff6b00;
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #ff6b00;
-    cursor: pointer;
-}
-
-.nav-perfil {
-    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    color: #ff6b00; background: transparent;
+    cursor: pointer; font: inherit;
 }
 
 .menu-perfil-dropdown {
     display: none;
-    position: absolute;
-    top: 50px;
-    right: 0;
+    position: absolute; top: 50px; right: 0;
     width: 180px;
     background-color: #25262a;
-    border: 1px solid #3a3b40;
-    border-radius: 8px;
+    border: 1px solid #3a3b40; border-radius: 8px;
     padding: 0.6rem;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
-    z-index: 1000;
-    flex-direction: column;
-    gap: 0.4rem;
+    z-index: 1000; flex-direction: column; gap: 0.4rem;
 }
-
-.menu-perfil-dropdown.ativo {
-    display: flex;
-}
+.menu-perfil-dropdown.ativo { display: flex; }
 
 .dropdown-item {
-    color: #ffffff;
-    text-decoration: none;
-    font-size: 0.95rem;
+    color: #ffffff; text-decoration: none; font-size: 0.95rem;
     padding: 0.5rem 0.6rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between;
     border-bottom: 1px solid #3a3b40;
     transition: background-color 0.2s;
 }
-
-.dropdown-item:hover {
-    background-color: #323338;
-}
-
-.dropdown-item i {
-    font-size: 0.9rem;
-    color: #cccccc;
-}
+.dropdown-item i { font-size: 0.9rem; color: #cccccc; }
+.dropdown-item:hover { background-color: #323338; }
 
 .dropdown-item.btn-desconectar {
-    background-color: #e63946;
-    color: #ffffff;
-    border-radius: 5px;
-    border-bottom: none;
-    margin-top: 0.2rem;
-    font-weight: 500;
+    background-color: #e63946; border: none; border-radius: 5px; margin-top: 0.2rem; font-weight: 500;
 }
+.dropdown-item.btn-desconectar:hover { background-color: #d62828; }
+.dropdown-item.btn-desconectar i { color: #ffffff; }
 
-.dropdown-item.btn-desconectar:hover {
-    background-color: #d62828;
-}
-
-.dropdown-item.btn-desconectar i {
-    color: #ffffff;
-}
-
-.container {
-    max-width: 1200px;
-    margin: 2rem auto;
-    padding: 0 1.5rem;
-}
+/* =========================================
+   3. LAYOUT PRINCIPAL E CARDS
+========================================= */
+.container { max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; }
 
 .hero-grid {
-    display: grid;
-    grid-template-columns: 1.8fr 1fr;
-    gap: 1.2rem;
-    margin-bottom: 3rem;
+    display: grid; grid-template-columns: 1.8fr 1fr; gap: 1.2rem; margin-bottom: 3rem;
 }
+.coluna-destaques-secundarios { display: flex; flex-direction: column; gap: 1.2rem; }
+.grid-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
+.secao-recomendados h2 { font-size: 1.2rem; font-weight: 400; margin-bottom: 1.2rem; }
 
-.card-hero-principal {
+/* Estilos Globais de Cartões (Otimizado) */
+.card-hero-principal, .card-hero-secundario, .card-recomendado, .card-item {
     background-color: #2a2b30;
-    border-radius: 6px;
-    padding: 1.5rem;
-    min-height: 320px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+    border-radius: 8px;
     position: relative;
+    overflow: hidden;
+    display: flex; flex-direction: column; justify-content: space-between;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    /* Trava Anti-Bug de Imagem */
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
 }
 
-.card-header-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.card-hero-principal:hover, .card-hero-secundario:hover, .card-recomendado:hover {
+    transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-.categoria-tag {
-    color: #a8a8b3;
-    font-size: 0.85rem;
-}
+.card-hero-principal { padding: 1.5rem; min-height: 320px; }
+.card-hero-secundario { padding: 1.2rem; flex: 1; }
+.card-recomendado, .card-item { padding: 1.2rem; min-height: 140px; color: #ffffff; }
 
-.indicadores-carrossel {
-    display: flex;
-    gap: 6px;
-}
+/* Textos e Tags dos Cards */
+.categoria-tag { color: #a8a8b3; font-size: 0.85rem; }
+.card-header-info { display: flex; justify-content: space-between; align-items: center; }
+.card-footer-info h2 { font-size: 1.3rem; font-weight: 400; margin-bottom: 1rem; line-height: 1.4; max-width: 90%; }
+.card-hero-secundario h3, .card-recomendado h4 { font-size: 0.95rem; font-weight: 400; line-height: 1.3; margin-top: 0.5rem; }
 
-.indicadores-carrossel .dot {
-    width: 24px;
-    height: 6px;
-    background-color: #4d4e54;
-    border-radius: 3px;
-}
+/* Controles (Carrossel, Seta e Barra) */
+.indicadores-carrossel { display: flex; gap: 6px; }
+.indicadores-carrossel .dot { width: 24px; height: 6px; background-color: #4d4e54; border-radius: 3px; }
+.indicadores-carrossel .dot.active { background-color: #ffffff; }
 
-.indicadores-carrossel .dot.active {
-    background-color: #ffffff;
-}
+.progresso-bar { width: 100%; height: 4px; background-color: #4d4e54; border-radius: 2px; }
+.progresso-fill { width: 40%; height: 100%; background-color: #ffffff; border-radius: 2px; }
 
 .btn-next-hero {
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: none;
-    background-color: rgba(255, 255, 255, 0.2);
-    color: #ffffff;
-    cursor: pointer;
+    position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
+    width: 42px; height: 42px; border-radius: 50%; z-index: 10; cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.2); background-color: rgba(0, 0, 0, 0.45);
+    color: #ffffff; font-size: 1.1rem; backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.25s ease-in-out;
 }
+.btn-next-hero:hover { background-color: #ff6b00; border-color: #ff6b00; transform: translateY(-50%) scale(1.08); }
+.btn-next-hero:active { transform: translateY(-50%) scale(0.95); }
 
-.card-footer-info h2 {
-    font-size: 1.3rem;
-    font-weight: 400;
-    margin-bottom: 1rem;
-    line-height: 1.4;
-    max-width: 90%;
-}
-
-.progresso-bar {
-    width: 100%;
-    height: 4px;
-    background-color: #4d4e54;
-    border-radius: 2px;
-}
-
-.progresso-fill {
-    width: 40%;
-    height: 100%;
-    background-color: #ffffff;
-    border-radius: 2px;
-}
-body.modo-claro {
-    background-color: #f3f4f6;
-    color: #1f2937;
-}
-
-body.modo-claro .navbar {
-    background-color: #ffffff;
-    border-bottom-color: #e5e7eb;
-}
-
-body.modo-claro .nav-link {
-    color: #374151;
-}
-
-body.modo-claro .card-hero-principal,
-body.modo-claro .card-hero-secundario,
-body.modo-claro .card-item,
-body.modo-claro .menu-perfil-dropdown {
-    background-color: #ffffff;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-}
-
-body.modo-claro .card-footer-info h2,
-body.modo-claro .card-hero-secundario h3,
-body.modo-claro .secao-recomendados h2,
-body.modo-claro .dropdown-item {
-    color: #111827;
-}
-
-body.modo-claro .dropdown-item:hover {
-    background-color: #f3f4f6;
-}
-
-body.modo-claro .categoria-tag,
-body.modo-claro .nav-data {
-    color: #6b7280;
-}
-
-.coluna-destaques-secundarios {
-    display: flex;
-    flex-direction: column;
-    gap: 1.2rem;
-}
-
-.card-hero-secundario {
-    background-color: #2a2b30;
-    border-radius: 6px;
-    padding: 1.2rem;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-.card-hero-secundario h3 {
-    font-size: 0.95rem;
-    font-weight: 400;
-    line-height: 1.4;
-    margin-top: 0.5rem;
-}
-
-/* Seção Recomendados */
-.secao-recomendados h2 {
-    font-size: 1.2rem;
-    font-weight: 400;
-    margin-bottom: 1.2rem;
-}
-
-.grid-cards {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.2rem;
-}
-
-.card-item {
-    background-color: #2a2b30;
-    border-radius: 6px;
-    min-height: 140px;
-    padding: 1.2rem;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-.card-item h4 {
-    font-size: 0.95rem;
-    font-weight: 400;
-    line-height: 1.3;
+/* =========================================
+   4. BOTÃO FAB (FEEDBACK)
+========================================= */
+.juris-fab {
+    position: fixed; right: 35px; bottom: 35px; z-index: 1200;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 0.75rem;
 }
 
 .fab-btn {
-    position: fixed;
-    bottom: 35px;
-    right: 35px;
-    width: 55px;
-    height: 55px;
-    background-color: #1a1b1e;
-    border: 2px solid #ff6b00;
-    border-radius: 14px;
-    color: #ff6b00;
-    font-size: 1.4rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    width: 55px; height: 55px; border-radius: 14px; cursor: pointer;
+    background-color: #1a1b1e; border: 2px solid #ff6b00; color: #ff6b00;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); font-family: Georgia, serif; font-weight: 800;
+    transition: transform 0.2s, color 0.2s, background-color 0.2s;
 }
-.card-hero-principal,
-.card-hero-secundario,
-.card-recomendado {
-    position: relative;
-    border-radius: 8px;
-    overflow: hidden;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+.juris-fab.aberto .fab-btn { transform: rotate(-8deg) scale(1.04); color: #1a1b1e; background-color: #ff6b00; }
+.juris-fab-letter { font-size: 1.75rem; line-height: 1; }
+
+.juris-fab-menu {
+    min-width: 230px; padding: 0.65rem; display: flex; flex-direction: column; gap: 0.45rem;
+    background-color: #25262a; border: 1px solid #3a3b40; border-radius: 12px;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
 }
 
-.card-hero-principal:hover,
-.card-hero-secundario:hover,
-.card-recomendado:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+.juris-fab-action {
+    width: 100%; min-height: 44px; padding: 0.7rem 0.85rem; gap: 0.75rem;
+    display: flex; align-items: center; text-align: left; text-decoration: none;
+    border-radius: 8px; color: #ffffff; border: 1px solid transparent; cursor: pointer;
+}
+.juris-fab-action i { width: 1.2rem; color: #ff6b00; text-align: center; }
+.juris-fab-action:hover { border-color: #4a4b50; background-color: #323338; }
+.juris-fab-feedback { border-color: rgba(255, 107, 0, 0.45); background-color: rgba(255, 107, 0, 0.1); }
+
+/* =========================================
+   5. ACESSIBILIDADE E FOCO
+========================================= */
+:focus-visible { outline: 3px solid #fb923c !important; outline-offset: 3px; }
+
+/* =========================================
+   6. MODO CLARO
+========================================= */
+body.modo-claro { background-color: #f3f4f6; color: #1f2937; }
+body.modo-claro .navbar { background-color: #ffffff; border-bottom-color: #e5e7eb; }
+body.modo-claro .nav-link { color: #374151; }
+body.modo-claro .categoria-tag, body.modo-claro .nav-data { color: #6b7280; }
+body.modo-claro .card-footer-info h2, body.modo-claro .card-hero-secundario h3, body.modo-claro .secao-recomendados h2, body.modo-claro .dropdown-item, body.modo-claro .juris-fab-action { color: #111827; }
+
+body.modo-claro .card-hero-principal, body.modo-claro .card-hero-secundario, body.modo-claro .card-item, body.modo-claro .menu-perfil-dropdown, body.modo-claro .juris-fab-menu {
+    background-color: #ffffff; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+body.modo-claro .dropdown-item:hover, body.modo-claro .juris-fab-action:hover { background-color: #f3f4f6; border-color: #e5e7eb; }
+
+/* =========================================
+   7. RESPONSIVIDADE
+========================================= */
+@media (max-width: 1180px) {
+    .navbar { gap: 1rem; padding-inline: 1rem; }
+    .nav-data { display: none; }
+    .nav-menu { flex: 1; gap: 1rem; overflow-x: auto; scrollbar-width: thin; }
+    .nav-link { flex: 0 0 auto; min-height: 44px; white-space: nowrap; }
 }
 
-.card-recomendado {
-    min-height: 140px;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    color: #ffffff;
+@media (max-width: 760px) {
+    .navbar { align-items: center; }
+    .container { margin-top: 1.25rem; padding-inline: 0.75rem; }
+    .hero-grid, .coluna-destaques-secundarios, .grid-cards { grid-template-columns: 1fr; }
+    .card-hero-principal { min-height: 260px; }
+    .card-hero-secundario { min-height: 150px; }
+    .juris-fab, .fab-btn { right: 18px; bottom: 18px; }
+    .juris-fab-menu { min-width: min(260px, calc(100vw - 36px)); }
 }
