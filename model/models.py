@@ -162,3 +162,32 @@ class Feedback(Base):
 
     usuario = relationship("Usuario", back_populates="feedbacks")
     conteudo = relationship("Conteudo", back_populates="feedbacks")
+
+
+class FeedbackAtendimento(Base):
+    """Registro completo usado pelo canal de feedback e pelo painel administrativo."""
+
+    __tablename__ = "feedback_atendimentos"
+
+    id = Column(String(50), primary_key=True)
+    protocolo = Column(String(30), unique=True, index=True, nullable=False)
+    usuario_id = Column(String(50), nullable=False, default="usr-sessao")
+    usuario_nome = Column(String(100), nullable=False)
+    usuario_email = Column(String(150), nullable=False)
+    tipo = Column(String(50), nullable=False)
+    assunto = Column(String(120), nullable=False)
+    mensagem = Column(Text, nullable=False)
+    avaliacao = Column(Integer, nullable=True)
+    status = Column(String(30), nullable=False, default="Recebido", index=True)
+    prioridade = Column(String(20), nullable=False, default="Normal", index=True)
+    respostas_json = Column(Text, nullable=False, default="[]")
+    observacoes_json = Column(Text, nullable=False, default="[]")
+    historico_json = Column(Text, nullable=False, default="[]")
+    novo = Column(Boolean, nullable=False, default=True)
+    arquivado = Column(Boolean, nullable=False, default=False)
+    criado_em = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    atualizado_em = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("avaliacao IS NULL OR (avaliacao >= 1 AND avaliacao <= 5)", name="ck_feedback_avaliacao"),
+    )

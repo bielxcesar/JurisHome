@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Termos jurídicos explicados para estudantes iniciantes, com exemplos e referências legais.">
+    <title>Glossário jurídico | JurisHome</title>
+    <link rel="stylesheet" href="/static/css/glossario.css">
+    <script src="/static/js/glossario.js"></script>
+</head>
+<body>
+    <a class="pular-conteudo" href="#conteudo">Pular para o conteúdo</a>
+    <header class="cabecalho">
+        <a class="marca" href="/home_admin" aria-label="JurisHome — página inicial">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 5v15M3 4.5c3-1 6-.5 9 1.5 3-2 6-2.5 9-1.5V19c-3-1-6-.5-9 1.5-3-2-6-2.5-9-1.5z"/></svg>
+            Juris<span>Home</span>
+        </a>
+        <nav class="navegacao" aria-label="Navegação principal">
+            <a href="/templates/home_Usuario.html">Início</a>
+            <a href="{{ url_glossario }}" aria-current="page">Glossário</a>
+        </nav>
+        <button class="botao-tema" type="button" id="alternar-tema" hidden>Modo claro</button>
+    </header>
+
+    <main id="conteudo" class="conteudo">
+        <section class="introducao" aria-labelledby="titulo-glossario">
+            <div>
+                <p class="sobretitulo"><span class="ponto"></span> SEUS PRIMEIROS PASSOS NO DIREITO</p>
+                <h1 id="titulo-glossario">Glossário <span>jurídico.</span></h1>
+                <p class="descricao">Uma palavra nova não precisa interromper seu estudo.<br class="quebra-desktop"> Explore os significados, veja exemplos e siga aprendendo.</p>
+            </div>
+            <div class="resumo-acervo" aria-label="{{ total_catalogo }} termos disponíveis">
+                <strong>{{ total_catalogo }}</strong>
+                <span>termos para<br>começar</span>
+            </div>
+        </section>
+
+        <section class="ferramentas" aria-label="Consultar o glossário">
+            <form action="/glossario" method="get" role="search">
+                {% if origem %}<input type="hidden" name="origem" value="{{ origem }}">{% endif %}
+                <label for="busca-termo">Qual termo você quer entender?</label>
+                <div class="linha-busca">
+                    <div class="campo-busca">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
+                        <input type="search" id="busca-termo" name="q" value="{{ q }}" maxlength="120" placeholder="Ex.: acórdão, citação, réu..." aria-describedby="dica-busca">
+                    </div>
+                    {% if letra %}<input type="hidden" name="letra" value="{{ letra }}">{% endif %}
+                    <button class="botao-buscar" type="submit">Buscar <span aria-hidden="true">→</span></button>
+                </div>
+                <p class="dica" id="dica-busca">Pesquise pelo termo ou por uma palavra da explicação. Pode escrever sem acentos.</p>
+            </form>
+
+            <nav class="alfabeto" aria-label="Filtrar pela primeira letra">
+                <a class="letra todas" href="{{ url_todas }}" {% if not letra %}aria-current="true"{% endif %}>Todas</a>
+                {% for item in links_letras %}
+                    {% if item.disponivel %}
+                    <a class="letra" href="{{ item.url }}" aria-label="Termos com a letra {{ item.letra }}" {% if letra == item.letra %}aria-current="true"{% endif %}>{{ item.letra }}</a>
+                    {% else %}
+                    <span class="letra indisponivel" aria-label="Nenhum termo com a letra {{ item.letra }}">{{ item.letra }}</span>
+                    {% endif %}
+                {% endfor %}
+            </nav>
+        </section>
+
+        <section class="resultados" aria-labelledby="titulo-resultados">
+            <div class="cabecalho-resultados">
+                <div>
+                    <h2 id="titulo-resultados">{% if q or letra %}Resultado da consulta{% else %}Explore os termos{% endif %}</h2>
+                    <p class="contador">{{ total }} {% if total == 1 %}termo encontrado{% else %}termos encontrados{% endif %}{% if q %} para “{{ q }}”{% endif %}{% if letra %} · Letra {{ letra }}{% endif %}</p>
+                </div>
+                {% if q or letra %}<a class="limpar" href="{{ url_limpar }}">Limpar filtros <span aria-hidden="true">×</span></a>{% else %}<span class="ordem">A → Z</span>{% endif %}
+            </div>
+
+            {% if itens %}
+            <div class="lista-termos">
+                {% for item in itens %}
+                <article class="termo" id="{{ item.id }}" aria-labelledby="titulo-{{ item.id }}">
+                    <p class="area">{{ item.area }}</p>
+                    <h3 id="titulo-{{ item.id }}">{{ item.termo }}</h3>
+                    <p class="definicao">{{ item.definicao }}</p>
+                    <details class="exemplo">
+                        <summary>Entender com um exemplo</summary>
+                        <p>{{ item.exemplo }}</p>
+                    </details>
+                    <div class="referencia">
+                        <span>{{ item.referencia }}</span>
+                        <a href="{{ item.fonte.url }}" target="_blank" rel="noopener noreferrer" aria-label="Fonte de {{ item.termo }}: {{ item.fonte.nome }} (abre em nova aba)">Fonte oficial <span aria-hidden="true">↗</span></a>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="sem-resultados">
+                <span class="simbolo-vazio" aria-hidden="true">Aa</span>
+                <h3>Nenhum termo por aqui.</h3>
+                <p>Tente uma palavra mais curta ou remova o filtro de letra para ampliar a busca.</p>
+                <a class="botao-buscar" href="{{ url_limpar }}">Ver todos os termos <span aria-hidden="true">→</span></a>
+            </div>
+            {% endif %}
+        </section>
+
+        <footer class="rodape">
+            <p>Um apoio para as primeiras leituras.<br><span>Definições introdutórias e exemplos ilustrativos, com referência à legislação brasileira.</span></p>
+            <a href="#conteudo">Voltar ao início <span aria-hidden="true">↑</span></a>
+        </footer>
+    </main>
+</body>
+</html>
