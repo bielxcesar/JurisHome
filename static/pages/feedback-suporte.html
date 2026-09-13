@@ -6,8 +6,8 @@
     <meta name="description" content="Canal direto de opiniões e suporte do JurisHome">
     <title>Feedback e Suporte | JurisHome</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/homeAdmin.css">
-    <link rel="stylesheet" href="/static/css/feedbacks.css">
+    <link rel="stylesheet" href="/static/css/homeAdmin.css?v=20260913">
+    <link rel="stylesheet" href="/static/css/feedbacks.css?v=20260913-2">
 </head>
 <body class="feedback-shell">
     <a class="feedback-skip-link" href="#conteudo-principal">Ir para o conteúdo</a>
@@ -17,18 +17,20 @@
 
         <nav class="nav-menu" aria-label="Navegação principal">
             <a href="/static/pages/home-usuario.html" class="nav-link"><i class="fa-solid fa-house" aria-hidden="true"></i> Início</a>
-            <a href="/static/pages/feedback-suporte.html" class="nav-link active" aria-current="page"><i class="fa-solid fa-headset" aria-hidden="true"></i> Feedback e Suporte</a>
+            <a href="/static/pages/feedback-suporte.html?v=20260913-3" class="nav-link active" aria-current="page"><i class="fa-solid fa-headset" aria-hidden="true"></i> Feedback e Suporte</a>
             <a href="#" class="nav-link"><i class="fa-solid fa-user-group" aria-hidden="true"></i> Sobre nós</a>
             <a href="#" class="nav-link"><i class="fa-solid fa-newspaper" aria-hidden="true"></i> Categoria</a>
             <a href="#" class="nav-link"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Pesquisa</a>
         </nav>
 
         <div class="nav-perfil">
-            <button class="avatar-icon feedback-avatar-button" id="btn-perfil" type="button" aria-label="Abrir menu do perfil" aria-expanded="false" aria-controls="dropdown-perfil">
+            <button class="avatar-icon feedback-avatar-button" id="btn-perfil" type="button" aria-label="Abrir configurações do usuário" aria-expanded="false" aria-controls="dropdown-perfil">
                 <i class="fa-solid fa-user" aria-hidden="true"></i>
             </button>
-            <div class="menu-perfil-dropdown" id="dropdown-perfil">
-                <a href="/" class="dropdown-item btn-desconectar">Desconectar <i class="fa-solid fa-power-off" aria-hidden="true"></i></a>
+            <div class="menu-perfil-dropdown" id="dropdown-perfil" aria-label="Configurações do usuário">
+                <a href="/configuracoes-usuario" class="dropdown-item">Configurações <i class="fa-solid fa-gear" aria-hidden="true"></i></a>
+                <a href="#" class="dropdown-item">Perfil <i class="fa-solid fa-user" aria-hidden="true"></i></a>
+                <a href="/" class="dropdown-item btn-desconectar">Sair <i class="fa-solid fa-power-off" aria-hidden="true"></i></a>
             </div>
         </div>
     </header>
@@ -115,7 +117,7 @@
 
     <div class="feedback-toast" id="feedback-user-toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="/static/js/feedbackMockService.js"></script>
-    <script src="/static/js/feedbackUsuario.js"></script>
+    <script src="/static/js/feedbackMockService.js?v=20260913-3"></script>
+    <script src="/static/js/feedbackUsuario.js?v=20260913-3"></script>
 </body>
 </html>

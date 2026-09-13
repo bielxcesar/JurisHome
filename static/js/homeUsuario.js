@@ -7,6 +7,7 @@
         aplicarTema();
         mostrarData();
         configurarPerfil();
+        configurarMenuJuris();
         carregarMaterias();
     }
 
@@ -26,6 +27,7 @@
             evento.stopPropagation();
             const aberto = menu.classList.toggle("ativo");
             botao.setAttribute("aria-expanded", String(aberto));
+            if (aberto) fecharMenuFeedback();
         });
 
         document.addEventListener("click", (evento) => {
@@ -39,6 +41,60 @@
             menu.classList.remove("ativo");
             botao.setAttribute("aria-expanded", "false");
         }
+
+        function fecharMenuFeedback() {
+            const containerFeedback = document.getElementById("juris-fab");
+            const menuFeedback = document.getElementById("juris-fab-menu");
+            const botaoFeedback = document.getElementById("juris-fab-toggle");
+            if (!containerFeedback || !menuFeedback || !botaoFeedback) return;
+
+            menuFeedback.hidden = true;
+            containerFeedback.classList.remove("aberto");
+            botaoFeedback.setAttribute("aria-expanded", "false");
+            botaoFeedback.setAttribute("aria-label", "Abrir acesso ao feedback");
+        }
+    }
+
+    function configurarMenuJuris() {
+        const container = document.getElementById("juris-fab");
+        const botao = document.getElementById("juris-fab-toggle");
+        const menu = document.getElementById("juris-fab-menu");
+        if (!container || !botao || !menu) return;
+
+        function definirAberto(aberto, devolverFoco = false) {
+            menu.hidden = !aberto;
+            container.classList.toggle("aberto", aberto);
+            botao.setAttribute("aria-expanded", String(aberto));
+            botao.setAttribute("aria-label", aberto ? "Fechar acesso ao feedback" : "Abrir acesso ao feedback");
+
+            if (aberto) {
+                menu.querySelector("a, button")?.focus();
+            } else if (devolverFoco) {
+                botao.focus();
+            }
+        }
+
+        botao.addEventListener("click", (evento) => {
+            evento.stopPropagation();
+            const abrir = menu.hidden;
+            if (abrir) {
+                document.getElementById("dropdown-perfil")?.classList.remove("ativo");
+                document.getElementById("btn-perfil")?.setAttribute("aria-expanded", "false");
+            }
+            definirAberto(abrir);
+        });
+
+        menu.addEventListener("click", (evento) => {
+            if (evento.target.closest("a")) definirAberto(false);
+        });
+
+        document.addEventListener("click", (evento) => {
+            if (!menu.hidden && !container.contains(evento.target)) definirAberto(false);
+        });
+
+        document.addEventListener("keydown", (evento) => {
+            if (evento.key === "Escape" && !menu.hidden) definirAberto(false, true);
+        });
     }
 
     async function carregarMaterias() {

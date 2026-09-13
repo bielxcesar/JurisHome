@@ -95,36 +95,49 @@ a busca.
 ### Passo a Passo
 
 **Clone o repositório:**
-   ```bash
-   git clone [https://github.com/bielxcesar/JurisHome.git](https://github.com/bielxcesar/JurisHome.git)
-   cd JurisHome
-````
-Crie e ative o ambiente virtual:
-  # No Windows:
-  ```bash
+```bash
+git clone https://github.com/bielxcesar/JurisHome.git
+cd JurisHome
+```
+
+**Crie e ative o ambiente virtual no Windows:**
+```powershell
 python -m venv venv
 .\venv\Scripts\Activate.ps1
-````
-# No Linux/macOS:
+```
+
+**No Linux ou macOS:**
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-````
-Instale as dependências:
-```bash
-$env:JurisHome_senha="sua_senha_secreta_aqui"
-pip install -r requirements.txt
-````
-Configure o arquivo de variáveis (.env):
-Crie um arquivo chamado .env na raiz do projeto com o seguinte conteúdo:
-   ```bash
-    DATABASE_URL=postgresql://usuario:senha@localhost:5432/jurishome
-    SECRET_KEY=sua_chave_secreta_jwt
-    CLOUDINARY_URL=sua_url_cloudinary
 ```
-Inicie o servidor local:
- ```bash
-uvicorn main:app --reload
+
+**Instale as dependências:**
+```bash
+pip install -r requirements.txt
+```
+
+**Configure o ambiente local:**
+
+Crie um arquivo `.env` na raiz do projeto. `JurisHome_senha` é obrigatória;
+sem `DATABASE_URL`, a aplicação usa automaticamente o SQLite local.
+
+```dotenv
+JurisHome_senha=troque-por-uma-chave-local-segura
+# DATABASE_URL=postgresql://usuario:senha@localhost:5432/jurishome
+# CLOUDINARY_URL=sua_url_cloudinary
+```
+
+**Carregue as matérias e categorias de demonstração:**
+```bash
+python seed.py
+```
+
+O seed pode ser executado novamente sem duplicar os três conteúdos demonstrativos.
+
+**Inicie o servidor local:**
+```bash
+python -m uvicorn main:app --reload
 ```
 
 ---

@@ -11,13 +11,13 @@
 <body>
     <a class="pular-conteudo" href="#conteudo">Pular para o conteúdo</a>
     <header class="cabecalho">
-        <a class="marca" href="/home_admin" aria-label="JurisHome — página inicial">
+        <a class="marca" href="{{ url_inicio }}" aria-label="JurisHome — página inicial">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 5v15M3 4.5c3-1 6-.5 9 1.5 3-2 6-2.5 9-1.5V19c-3-1-6-.5-9 1.5-3-2-6-2.5-9-1.5z"/></svg>
             Juris<span>Home</span>
         </a>
         <nav class="navegacao" aria-label="Navegação principal">
-            <a href="/home_admin">Início</a>
-            <a href="/glossario" aria-current="page">Glossário</a>
+            <a href="{{ url_inicio }}">Início</a>
+            <a href="{{ url_glossario }}" aria-current="page">Glossário</a>
         </nav>
         <button class="botao-tema" type="button" id="alternar-tema" hidden>Modo claro</button>
     </header>
@@ -37,6 +37,7 @@
 
         <section class="ferramentas" aria-label="Consultar o glossário">
             <form action="/glossario" method="get" role="search">
+                {% if origem %}<input type="hidden" name="origem" value="{{ origem }}">{% endif %}
                 <label for="busca-termo">Qual termo você quer entender?</label>
                 <div class="linha-busca">
                     <div class="campo-busca">
@@ -67,7 +68,7 @@
                     <h2 id="titulo-resultados">{% if q or letra %}Resultado da consulta{% else %}Explore os termos{% endif %}</h2>
                     <p class="contador">{{ total }} {% if total == 1 %}termo encontrado{% else %}termos encontrados{% endif %}{% if q %} para “{{ q }}”{% endif %}{% if letra %} · Letra {{ letra }}{% endif %}</p>
                 </div>
-                {% if q or letra %}<a class="limpar" href="/glossario">Limpar filtros <span aria-hidden="true">×</span></a>{% else %}<span class="ordem">A → Z</span>{% endif %}
+                {% if q or letra %}<a class="limpar" href="{{ url_limpar }}">Limpar filtros <span aria-hidden="true">×</span></a>{% else %}<span class="ordem">A → Z</span>{% endif %}
             </div>
 
             {% if itens %}
@@ -93,7 +94,7 @@
                 <span class="simbolo-vazio" aria-hidden="true">Aa</span>
                 <h3>Nenhum termo por aqui.</h3>
                 <p>Tente uma palavra mais curta ou remova o filtro de letra para ampliar a busca.</p>
-                <a class="botao-buscar" href="/glossario">Ver todos os termos <span aria-hidden="true">→</span></a>
+                <a class="botao-buscar" href="{{ url_limpar }}">Ver todos os termos <span aria-hidden="true">→</span></a>
             </div>
             {% endif %}
         </section>

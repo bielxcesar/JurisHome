@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Painel administrativo de feedbacks e reclamações do JurisHome">
-    <title>Feedbacks e reclamações | JurisHome</title>
+    <meta name="description" content="Painel administrativo de feedbacks do JurisHome">
+    <title>Feedbacks recebidos | JurisHome</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/homeAdmin.css">
-    <link rel="stylesheet" href="/static/css/feedbacks.css">
+    <link rel="stylesheet" href="/static/css/homeAdmin.css?v=20260913">
+    <link rel="stylesheet" href="/static/css/feedbacks.css?v=20260913-3">
 </head>
-<body class="feedback-shell feedback-admin-shell">
+<body class="feedback-shell feedback-admin-shell feedback-admin-simple">
     <a class="feedback-skip-link" href="#conteudo-principal">Ir para o conteúdo</a>
 
     <header class="navbar feedback-navbar">
@@ -17,14 +17,14 @@
 
         <nav class="nav-menu" aria-label="Navegação administrativa">
             <a href="/home_admin" class="nav-link"><i class="fa-solid fa-house" aria-hidden="true"></i> Painel</a>
-            <a href="/static/pages/admin-feedbacks.html" class="nav-link active" aria-current="page"><i class="fa-solid fa-inbox" aria-hidden="true"></i> Feedbacks e reclamações</a>
+            <a href="/static/pages/admin-feedbacks.html?v=20260913-3" class="nav-link active" aria-current="page"><i class="fa-solid fa-inbox" aria-hidden="true"></i> Feedbacks</a>
             <a href="#" class="nav-link"><i class="fa-solid fa-square-plus" aria-hidden="true"></i> Adicionar matéria</a>
-            <a href="#" class="nav-link"><i class="fa-solid fa-newspaper" aria-hidden="true"></i> Categorias</a>
-            <a href="#" class="nav-link"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Pesquisa</a>
+            <a href="/home_admin#categorias" class="nav-link"><i class="fa-solid fa-newspaper" aria-hidden="true"></i> Categorias</a>
+            <a href="/home_admin#pesquisa-home" class="nav-link"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Pesquisa</a>
         </nav>
 
         <div class="nav-perfil">
-            <button class="avatar-icon feedback-avatar-button" id="btn-perfil" type="button" aria-label="Abrir menu do administrador" aria-expanded="false" aria-controls="dropdown-perfil">
+            <button class="avatar-icon feedback-avatar-button" id="btn-perfil" type="button" aria-label="Abrir configurações do administrador" aria-expanded="false" aria-controls="dropdown-perfil">
                 <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
             </button>
             <div class="menu-perfil-dropdown" id="dropdown-perfil">
@@ -38,43 +38,29 @@
         <header class="feedback-page-heading feedback-admin-heading">
             <div>
                 <span class="feedback-eyebrow"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Painel administrativo</span>
-                <h1>Feedbacks e reclamações</h1>
-                <p>Veja e responda aos feedbacks recebidos.</p>
-            </div>
-            <div class="feedback-admin-health" aria-label="Situação do atendimento">
-                <span class="feedback-health-dot" aria-hidden="true"></span>
-                <span><strong>Atendimento</strong><small>Online</small></span>
+                <h1>Feedbacks recebidos</h1>
+                <p>Veja as mensagens enviadas pelos usuários e responda pelo JurisHome.</p>
             </div>
         </header>
 
-        <section class="feedback-summary-grid" aria-label="Resumo de feedbacks">
+        <section class="feedback-summary-grid" aria-label="Resumo dos feedbacks">
             <article class="feedback-summary-card feedback-summary-total">
                 <span class="feedback-summary-icon"><i class="fa-regular fa-comments" aria-hidden="true"></i></span>
-                <div><span>Total de feedbacks</span><strong id="summary-total">0</strong><small>recebidos no total</small></div>
+                <div><span>Total</span><strong id="summary-total">0</strong><small>feedbacks recebidos</small></div>
             </article>
             <article class="feedback-summary-card">
                 <span class="feedback-summary-icon status-recebido"><i class="fa-solid fa-inbox" aria-hidden="true"></i></span>
-                <div><span>Recebidos</span><strong id="summary-recebido">0</strong><small>aguardando triagem</small></div>
-            </article>
-            <article class="feedback-summary-card">
-                <span class="feedback-summary-icon status-em-analise"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span>
-                <div><span>Em análise</span><strong id="summary-em-analise">0</strong><small>em andamento</small></div>
+                <div><span>Pendentes</span><strong id="summary-pendente">0</strong><small>aguardando atendimento</small></div>
             </article>
             <article class="feedback-summary-card">
                 <span class="feedback-summary-icon status-respondido"><i class="fa-regular fa-comment-dots" aria-hidden="true"></i></span>
-                <div><span>Respondidos</span><strong id="summary-respondido">0</strong><small>com resposta</small></div>
-            </article>
-            <article class="feedback-summary-card">
-                <span class="feedback-summary-icon status-resolvido"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
-                <div><span>Resolvidos</span><strong id="summary-resolvido">0</strong><small>casos concluídos</small></div>
+                <div><span>Respondidos</span><strong id="summary-respondido">0</strong><small>com resposta enviada</small></div>
             </article>
         </section>
 
         <section class="feedback-panel feedback-admin-list-panel" aria-labelledby="admin-list-title">
             <div class="feedback-admin-list-heading">
-                <div>
-                    <h2 id="admin-list-title">Feedbacks recebidos</h2>
-                </div>
+                <h2 id="admin-list-title">Mensagens dos usuários</h2>
                 <span class="feedback-count-badge" id="admin-result-count" aria-live="polite">0 registros</span>
             </div>
 
@@ -83,40 +69,24 @@
                     <label for="admin-search">Pesquisar</label>
                     <div class="feedback-search-control">
                         <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-                        <input id="admin-search" type="search" placeholder="Protocolo, nome, e-mail ou assunto">
+                        <input id="admin-search" type="search" placeholder="Protocolo, e-mail ou assunto">
                     </div>
-                </div>
-                <div class="feedback-filter-field">
-                    <label for="admin-type-filter">Tipo</label>
-                    <select id="admin-type-filter"><option value="">Todos os tipos</option></select>
                 </div>
                 <div class="feedback-filter-field">
                     <label for="admin-status-filter">Status</label>
                     <select id="admin-status-filter"><option value="">Todos os status</option></select>
                 </div>
-                <div class="feedback-filter-field">
-                    <label for="admin-priority-filter">Prioridade</label>
-                    <select id="admin-priority-filter"><option value="">Todas as prioridades</option></select>
-                </div>
-                <div class="feedback-filter-field">
-                    <label for="admin-order">Ordenar</label>
-                    <select id="admin-order">
-                        <option value="desc">Mais recentes</option>
-                        <option value="asc">Mais antigos</option>
-                    </select>
-                </div>
-                <button class="feedback-secondary-button feedback-clear-button" id="admin-clear-filters" type="button"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Limpar filtros</button>
+                <button class="feedback-secondary-button feedback-clear-button" id="admin-clear-filters" type="button"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Limpar</button>
             </form>
 
-            <div class="feedback-table-wrap" tabindex="0" aria-label="Tabela de feedbacks; deslize horizontalmente se necessário">
+            <div class="feedback-table-wrap" tabindex="0" aria-label="Tabela de feedbacks">
                 <table class="feedback-admin-table">
                     <thead>
                         <tr>
                             <th scope="col">Protocolo</th>
                             <th scope="col">Usuário</th>
-                            <th scope="col">Tipo e assunto</th>
+                            <th scope="col">Assunto</th>
                             <th scope="col">Status</th>
-                            <th scope="col">Prioridade</th>
                             <th scope="col">Data</th>
                             <th scope="col"><span class="feedback-sr-only">Ações</span></th>
                         </tr>
@@ -129,8 +99,8 @@
             <div class="feedback-empty" id="admin-feedback-empty" hidden>
                 <span class="feedback-empty-icon"><i class="fa-solid fa-filter-circle-xmark" aria-hidden="true"></i></span>
                 <h3>Nenhum feedback encontrado</h3>
-                <p>Tente outra busca ou limpe os filtros.</p>
-                <button class="feedback-secondary-button" id="admin-empty-clear" type="button">Limpar filtros</button>
+                <p>Tente outra busca ou limpe o filtro.</p>
+                <button class="feedback-secondary-button" id="admin-empty-clear" type="button">Limpar filtro</button>
             </div>
         </section>
     </main>
@@ -150,84 +120,52 @@
 
             <div class="feedback-dialog-body feedback-admin-dialog-body">
                 <section class="feedback-requester-card" aria-label="Dados do usuário">
-                    <span class="feedback-requester-avatar" id="feedback-admin-avatar" aria-hidden="true">GB</span>
-                    <div><strong id="feedback-admin-user-name"></strong><a id="feedback-admin-user-email" href="#"></a></div>
+                    <span class="feedback-requester-avatar" id="feedback-admin-avatar" aria-hidden="true">@</span>
+                    <div><a id="feedback-admin-user-email" href="#"></a></div>
                     <span id="feedback-admin-created-date"></span>
                 </section>
 
-                <div class="feedback-admin-detail-layout">
-                    <div class="feedback-admin-detail-main">
-                        <dl class="feedback-detail-grid">
-                            <div><dt>Tipo</dt><dd id="feedback-admin-type"></dd></div>
-                            <div><dt>Avaliação</dt><dd id="feedback-admin-rating"></dd></div>
-                            <div class="feedback-detail-wide"><dt>Assunto</dt><dd id="feedback-admin-subject"></dd></div>
-                            <div class="feedback-detail-wide"><dt>Mensagem do usuário</dt><dd id="feedback-admin-message"></dd></div>
-                        </dl>
+                <dl class="feedback-detail-grid feedback-simple-detail-grid">
+                    <div><dt>Motivo</dt><dd id="feedback-admin-type"></dd></div>
+                    <div><dt>Avaliação</dt><dd id="feedback-admin-rating"></dd></div>
+                    <div class="feedback-detail-wide"><dt>Assunto</dt><dd id="feedback-admin-subject"></dd></div>
+                    <div class="feedback-detail-wide"><dt>Mensagem do usuário</dt><dd id="feedback-admin-message"></dd></div>
+                </dl>
 
-                        <section class="feedback-admin-compose" aria-labelledby="admin-response-title">
-                            <div class="feedback-compose-heading">
-                                <span class="feedback-section-icon"><i class="fa-regular fa-paper-plane" aria-hidden="true"></i></span>
-                                <div><h3 id="admin-response-title">Responder ao usuário</h3><p>O usuário verá esta resposta.</p></div>
-                            </div>
-                            <label for="feedback-admin-response">Resposta</label>
-                            <textarea id="feedback-admin-response" rows="4" maxlength="2000" placeholder="Digite sua resposta" aria-describedby="feedback-admin-response-error"></textarea>
-                            <p class="feedback-field-error" id="feedback-admin-response-error"></p>
-                            <button class="feedback-primary-button" id="feedback-admin-send-response" type="button">
-                                <span class="feedback-button-spinner" aria-hidden="true"></span>
-                                <i class="fa-regular fa-paper-plane" aria-hidden="true"></i>
-                                <span class="feedback-button-text">Enviar resposta</span>
-                            </button>
-                        </section>
-
-                        <section class="feedback-admin-compose feedback-internal-compose" aria-labelledby="admin-note-title">
-                            <div class="feedback-compose-heading">
-                                <span class="feedback-section-icon"><i class="fa-solid fa-lock" aria-hidden="true"></i></span>
-                                <div><h3 id="admin-note-title">Observação interna</h3><p>Só a equipe verá esta observação.</p></div>
-                            </div>
-                            <label for="feedback-admin-note">Observação</label>
-                            <textarea id="feedback-admin-note" rows="3" maxlength="1000" placeholder="Adicione uma nota para a equipe" aria-describedby="feedback-admin-note-error"></textarea>
-                            <p class="feedback-field-error" id="feedback-admin-note-error"></p>
-                            <button class="feedback-secondary-button" id="feedback-admin-add-note" type="button"><i class="fa-solid fa-plus" aria-hidden="true"></i> Adicionar observação</button>
-                        </section>
+                <section class="feedback-simple-service" aria-labelledby="feedback-service-title">
+                    <div>
+                        <label id="feedback-service-title" for="feedback-admin-status">Status do atendimento</label>
+                        <select id="feedback-admin-status"></select>
                     </div>
+                    <small>Última atualização: <strong id="feedback-admin-updated-date"></strong></small>
+                </section>
 
-                    <aside class="feedback-admin-detail-aside" aria-label="Ações do feedback">
-                        <section class="feedback-management-card">
-                            <h3>Atendimento</h3>
-                            <div class="feedback-field">
-                                <label for="feedback-admin-status">Status</label>
-                                <select id="feedback-admin-status"></select>
-                            </div>
-                            <div class="feedback-field">
-                                <label for="feedback-admin-priority">Prioridade</label>
-                                <select id="feedback-admin-priority"></select>
-                            </div>
-                            <div class="feedback-management-updated"><span>Última atualização</span><strong id="feedback-admin-updated-date"></strong></div>
-                        </section>
+                <section class="feedback-simple-responses" aria-labelledby="feedback-responses-title">
+                    <h3 id="feedback-responses-title">Respostas enviadas</h3>
+                    <div id="feedback-admin-responses"></div>
+                </section>
 
-                        <section class="feedback-timeline-section feedback-admin-timeline-section">
-                            <h3>Histórico</h3>
-                            <ol class="feedback-timeline" id="feedback-admin-timeline"></ol>
-                        </section>
-
-                        <button class="feedback-danger-button" id="feedback-admin-archive" type="button"><i class="fa-regular fa-folder-closed" aria-hidden="true"></i> Arquivar registro</button>
-                        <div class="feedback-archive-confirm" id="feedback-archive-confirm" role="alertdialog" aria-labelledby="feedback-archive-title" aria-describedby="feedback-archive-description" hidden>
-                            <strong id="feedback-archive-title">Arquivar este registro?</strong>
-                            <p id="feedback-archive-description">Este feedback ficará arquivado.</p>
-                            <div>
-                                <button class="feedback-secondary-button" id="feedback-archive-cancel" type="button">Cancelar</button>
-                                <button class="feedback-danger-button" id="feedback-archive-confirm-button" type="button">Sim, arquivar</button>
-                            </div>
-                        </div>
-                    </aside>
-                </div>
+                <section class="feedback-admin-compose" aria-labelledby="admin-response-title">
+                    <div class="feedback-compose-heading">
+                        <span class="feedback-section-icon"><i class="fa-regular fa-paper-plane" aria-hidden="true"></i></span>
+                        <div><h3 id="admin-response-title">Responder ao usuário</h3><p>A resposta ficará registrada neste atendimento.</p></div>
+                    </div>
+                    <label for="feedback-admin-response">Resposta</label>
+                    <textarea id="feedback-admin-response" rows="4" maxlength="2000" placeholder="Digite sua resposta" aria-describedby="feedback-admin-response-error"></textarea>
+                    <p class="feedback-field-error" id="feedback-admin-response-error"></p>
+                    <button class="feedback-primary-button" id="feedback-admin-send-response" type="button">
+                        <span class="feedback-button-spinner" aria-hidden="true"></span>
+                        <i class="fa-regular fa-paper-plane" aria-hidden="true"></i>
+                        <span class="feedback-button-text">Enviar resposta</span>
+                    </button>
+                </section>
             </div>
         </div>
     </dialog>
 
     <div class="feedback-toast" id="feedback-admin-toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="/static/js/feedbackMockService.js"></script>
-    <script src="/static/js/feedbackAdmin.js"></script>
+    <script src="/static/js/feedbackMockService.js?v=20260913-3"></script>
+    <script src="/static/js/feedbackAdmin.js?v=20260913-7"></script>
 </body>
 </html>

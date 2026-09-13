@@ -6,7 +6,7 @@
     <meta name="description" content="Página inicial do usuário JurisHome">
     <title>Início | JurisHome</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/homeAdmin.css">
+    <link rel="stylesheet" href="/static/css/homeAdmin.css?v=20260913">
 </head>
 <body>
     <header class="navbar">
@@ -15,19 +15,19 @@
         <nav class="nav-menu" aria-label="Navegação do usuário">
             <a href="/static/pages/home-usuario.html" class="nav-link active" aria-current="page"><i class="fa-solid fa-house" aria-hidden="true"></i> Início</a>
             <a href="#mais-conteudos" class="nav-link"><i class="fa-solid fa-square-plus" aria-hidden="true"></i> Exibir mais</a>
-            <a href="/static/pages/feedback-suporte.html" class="nav-link"><i class="fa-solid fa-headset" aria-hidden="true"></i> Feedback e suporte</a>
             <a href="#" class="nav-link"><i class="fa-solid fa-user-group" aria-hidden="true"></i> Sobre nós</a>
-            <a href="#" class="nav-link"><i class="fa-solid fa-newspaper" aria-hidden="true"></i> Categorias</a>
+            <a href="#categorias" class="nav-link"><i class="fa-solid fa-newspaper" aria-hidden="true"></i> Categorias</a>
             <a href="#" class="nav-link"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Pesquisa</a>
+            <a href="/glossario?origem=usuario" class="nav-link"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Glossário</a>
         </nav>
 
         <div class="nav-perfil">
-            <button class="avatar-icon" id="btn-perfil" type="button" aria-label="Abrir menu do perfil" aria-expanded="false" aria-controls="dropdown-perfil">
+            <button class="avatar-icon" id="btn-perfil" type="button" aria-label="Abrir configurações do usuário" aria-expanded="false" aria-controls="dropdown-perfil">
                 <i class="fa-solid fa-user" aria-hidden="true"></i>
             </button>
-            <div class="menu-perfil-dropdown" id="dropdown-perfil">
+            <div class="menu-perfil-dropdown" id="dropdown-perfil" aria-label="Configurações do usuário">
+                <a href="/configuracoes-usuario" class="dropdown-item">Configurações <i class="fa-solid fa-gear" aria-hidden="true"></i></a>
                 <a href="#" class="dropdown-item">Perfil <i class="fa-solid fa-user" aria-hidden="true"></i></a>
-                <a href="/static/pages/feedback-suporte.html" class="dropdown-item">Feedback e suporte <i class="fa-solid fa-headset" aria-hidden="true"></i></a>
                 <a href="/" class="dropdown-item btn-desconectar">Sair <i class="fa-solid fa-power-off" aria-hidden="true"></i></a>
             </div>
         </div>
@@ -35,7 +35,7 @@
 
     <main class="container" id="conteudo-principal">
         <h1 class="home-user-sr-only">Página inicial do JurisHome</h1>
-        <section class="hero-grid" aria-label="Matérias em destaque">
+        <section class="hero-grid" id="categorias" aria-label="Matérias em destaque por categoria">
             <article class="card-hero-principal" id="card-destaque-principal" tabindex="0">
                 <div class="card-header-info">
                     <span class="categoria-tag" id="hero-cat-1">Carregando...</span>
@@ -68,6 +68,19 @@
         </section>
     </main>
 
-    <script src="/static/js/homeUsuario.js"></script>
+    <div class="juris-fab" id="juris-fab">
+        <nav class="juris-fab-menu" id="juris-fab-menu" aria-label="Acesso rápido ao feedback" hidden>
+            <a class="juris-fab-action juris-fab-feedback" href="/configuracoes-usuario#feedback">
+                <i class="fa-solid fa-headset" aria-hidden="true"></i>
+                <span>Feedback e suporte</span>
+            </a>
+        </nav>
+
+        <button class="fab-btn" id="juris-fab-toggle" type="button" aria-label="Abrir acesso ao feedback" aria-expanded="false" aria-controls="juris-fab-menu">
+            <span class="juris-fab-letter" aria-hidden="true">J</span>
+        </button>
+    </div>
+
+    <script src="/static/js/homeUsuario.js?v=20260913-3"></script>
 </body>
 </html>

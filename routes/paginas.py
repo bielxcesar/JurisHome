@@ -40,6 +40,24 @@ def pagina_2fatores(request: Request):
         request=request,
         name="2fatores.html"
     )
+
+
+@router.get("/configuracoes-usuario", response_class=HTMLResponse)
+def pagina_configuracoes_usuario(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="confAdm.html",
+        context={
+            "titulo_configuracao": "Configurações do usuário",
+            "destino_voltar": "/static/pages/home-usuario.html",
+            "destino_feedback": "/static/pages/feedback-suporte.html?v=20260913-3",
+            "rotulo_feedback": "Feedback e suporte",
+            "rotulo_sair": "Sair",
+            "feedback_interno": True,
+        },
+    )
+
+
 @router.get("/materia/{conteudo_id}")
 def pagina_materia(conteudo_id: str, request: Request, db: Session = Depends(get_db)):
     # CORREÇÃO: Trocar Conteudo.id por Conteudo.uuid

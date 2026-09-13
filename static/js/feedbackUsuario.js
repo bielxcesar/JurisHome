@@ -152,7 +152,7 @@
 
         try {
             await service.aguardar(750);
-            const criado = service.criar({
+            const criado = await service.criar({
                 tipo: document.getElementById("feedback-tipo").value,
                 assunto: document.getElementById("feedback-assunto").value,
                 mensagem: document.getElementById("feedback-mensagem").value,
@@ -167,7 +167,7 @@
             sucesso.hidden = false;
             sucesso.scrollIntoView({ behavior: "smooth", block: "nearest" });
         } catch (erro) {
-            erroGeral.textContent = "Não foi possível enviar agora. Tente de novo.";
+            erroGeral.textContent = erro.message || "Não foi possível enviar agora. Tente de novo.";
             erroGeral.hidden = false;
         } finally {
             botao.disabled = false;

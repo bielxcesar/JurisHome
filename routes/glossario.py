@@ -22,12 +22,25 @@ def listar_glossario(q: Busca = "", letra: Letra = ""):
 
 
 @router.get("/glossario", response_class=HTMLResponse)
-def pagina_glossario(request: Request, q: Busca = "", letra: Letra = ""):
+def pagina_glossario(
+    request: Request,
+    q: Busca = "",
+    letra: Letra = "",
+    origem: str = Query(default="", max_length=10, pattern=r"^(usuario)?$"),
+):
     resultado = consultar_glossario(q, letra)
+    origem_usuario = origem == "usuario"
+
+    def url_glossario(**parametros: str) -> str:
+        if origem_usuario:
+            parametros["origem"] = "usuario"
+        consulta = urlencode(parametros)
+        return "/glossario" + (f"?{consulta}" if consulta else "")
+
     links_letras = [
         {
             "letra": inicial,
-            "url": "/glossario?" + urlencode({"q": resultado["q"], "letra": inicial}),
+            "url": url_glossario(q=resultado["q"], letra=inicial),
             "disponivel": inicial in resultado["letras_disponiveis"],
         }
         for inicial in ascii_uppercase
@@ -38,6 +51,10 @@ def pagina_glossario(request: Request, q: Busca = "", letra: Letra = ""):
         context={
             **resultado,
             "links_letras": links_letras,
-            "url_todas": "/glossario?" + urlencode({"q": resultado["q"]}),
+            "url_todas": url_glossario(q=resultado["q"]),
+            "url_glossario": url_glossario(),
+            "url_limpar": url_glossario(),
+            "url_inicio": "/static/pages/home-usuario.html" if origem_usuario else "/home_admin",
+            "origem": "usuario" if origem_usuario else "",
         },
     )

@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JurisHome</title>
+    <meta name="description" content="Painel inicial do JurisHome com matérias organizadas por categoria">
+    <title>Início | JurisHome</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/homeAdmin.css">
+    <link rel="stylesheet" href="/static/css/homeAdmin.css?v=20260913">
 </head>
 <body>
 
@@ -14,34 +15,61 @@
         <div class="nav-data" id="data-atual">--/--/----</div>
         
         <nav class="nav-menu">
-            <a href="/home_Admin.html" class="nav-link active"><i class="fa-solid fa-house"></i> Home</a>
+            <a href="/home_admin" class="nav-link active" aria-current="page"><i class="fa-solid fa-house" aria-hidden="true"></i> Home</a>
             <a href="#mais-conteudos" class="nav-link"><i class="fa-solid fa-square-plus"></i> Exibir mais</a>
-            <a href="/static/pages/admin-feedbacks.html" class="nav-link"><i class="fa-solid fa-inbox"></i> Feedbacks e reclamações</a>
+            <a href="/static/pages/admin-feedbacks.html?v=20260913-3" class="nav-link"><i class="fa-solid fa-inbox"></i> Feedbacks</a>
             <a href="#" class="nav-link"><i class="fa-solid fa-user-group"></i> Sobre nós</a>
-            <a href="#" class="nav-link"><i class="fa-solid fa-newspaper"></i> Categoria</a>
-            <a href="#" class="nav-link"><i class="fa-solid fa-magnifying-glass"></i> Pesquisa</a>
+            <a href="#categorias" class="nav-link"><i class="fa-solid fa-newspaper"></i> Categorias</a>
+            <a href="#pesquisa-home" class="nav-link"><i class="fa-solid fa-magnifying-glass"></i> Pesquisa</a>
             <a href="/glossario" class="nav-link"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Glossário</a>
         </nav>
 
         <div class="nav-perfil">
-    <div class="avatar-icon" id="btn-perfil">
+    <button class="avatar-icon" id="btn-perfil" type="button" aria-label="Abrir configurações do administrador" aria-expanded="false" aria-controls="dropdown-perfil">
         <i class="fa-solid fa-user-group"></i>
-    </div>
+    </button>
 
     <div class="menu-perfil-dropdown" id="dropdown-perfil">
         <a href="/configuracao" class="dropdown-item">Configuração <i class="fa-solid fa-gear"></i></a>
-        <a href="/static/pages/admin-feedbacks.html" class="dropdown-item">Feedbacks <i class="fa-solid fa-inbox"></i></a>
+        <a href="/static/pages/admin-feedbacks.html?v=20260913-3" class="dropdown-item">Feedbacks <i class="fa-solid fa-inbox"></i></a>
         <a href="#" class="dropdown-item">Perfil <i class="fa-solid fa-user"></i></a>
-        <a href="#" class="dropdown-item">Adicionar materia</a>
+        <a href="#mais-conteudos" class="dropdown-item">Ver matérias</a>
         <a href="/" class="dropdown-item btn-desconectar">Desconectar <i class="fa-solid fa-power-off"></i></a>
     </div>
 </div>
     </header>
 
-    <main class="container">
+    <main class="container" id="conteudo-principal">
+        <h1 class="home-user-sr-only">Conteúdos jurídicos do JurisHome</h1>
+
+        <section class="painel-acervo" id="categorias" aria-labelledby="titulo-acervo">
+            <div class="painel-acervo-cabecalho">
+                <div>
+                    <span class="painel-acervo-etiqueta">Acervo jurídico</span>
+                    <h2 id="titulo-acervo">Matérias por categoria</h2>
+                    <p>Pesquise e filtre os conteúdos aprovados disponíveis na plataforma.</p>
+                </div>
+
+                <form class="pesquisa-home" id="form-pesquisa-home" role="search">
+                    <label class="home-user-sr-only" for="pesquisa-home">Pesquisar matérias</label>
+                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                    <input id="pesquisa-home" name="q" type="search" maxlength="100" placeholder="Pesquisar matéria" autocomplete="off">
+                    <button type="submit">Pesquisar</button>
+                </form>
+            </div>
+
+            <div class="filtros-categoria">
+                <strong>Categorias:</strong>
+                <div class="lista-categorias" id="lista-categorias" aria-label="Filtrar matérias por categoria">
+                    <button class="categoria-filtro ativa" type="button" data-categoria="" aria-pressed="true">Todas</button>
+                </div>
+            </div>
+
+            <p class="status-conteudos" id="status-conteudos" role="status" aria-live="polite">Carregando matérias...</p>
+        </section>
         
-        <section class="hero-grid">
-            <article class="card-hero-principal" id="card-destaque-principal">
+        <section class="hero-grid" id="destaques-home" aria-label="Matérias em destaque">
+            <article class="card-hero-principal" id="card-destaque-principal" tabindex="0">
                 <div class="card-header-info">
                     <span class="categoria-tag" id="hero-cat-1">Carregando...</span>
                     <div class="indicadores-carrossel">
@@ -52,7 +80,7 @@
                     </div>
                 </div>
                 
-                <button class="btn-next-hero"><i class="fa-solid fa-arrow-right"></i></button>
+                <span class="btn-next-hero" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></span>
 
                 <div class="card-footer-info">
                     <h2 id="hero-titulo-1">...</h2>
@@ -62,13 +90,13 @@
                 </div>
             </article>
 
-            <div class="coluna-destaques-secundarios">
-                <article class="card-hero-secundario" id="card-destaque-2">
+            <div class="coluna-destaques-secundarios" id="coluna-destaques-secundarios">
+                <article class="card-hero-secundario" id="card-destaque-2" tabindex="0">
                     <span class="categoria-tag" id="hero-cat-2">...</span>
                     <h3 id="hero-titulo-2">...</h3>
                 </article>
 
-                <article class="card-hero-secundario" id="card-destaque-3">
+                <article class="card-hero-secundario" id="card-destaque-3" tabindex="0">
                     <span class="categoria-tag" id="hero-cat-3">...</span>
                     <h3 id="hero-titulo-3">...</h3>
                 </article>
@@ -83,10 +111,19 @@
 
     </main>
 
-    <button class="fab-btn" title="Adicionar">
-        <i class="fa-solid fa-plus"></i>
-    </button>
+    <div class="juris-fab" id="juris-fab">
+        <nav class="juris-fab-menu" id="juris-fab-menu" aria-label="Acesso rápido aos feedbacks recebidos" hidden>
+            <a class="juris-fab-action juris-fab-feedback" href="/static/pages/admin-feedbacks.html?v=20260913-3">
+                <i class="fa-solid fa-inbox" aria-hidden="true"></i>
+                <span>Feedbacks recebidos</span>
+            </a>
+        </nav>
 
-    <script src="/static/js/homeAdmin.js"></script>
+        <button class="fab-btn" id="juris-fab-toggle" type="button" aria-label="Abrir feedbacks recebidos" aria-expanded="false" aria-controls="juris-fab-menu">
+            <span class="juris-fab-letter" aria-hidden="true">J</span>
+        </button>
+    </div>
+
+    <script src="/static/js/homeAdmin.js?v=20260913-3"></script>
 </body>
 </html>

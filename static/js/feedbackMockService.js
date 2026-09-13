@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    // Substituir os dados locais pela API quando o backend estiver disponível.
-    const STORAGE_KEY = "jurishome_feedback_v5";
+    const STORAGE_KEY = "jurishome_feedback_v6";
+    const LEGACY_STORAGE_KEY = "jurishome_feedback_v5";
     const CURRENT_USER = Object.freeze({
         id: "usr-sessao",
         nome: "Usuário",
@@ -21,150 +21,120 @@
     const STATUS = Object.freeze(["Recebido", "Em análise", "Respondido", "Resolvido", "Arquivado"]);
     const PRIORIDADES = Object.freeze(["Baixa", "Normal", "Alta", "Urgente"]);
 
-    const DADOS_INICIAIS = [
-        {
-            id: "fb-001",
-            protocolo: "JH-20260911-1042",
-            usuario: {
-                id: "usr-erick",
-                nome: "Erick Santos",
-                email: "erick.santos@aluno.umc.br"
-            },
-            tipo: "Sugestão",
-            assunto: "Filtro por tribunal na pesquisa",
-            mensagem: "Podiam colocar filtros por tribunal e período na pesquisa? Isso ajudaria bastante.",
-            avaliacao: 5,
-            status: "Recebido",
-            prioridade: "Normal",
-            criadoEm: "2026-09-11T09:14:00-03:00",
-            atualizadoEm: "2026-09-11T09:14:00-03:00",
-            respostas: [],
-            observacoesInternas: [],
-            historico: [
-                {
-                    id: "hist-001",
-                    tipo: "criacao",
-                    autor: "Erick Santos",
-                    descricao: "Feedback enviado.",
-                    criadoEm: "2026-09-11T09:14:00-03:00",
-                    visibilidade: "publica"
-                }
-            ],
-            novo: true,
-            arquivado: false
-        },
-        {
-            id: "fb-002",
-            protocolo: "JH-20260909-0837",
-            usuario: {
-                id: "usr-pedro",
-                nome: "Pedro Henrique",
-                email: "pedro.henrique@aluno.umc.br"
-            },
-            tipo: "Dificuldade de acesso",
-            assunto: "Não consigo acessar pelo celular",
-            mensagem: "No celular, depois que digito o código de verificação, o sistema volta para a tela de login.",
-            avaliacao: null,
-            status: "Em análise",
-            prioridade: "Alta",
-            criadoEm: "2026-09-09T18:22:00-03:00",
-            atualizadoEm: "2026-09-10T08:37:00-03:00",
-            respostas: [],
-            observacoesInternas: [],
-            historico: [
-                {
-                    id: "hist-002-a",
-                    tipo: "criacao",
-                    autor: "Pedro Henrique",
-                    descricao: "Feedback enviado.",
-                    criadoEm: "2026-09-09T18:22:00-03:00",
-                    visibilidade: "publica"
-                },
-                {
-                    id: "hist-002-b",
-                    tipo: "status",
-                    autor: "Equipe JurisHome",
-                    descricao: "Estamos verificando o problema de acesso.",
-                    criadoEm: "2026-09-10T08:37:00-03:00",
-                    visibilidade: "publica"
-                }
-            ],
-            novo: false,
-            arquivado: false
-        }
-    ];
-
-    let memoria = copiar(DADOS_INICIAIS);
+    let memoria = lerCache();
 
     function copiar(valor) {
         return JSON.parse(JSON.stringify(valor));
     }
 
-    function ler() {
+    function lerCache() {
         try {
-            const salvo = window.sessionStorage.getItem(STORAGE_KEY);
-            if (salvo) return JSON.parse(salvo);
-            window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(memoria));
+            const atual = window.localStorage.getItem(STORAGE_KEY);
+            if (atual) return JSON.parse(atual);
+
+            const legado = window.localStorage.getItem(LEGACY_STORAGE_KEY)
+                || window.sessionStorage.getItem(LEGACY_STORAGE_KEY);
+            if (legado) {
+                const registros = JSON.parse(legado);
+                window.localStorage.setItem(STORAGE_KEY, JSON.stringify(registros));
+                return registros;
+            }
         } catch (erro) {
-            return copiar(memoria);
+            console.warn("Não foi possível ler o cache de feedbacks.", erro);
         }
-        return copiar(memoria);
+        return [];
     }
 
-    function salvar(registros) {
-        memoria = copiar(registros);
+    function salvarCache() {
         try {
-            window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(registros));
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(memoria));
         } catch (erro) {
-            return;
+            console.warn("Não foi possível atualizar o cache de feedbacks.", erro);
         }
     }
 
     function gerarId(prefixo) {
-        const identificador = window.crypto && window.crypto.randomUUID
+        const identificador = window.crypto?.randomUUID
             ? window.crypto.randomUUID()
             : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
         return `${prefixo}-${identificador}`;
     }
 
-    function gerarProtocolo(registros) {
+    function gerarProtocolo() {
         const agora = new Date();
         const data = [
             agora.getFullYear(),
             String(agora.getMonth() + 1).padStart(2, "0"),
             String(agora.getDate()).padStart(2, "0")
         ].join("");
-        let protocolo;
-
-        do {
-            protocolo = `JH-${data}-${String(Math.floor(1000 + Math.random() * 9000))}`;
-        } while (registros.some((item) => item.protocolo === protocolo));
-
-        return protocolo;
+        return `JH-${data}-${String(Math.floor(1000 + Math.random() * 9000))}`;
     }
 
-    function prepararParaUsuario(feedback) {
-        const registro = copiar(feedback);
-        delete registro.observacoesInternas;
-        registro.historico = registro.historico.filter((evento) => evento.visibilidade !== "interna");
-        return registro;
+    async function requisitar(url, opcoes = {}) {
+        let resposta;
+        try {
+            resposta = await window.fetch(url, {
+                ...opcoes,
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(opcoes.headers || {})
+                }
+            });
+        } catch (erro) {
+            erro.apiIndisponivel = true;
+            throw erro;
+        }
+
+        if (!resposta.ok) {
+            let mensagem = "Não foi possível concluir a operação.";
+            try {
+                const corpo = await resposta.json();
+                mensagem = typeof corpo.detail === "string" ? corpo.detail : mensagem;
+            } catch (erro) {
+                // Mantém a mensagem padrão quando a resposta não é JSON.
+            }
+            const erro = new Error(mensagem);
+            erro.apiRespondeu = true;
+            throw erro;
+        }
+        return resposta.json();
+    }
+
+    function atualizarMemoria(feedback) {
+        const indice = memoria.findIndex((item) => item.id === feedback.id);
+        if (indice >= 0) memoria[indice] = copiar(feedback);
+        else memoria.unshift(copiar(feedback));
+        salvarCache();
+        return copiar(feedback);
+    }
+
+    async function inicializar() {
+        try {
+            const registros = await requisitar("/api/admin/feedbacks");
+            memoria = Array.isArray(registros) ? registros : [];
+            salvarCache();
+            return listar();
+        } catch (erro) {
+            if (!erro.apiIndisponivel) throw erro;
+            memoria = lerCache();
+            return listar();
+        }
     }
 
     function listar() {
-        return copiar(ler());
+        return copiar(memoria);
     }
 
     function buscarPorId(id) {
-        const feedback = ler().find((item) => item.id === id);
+        const feedback = memoria.find((item) => item.id === id);
         return feedback ? copiar(feedback) : null;
     }
 
-    function criar(dados) {
-        const registros = ler();
+    function criarLocal(dados) {
         const agora = new Date().toISOString();
-        const feedback = {
+        return atualizarMemoria({
             id: gerarId("fb"),
-            protocolo: gerarProtocolo(registros),
+            protocolo: gerarProtocolo(),
             usuario: copiar(CURRENT_USER),
             tipo: dados.tipo,
             assunto: dados.assunto.trim(),
@@ -176,37 +146,55 @@
             atualizadoEm: agora,
             respostas: [],
             observacoesInternas: [],
-            historico: [
-                {
-                    id: gerarId("hist"),
-                    tipo: "criacao",
-                    autor: CURRENT_USER.nome,
-                    descricao: "Feedback enviado.",
-                    criadoEm: agora,
-                    visibilidade: "publica"
-                }
-            ],
+            historico: [{
+                id: gerarId("hist"),
+                tipo: "criacao",
+                autor: CURRENT_USER.nome,
+                descricao: "Feedback enviado.",
+                criadoEm: agora,
+                visibilidade: "publica"
+            }],
             novo: true,
             arquivado: false
-        };
-
-        registros.unshift(feedback);
-        salvar(registros);
-        return prepararParaUsuario(feedback);
+        });
     }
 
-    function alterar(id, acao) {
-        const registros = ler();
-        const indice = registros.findIndex((item) => item.id === id);
+    async function criar(dados) {
+        try {
+            const feedback = await requisitar("/api/feedbacks", {
+                method: "POST",
+                body: JSON.stringify(dados)
+            });
+            return atualizarMemoria(feedback);
+        } catch (erro) {
+            if (!erro.apiIndisponivel) throw erro;
+            return criarLocal(dados);
+        }
+    }
+
+    function alterarLocal(id, acao) {
+        const indice = memoria.findIndex((item) => item.id === id);
         if (indice < 0) throw new Error("Feedback não encontrado.");
-
-        acao(registros[indice]);
-        registros[indice].atualizadoEm = new Date().toISOString();
-        salvar(registros);
-        return copiar(registros[indice]);
+        acao(memoria[indice]);
+        memoria[indice].atualizadoEm = new Date().toISOString();
+        salvarCache();
+        return copiar(memoria[indice]);
     }
 
-    function adicionarHistorico(feedback, tipo, descricao, visibilidade) {
+    async function alterarNoServidor(id, caminho, metodo, dados, alternativaLocal) {
+        try {
+            const feedback = await requisitar(`/api/admin/feedbacks/${encodeURIComponent(id)}/${caminho}`, {
+                method: metodo,
+                body: dados === undefined ? undefined : JSON.stringify(dados)
+            });
+            return atualizarMemoria(feedback);
+        } catch (erro) {
+            if (!erro.apiIndisponivel) throw erro;
+            return alterarLocal(id, alternativaLocal);
+        }
+    }
+
+    function adicionarHistoricoLocal(feedback, tipo, descricao, visibilidade) {
         feedback.historico.push({
             id: gerarId("hist"),
             tipo,
@@ -217,80 +205,79 @@
         });
     }
 
-    function alterarStatus(id, novoStatus) {
+    async function alterarStatus(id, novoStatus) {
         if (!STATUS.includes(novoStatus)) throw new Error("Status inválido.");
-        return alterar(id, (feedback) => {
+        return alterarNoServidor(id, "status", "PATCH", { status: novoStatus }, (feedback) => {
             feedback.status = novoStatus;
             feedback.arquivado = novoStatus === "Arquivado";
-            adicionarHistorico(feedback, "status", `Status: ${novoStatus}.`, "publica");
+            adicionarHistoricoLocal(feedback, "status", `Status: ${novoStatus}.`, "publica");
         });
     }
 
-    function alterarPrioridade(id, novaPrioridade) {
+    async function alterarPrioridade(id, novaPrioridade) {
         if (!PRIORIDADES.includes(novaPrioridade)) throw new Error("Prioridade inválida.");
-        return alterar(id, (feedback) => {
+        return alterarNoServidor(id, "prioridade", "PATCH", { prioridade: novaPrioridade }, (feedback) => {
             feedback.prioridade = novaPrioridade;
-            adicionarHistorico(feedback, "prioridade", `Prioridade: ${novaPrioridade}.`, "interna");
+            adicionarHistoricoLocal(feedback, "prioridade", `Prioridade: ${novaPrioridade}.`, "interna");
         });
     }
 
-    function responder(id, mensagem) {
+    async function responder(id, mensagem) {
         const texto = String(mensagem || "").trim();
         if (!texto) throw new Error("Digite uma resposta antes de enviar.");
-
-        return alterar(id, (feedback) => {
-            const agora = new Date().toISOString();
+        return alterarNoServidor(id, "respostas", "POST", { mensagem: texto }, (feedback) => {
             feedback.respostas.push({
                 id: gerarId("resp"),
                 autor: "Equipe JurisHome",
                 papel: "administrador",
                 mensagem: texto,
-                criadoEm: agora
+                criadoEm: new Date().toISOString()
             });
             feedback.status = "Respondido";
             feedback.arquivado = false;
             feedback.novo = false;
-            adicionarHistorico(feedback, "resposta", "Resposta enviada.", "publica");
+            adicionarHistoricoLocal(feedback, "resposta", "Resposta enviada.", "publica");
         });
     }
 
-    function adicionarObservacao(id, mensagem) {
+    async function adicionarObservacao(id, mensagem) {
         const texto = String(mensagem || "").trim();
         if (!texto) throw new Error("Digite uma observação interna antes de adicionar.");
-
-        return alterar(id, (feedback) => {
+        return alterarNoServidor(id, "observacoes", "POST", { mensagem: texto }, (feedback) => {
             feedback.observacoesInternas.push({
                 id: gerarId("obs"),
                 autor: "Administrador JurisHome",
                 mensagem: texto,
                 criadoEm: new Date().toISOString()
             });
-            adicionarHistorico(feedback, "observacao", "Observação adicionada.", "interna");
+            adicionarHistoricoLocal(feedback, "observacao", "Observação adicionada.", "interna");
         });
     }
 
-    function arquivar(id) {
-        return alterarStatus(id, "Arquivado");
+    async function arquivar(id) {
+        return alterarNoServidor(id, "arquivar", "PATCH", undefined, (feedback) => {
+            feedback.status = "Arquivado";
+            feedback.arquivado = true;
+            adicionarHistoricoLocal(feedback, "status", "Status: Arquivado.", "publica");
+        });
     }
 
-    function marcarComoVisto(id) {
-        return alterar(id, (feedback) => {
+    async function marcarComoVisto(id) {
+        return alterarNoServidor(id, "visto", "PATCH", undefined, (feedback) => {
             feedback.novo = false;
         });
     }
 
-    function aguardar(tempo = 650) {
+    function aguardar(tempo = 350) {
         return new Promise((resolve) => window.setTimeout(resolve, tempo));
     }
 
-    function restaurarDadosIniciais() {
-        salvar(copiar(DADOS_INICIAIS));
-    }
-
     window.FeedbackMockService = Object.freeze({
+        STORAGE_KEY,
         TIPOS,
         STATUS,
         PRIORIDADES,
+        inicializar,
         listar,
         buscarPorId,
         criar,
@@ -300,7 +287,6 @@
         adicionarObservacao,
         arquivar,
         marcarComoVisto,
-        aguardar,
-        restaurarDadosIniciais
+        aguardar
     });
 })();

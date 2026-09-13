@@ -4,6 +4,31 @@ document.addEventListener("DOMContentLoaded", () => {
     const alertSucesso = document.getElementById("alert-sucesso");
     const btnTema = document.querySelector(".btn-theme");
     const iconeTema = btnTema ? btnTema.querySelector("i") : null;
+    const atalhosSecao = Array.from(document.querySelectorAll("[data-config-section]"));
+    const paineisSecao = Array.from(document.querySelectorAll("[data-config-panel]"));
+
+    function exibirSecao(nome, atualizarEndereco = true) {
+        const painelSelecionado = paineisSecao.find((painel) => painel.dataset.configPanel === nome);
+        if (!painelSelecionado) return;
+
+        paineisSecao.forEach((painel) => {
+            painel.hidden = painel !== painelSelecionado;
+        });
+
+        atalhosSecao.forEach((atalho) => {
+            const ativo = atalho.dataset.configSection === nome;
+            atalho.classList.toggle("active", ativo);
+            if (ativo) {
+                atalho.setAttribute("aria-current", "page");
+            } else {
+                atalho.removeAttribute("aria-current");
+            }
+        });
+
+        if (atualizarEndereco) {
+            window.history.replaceState(null, "", `#${nome}`);
+        }
+    }
 
     function aplicarTemaSalvo() {
         const temaSalvo = localStorage.getItem("tema_juris");
@@ -36,9 +61,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     aplicarTemaSalvo();
 
+    atalhosSecao.forEach((atalho) => {
+        atalho.addEventListener("click", (evento) => {
+            evento.preventDefault();
+            exibirSecao(atalho.dataset.configSection);
+        });
+    });
+
+    const secaoInicial = window.location.hash.slice(1);
+    exibirSecao(secaoInicial === "feedback" ? "feedback" : "senha", false);
+
     if (btnVoltar) {
         btnVoltar.addEventListener("click", () => {
-            window.location.href = "/home_admin";
+            window.location.href = document.body.dataset.destinoVoltar || "/";
         });
     }
 
