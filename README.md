@@ -61,33 +61,6 @@ Em pesquisa realizada com acadêmicos de Direito, evidenciou-se a frustração c
 
 ## 💻 Como Executar o Projeto Localmente
 
-### Funcionalidade 4 — Glossário jurídico para estudantes iniciantes
-
-A página `/glossario`, acessível pelo menu da home, apresenta 25 termos introdutórios
-em ordem alfabética, com explicações simples, exemplos expansíveis e referências
-ao Código de Processo Civil e à Constituição Federal. A busca consulta o termo,
-a definição, o exemplo e a área; ignora diferenças de acentuação, maiúsculas e
-espaços. É possível combinar palavras com o filtro por inicial e limpar a consulta.
-
-O glossário funciona sem login, mantém a preferência de tema `tema_juris` e se
-adapta ao celular. O formulário e a navegação por letras funcionam também sem
-JavaScript. A mesma consulta está disponível em `GET /api/glossario?q=acordao&letra=A`
-e documentada em `/docs`.
-
-Os termos ficam em `data/glossario.json`, separados da interface. Para ampliar
-o catálogo, adicione um identificador único, termo, área, definição, exemplo,
-referência legal e identificador de fonte, atualize `revisado_em` e reinicie o
-servidor. As definições são adaptações didáticas; os exemplos são ilustrativos.
-Esta primeira versão usa catálogo editorial em arquivo, sem painel de cadastro.
-
-**Critério de aceitação para a ficha:** o estudante deve conseguir consultar
-termos jurídicos em ordem alfabética, pesquisar palavras com ou sem acentos,
-visualizar definições simples e exemplos e acessar a referência oficial de cada
-termo. Quando não houver resultados, a interface deve informar e permitir limpar
-a busca.
-
-**Validação:** `python -m unittest discover -s tests -v`.
-
 ### Pré-requisitos
 - **Python 3.12+** instalado.
 - Git instalado.

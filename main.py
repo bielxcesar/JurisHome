@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from database import engine
 from model.models import Base, Usuario, Conteudo, Categoria, StatusConteudo
 from auth.security import get_current_admin
-from routes import paginas, admin, conteudos, glossario
+from routes import paginas, admin, conteudos
 
 Base.metadata.create_all(bind=engine)
 
@@ -24,7 +24,6 @@ admin_dependencies = [Depends(get_current_admin)] if exigir_auth_admin else []
 app.include_router(paginas.router)
 app.include_router(admin.router, dependencies=admin_dependencies)
 app.include_router(conteudos.router)
-app.include_router(glossario.router)
 
 if __name__ == "__main__":
     import uvicorn
