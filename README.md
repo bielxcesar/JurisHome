@@ -18,7 +18,7 @@
 
 ## 📌 Sobre o Projeto
 
-O **JurisHome** é uma plataforma web desenvolvida como **Projeto de Final de Curso (PFC)** do bacharelado em **Engenharia de Software** da **Universidade de Mogi das Cruzes (UMC)**. 
+O JurisHome é uma plataforma web criada para facilitar o acesso a conteúdos jurídicos confiáveis, oferecendo aos estudantes uma experiência de consulta e aprendizado mais simples, organizada e segura.
 
 O sistema foi concebido para resolver a alta dispersão de informações na rotina acadêmica dos estudantes de Direito, oferecendo um ambiente centralizado com fontes verificadas, linguagem didática e categorização por áreas do conhecimento jurídico.
 
@@ -29,6 +29,7 @@ O sistema foi concebido para resolver a alta dispersão de informações na roti
 - 🔒 **Autenticação Segura & Múltiplos Perfis**: Cadastro com distinção entre **Estudantes** e **Administradores**, suporte a login via Google OAuth 2.0 e segundo fator de autenticação (2FA/TOTP).
 - 🛡️ **Curadoria de Conteúdo**: Sistema de aprovação em etapas — matérias submetidas passam pelo status `EM_ANALISE` antes de ficarem visíveis publicamente.
 - 📚 **Acervo Organizado**: Navegação e busca inteligente por Doutrinas, Legislações e Acórdãos divididos por **Categorias** (ex: Direito Penal) e **Subtemas**.
+- 📖 Glossário Jurídico: Consulta de termos jurídicos em linguagem simples, com busca, filtro por letra inicial, exemplos práticos e referências oficiais para apoiar estudantes iniciantes.
 - 🖼️ **Otimização de Mídias**: Integração com Cloudinary CDN para armazenamento de imagens, mantendo o banco de dados leve.
 - 💬 **Canal de Feedback**: Envio direto de dúvidas, sugestões e relatórios de uso pelos alunos.
 
@@ -61,32 +62,6 @@ Em pesquisa realizada com acadêmicos de Direito, evidenciou-se a frustração c
 
 ## 💻 Como Executar o Projeto Localmente
 
-### Funcionalidade 4 — Glossário jurídico para estudantes iniciantes
-
-A página `/glossario`, acessível pelo menu da home, apresenta 25 termos introdutórios
-em ordem alfabética, com explicações simples, exemplos expansíveis e referências
-ao Código de Processo Civil e à Constituição Federal. A busca consulta o termo,
-a definição, o exemplo e a área; ignora diferenças de acentuação, maiúsculas e
-espaços. É possível combinar palavras com o filtro por inicial e limpar a consulta.
-
-O glossário funciona sem login, mantém a preferência de tema `tema_juris` e se
-adapta ao celular. O formulário e a navegação por letras funcionam também sem
-JavaScript. A mesma consulta está disponível em `GET /api/glossario?q=acordao&letra=A`
-e documentada em `/docs`.
-
-Os termos ficam em `data/glossario.json`, separados da interface. Para ampliar
-o catálogo, adicione um identificador único, termo, área, definição, exemplo,
-referência legal e identificador de fonte, atualize `revisado_em` e reinicie o
-servidor. As definições são adaptações didáticas; os exemplos são ilustrativos.
-Esta primeira versão usa catálogo editorial em arquivo, sem painel de cadastro.
-
-**Critério de aceitação para a ficha:** o estudante deve conseguir consultar
-termos jurídicos em ordem alfabética, pesquisar palavras com ou sem acentos,
-visualizar definições simples e exemplos e acessar a referência oficial de cada
-termo. Quando não houver resultados, a interface deve informar e permitir limpar
-a busca.
-
-**Validação:** `python -m unittest discover -s tests -v`.
 
 ### Pré-requisitos
 - **Python 3.12+** instalado.
@@ -146,16 +121,11 @@ python -m uvicorn main:app --reload
   
    <summary><b>👥Desenvolvedores</b></summary>
 
-## Projeto desenvolvido pelo trio para o Projeto de Conclusão de Curso (PFC) de Engenharia de Software da Universidade de Mogi das Cruzes (UMC 2026):
-
+## Projeto desenvolvido por:
 - **Pedro Henrique Harada Pecegueiro** — [GitHub](https://github.com/Diego251Fagundes)
 - **Erick Santos Barbosa** — [GitHub](https://github.com/ErickSantosBarbosa04)
 - **Gabriel Agustín Fernández Alves** — [GitHub](https://github.com/Pedro-Pecegueiro)
 </details>
 
-## Orientadores:
 
-Orientador: Prof. Alessandro Aparecido da Silva Horas
-
-Coorientador: Prof. Leandro Miranda de Almeida
 
