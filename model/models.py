@@ -9,11 +9,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import relationship
 
-# Importa o Base oficial do database.py
 from database import Base
-
-# REMOVIDO: Base = declarative_base() 
-# (Sobrescrever o Base aqui fazia o Base.metadata de database.py ficar sem tabelas)
 
 
 class TipoUsuario(str, enum.Enum):
@@ -165,7 +161,6 @@ class Feedback(Base):
 
 
 class FeedbackAtendimento(Base):
-    """Registro completo usado pelo canal de feedback e pelo painel administrativo."""
 
     __tablename__ = "feedback_atendimentos"
 
