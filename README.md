@@ -122,9 +122,9 @@ python -m uvicorn main:app --reload
    <summary><b>👥Desenvolvedores</b></summary>
 
 ## Projeto desenvolvido por:
-- **Pedro Henrique Harada Pecegueiro** — [GitHub](https://github.com/Diego251Fagundes)
+- **Pedro Henrique Harada Pecegueiro** — [GitHub](https://github.com/Pedro-Pecegueiro)
 - **Erick Santos Barbosa** — [GitHub](https://github.com/ErickSantosBarbosa04)
-- **Gabriel Agustín Fernández Alves** — [GitHub](https://github.com/Pedro-Pecegueiro)
+- **Gabriel Agustín Fernández Alves** — [GitHub](https://github.com/bielxcesar)
 </details>
 
 
