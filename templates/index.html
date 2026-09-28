@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JurisHome - Login</title>
+    <link rel="stylesheet" href="/static/css/login.css?v=20260925-4">
+    <link rel="stylesheet" href="/static/css/auth-figma.css?v=20260925-1">
+    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+</head>
+<body class="bg-login">
+
+    <div class="overlay-login"></div>
+
+    <main class="login-container">
+        <div class="logo-box">
+            <img src="/static/images/logo.png" alt="JurisHome Logo" class="logo-img">
+        </div>
+
+        <h1 class="titulo-bemvindo">Bem-vindo de volta!</h1>
+        <p class="subtitulo">Informe seus dados para continuar</p>
+
+        <form id="form-login" class="form-login" novalidate>
+            <div class="input-group">
+                <label for="email">E-mail</label>
+                <input type="email" id="email" placeholder="Digite seu e-mail" autocomplete="email" required>
+            </div>
+
+            <div class="input-group">
+                <label for="senha">Senha</label>
+                <div class="password-input-wrap">
+                    <input type="password" id="senha" placeholder="Digite sua senha" autocomplete="current-password" required>
+                    <button class="password-toggle" type="button" data-password-toggle="senha" aria-label="Mostrar senha" aria-pressed="false">Mostrar</button>
+                </div>
+            </div>
+
+            <p class="auth-message" id="auth-message" role="alert" hidden></p>
+
+            <div class="login-options">
+                <label class="remember-option" for="manter-conectado">
+                    <input type="checkbox" id="manter-conectado">
+                    <span>Manter conectado</span>
+                </label>
+                <a class="link-esqueceu" href="/recuperar-senha">Esqueci minha senha</a>
+            </div>
+
+            <button type="submit" class="btn-entrar">Entrar</button>
+        </form>
+
+        <p class="texto-cadastro">
+            Não tem uma conta? <a href="/cadastro">Crie agora!</a>
+        </p>
+    </main>
+
+    {% include "_legal_links.html" %}
+    <script src="/static/js/auth.js?v=20260926-2"></script>
+</body>
+</html>

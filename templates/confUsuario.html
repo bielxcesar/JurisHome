@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ titulo_configuracao }} | JurisHome</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/confAdm.css?v=20260925-1">
+    <link rel="stylesheet" href="/static/css/figma-app.css?v=20260925-2">
+    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+
+    <script>
+        (function() {
+            const temaSalvo = localStorage.getItem("tema_juris");
+            if (temaSalvo === "claro") {
+                document.documentElement.classList.remove("dark");
+                document.documentElement.setAttribute("data-theme", "light");
+                window.addEventListener('DOMContentLoaded', () => document.body.classList.add("modo-claro"));
+            } else {
+                document.documentElement.classList.add("dark");
+                document.documentElement.setAttribute("data-theme", "dark");
+            }
+        })();
+    </script>
+</head>
+<body data-destino-voltar="{{ destino_voltar }}">
+
+    <div class="conf-box">
+        <header class="conf-header">
+            <button class="btn-back" id="btn-voltar" title="Voltar ao início">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <h1>{{ titulo_configuracao }}</h1>
+            
+            <button class="btn-theme" id="btn-alternar-tema" title="Alternar Tema">
+                <i class="fa-solid fa-circle-half-stroke"></i>
+            </button>
+        </header>
+
+        <div class="conf-body">
+            <aside class="conf-sidebar">
+                <nav class="sidebar-menu">
+                    <a href="/termos-de-aceite" class="sidebar-item">
+                        <i class="fa-regular fa-file-lines"></i>
+                        <span>Termo de Aceite</span>
+                    </a>
+                    <a href="/politica-de-privacidade" class="sidebar-item">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <span>Privacidade</span>
+                    </a>
+                    <a href="#senha" class="sidebar-item active" data-config-section="senha" aria-controls="config-section-senha" aria-current="page">
+                        <i class="fa-solid fa-key"></i>
+                        <span>Trocar senha</span>
+                    </a>
+
+                    {% if mostrar_exclusao_dados|default(false) %}
+                    <a href="#privacidade" class="sidebar-item" data-config-section="privacidade" aria-controls="config-section-privacidade">
+                        <i class="fa-solid fa-user-shield"></i>
+                        <span>Privacidade e dados</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if feedback_interno|default(false) %}
+                    <a href="#feedback" class="sidebar-item" data-config-section="feedback" aria-controls="config-section-feedback">
+                        <i class="fa-regular fa-comment-dots"></i>
+                        <span>{{ rotulo_feedback }}</span>
+                    </a>
+                    {% else %}
+                    <a href="{{ destino_feedback }}" class="sidebar-item">
+                        <i class="fa-regular fa-comment-dots"></i>
+                        <span>{{ rotulo_feedback }}</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if mostrar_auditoria|default(false) %}
+                    <a href="/admin/auditoria" class="sidebar-item">
+                        <i class="fa-regular fa-clipboard"></i>
+                        <span>Logs de auditoria</span>
+                    </a>
+                    {% endif %}
+                </nav>
+
+                <div class="sidebar-footer">
+                    <a href="/" class="btn-desconectar-side">
+                        <i class="fa-solid fa-power-off"></i>
+                        <span>{{ rotulo_sair }}</span>
+                    </a>
+                </div>
+            </aside>
+
+            <main class="conf-content">
+                <!-- Seção: Trocar Senha -->
+                <section class="config-section" id="config-section-senha" data-config-panel="senha">
+                    <div class="alert-success" id="alert-sucesso" style="display: none;">
+                        <i class="fa-solid fa-check"></i> Senha alterada com sucesso
+                    </div>
+
+                    <form id="form-troca-senha" class="form-senha">
+                        <div class="form-group">
+                            <label for="senha-atual">Senha atual:</label>
+                            <input type="password" id="senha-atual" placeholder="Digite sua senha atual" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="nova-senha">Nova senha:</label>
+                            <input type="password" id="nova-senha" placeholder="Crie uma nova senha" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confirma-senha">Confirmar senha:</label>
+                            <input type="password" id="confirma-senha" placeholder="Repita a nova senha" required>
+                        </div>
+
+                        <button type="submit" class="btn-salvar">Salvar Alteração</button>
+                    </form>
+                </section>
+
+                {% if mostrar_exclusao_dados|default(false) %}
+                <section class="config-section privacy-section" id="config-section-privacidade" data-config-panel="privacidade" hidden>
+                    <div class="config-section-heading">
+                        <span class="config-section-icon"><i class="fa-solid fa-user-shield" aria-hidden="true"></i></span>
+                        <div>
+                            <h2>Privacidade e dados</h2>
+                            <p>Solicite a anonimização dos dados associados à sua conta.</p>
+                        </div>
+                    </div>
+
+                    <div class="privacy-explanation">
+                        <h3>O que será removido</h3>
+                        <ul>
+                            <li>Nome, e-mail e eventuais dados acadêmicos legados.</li>
+                            <li>Senha, vínculo externo e segredo da autenticação em duas etapas.</li>
+                            <li>Assunto, mensagem, avaliação, respostas e observações dos seus feedbacks.</li>
+                        </ul>
+
+                        <h3>O que será preservado</h3>
+                        <p>O identificador técnico da conta, as datas, a versão do Termo aceita, os protocolos e estados dos feedbacks e os logs de auditoria permanecem sem os dados pessoais removidos. Isso permite comprovar que as operações existiram sem manter seu conteúdo sensível.</p>
+                    </div>
+
+                    <div class="privacy-alert privacy-alert-success" id="privacy-success" role="status" aria-live="polite" hidden></div>
+                    <div class="privacy-alert privacy-alert-error" id="privacy-error" role="alert" hidden></div>
+
+                    <form id="form-anonimizacao" class="privacy-form" novalidate>
+                        <div class="form-group">
+                            <label for="senha-anonimizacao">Confirme sua senha atual:</label>
+                            <input type="password" id="senha-anonimizacao" autocomplete="current-password" maxlength="72" required>
+                        </div>
+                        <label class="privacy-confirmation" for="confirmar-anonimizacao">
+                            <input type="checkbox" id="confirmar-anonimizacao" required>
+                            <span>Entendo que a anonimização encerra a conta e não pode ser desfeita.</span>
+                        </label>
+                        <button type="submit" class="privacy-danger-button" id="btn-anonimizar">
+                            <i class="fa-solid fa-user-slash" aria-hidden="true"></i>
+                            <span>Anonimizar meus dados e encerrar conta</span>
+                        </button>
+                    </form>
+                </section>
+                {% endif %}
+
+                {% if feedback_interno|default(false) %}
+                <section class="config-section config-feedback-section" id="config-section-feedback" data-config-panel="feedback" hidden>
+                    <div class="config-section-heading">
+                        <span class="config-section-icon"><i class="fa-regular fa-comment-dots" aria-hidden="true"></i></span>
+                        <div>
+                            <h2>Feedback e suporte</h2>
+                            <p>Conte o que aconteceu ou envie uma sugestão.</p>
+                        </div>
+                    </div>
+
+                    <div class="feedback-alert feedback-alert-success" id="feedback-sucesso" role="status" aria-live="polite" hidden></div>
+                    <div class="feedback-alert feedback-alert-error" id="feedback-erro-geral" role="alert" hidden></div>
+
+                    <form id="feedback-form" class="config-feedback-form" novalidate>
+                        <div class="feedback-field">
+                            <label for="feedback-tipo">Motivo do contato <span aria-hidden="true">*</span></label>
+                            <select id="feedback-tipo" name="tipo" required aria-describedby="erro-tipo">
+                                <option value="">Escolha o motivo</option>
+                                <option>Reclamação</option>
+                                <option>Dificuldade de acesso</option>
+                                <option>Problema técnico</option>
+                                <option>Sugestão</option>
+                                <option>Dúvida</option>
+                                <option>Elogio</option>
+                                <option>Outro</option>
+                            </select>
+                            <p class="feedback-field-error" id="erro-tipo"></p>
+                        </div>
+
+                        <div class="feedback-field">
+                            <div class="feedback-label-row">
+                                <label for="feedback-assunto">Assunto <span aria-hidden="true">*</span></label>
+                                <span class="feedback-counter" id="contador-assunto">0/120</span>
+                            </div>
+                            <input id="feedback-assunto" name="assunto" type="text" minlength="5" maxlength="120" placeholder="Resuma sua mensagem" required aria-describedby="ajuda-assunto erro-assunto">
+                            <small id="ajuda-assunto">Use entre 5 e 120 caracteres.</small>
+                            <p class="feedback-field-error" id="erro-assunto"></p>
+                        </div>
+
+                        <div class="feedback-field">
+                            <div class="feedback-label-row">
+                                <label for="feedback-mensagem">Mensagem <span aria-hidden="true">*</span></label>
+                                <span class="feedback-counter" id="contador-mensagem">0/2000</span>
+                            </div>
+                            <textarea id="feedback-mensagem" name="mensagem" rows="5" minlength="10" maxlength="2000" placeholder="Explique sua dúvida, problema ou sugestão" required aria-describedby="ajuda-mensagem erro-mensagem"></textarea>
+                            <small id="ajuda-mensagem">Use entre 10 e 2.000 caracteres.</small>
+                            <p class="feedback-field-error" id="erro-mensagem"></p>
+                        </div>
+
+                        <fieldset class="feedback-rating" id="feedback-avaliacao">
+                            <legend>Sua avaliação <span>(opcional)</span></legend>
+                            <div class="feedback-stars" role="radiogroup" aria-label="Avaliação de 1 a 5 estrelas">
+                                <label><input type="radio" name="avaliacao" value="1"><span aria-hidden="true">★</span><span class="feedback-sr-only">1 estrela</span></label>
+                                <label><input type="radio" name="avaliacao" value="2"><span aria-hidden="true">★</span><span class="feedback-sr-only">2 estrelas</span></label>
+                                <label><input type="radio" name="avaliacao" value="3"><span aria-hidden="true">★</span><span class="feedback-sr-only">3 estrelas</span></label>
+                                <label><input type="radio" name="avaliacao" value="4"><span aria-hidden="true">★</span><span class="feedback-sr-only">4 estrelas</span></label>
+                                <label><input type="radio" name="avaliacao" value="5"><span aria-hidden="true">★</span><span class="feedback-sr-only">5 estrelas</span></label>
+                            </div>
+                        </fieldset>
+
+                        <button class="feedback-primary-button" id="feedback-enviar" type="submit">
+                            <span class="feedback-button-spinner" aria-hidden="true"></span>
+                            <i class="fa-regular fa-paper-plane" aria-hidden="true"></i>
+                            <span class="feedback-button-text">Enviar feedback</span>
+                        </button>
+                    </form>
+                </section>
+                {% endif %}
+            </main>
+        </div>
+    </div>
+
+    {% include "_legal_links.html" %}
+    <script src="/static/js/confAdm.js?v=20260925-1"></script>
+    {% if feedback_interno|default(false) %}
+    <script src="/static/js/feedbackService.js?v=20260927-1"></script>
+    <script src="/static/js/feedbackUsuario.js?v=20260913-3"></script>
+    {% endif %}
+</body>
+</html>

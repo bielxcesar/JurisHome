@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recuperar senha | JurisHome</title>
+    <link rel="stylesheet" href="/static/css/login.css?v=20260925-4">
+    <link rel="stylesheet" href="/static/css/auth-figma.css?v=20260925-1">
+    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+</head>
+<body class="bg-recovery">
+    <div class="overlay-login"></div>
+    <main class="auth-panel recovery-panel recovery-panel-email">
+        <header class="recovery-header">
+            <a class="recovery-back" href="/" aria-label="Voltar ao login">
+                <img src="/static/images/icon-voltar.png" alt="">
+            </a>
+            <h1>Esqueceu a senha?</h1>
+        </header>
+        <div class="recovery-divider"></div>
+        <p class="recovery-copy">Informe o e-mail da sua conta e confirme sua identidade pelo aplicativo autenticador.</p>
+        <form id="form-recuperacao-email" class="recovery-form" novalidate>
+            <div class="input-group">
+                <label for="recuperacao-email">E-mail</label>
+                <input id="recuperacao-email" type="email" autocomplete="email" placeholder="Digite seu e-mail" required>
+            </div>
+            <p class="auth-message" id="auth-message" role="alert" hidden></p>
+            <button class="recovery-submit" type="submit">Próximo</button>
+        </form>
+    </main>
+    {% include "_legal_links.html" %}
+    <script src="/static/js/auth.js?v=20260926-2"></script>
+</body>
+</html>

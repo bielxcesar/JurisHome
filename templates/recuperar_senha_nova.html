@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova senha | JurisHome</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/login.css?v=20260925-4">
+    <link rel="stylesheet" href="/static/css/auth-figma.css?v=20260925-1">
+    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+</head>
+<body class="bg-recovery">
+    <div class="overlay-login"></div>
+    <main class="auth-panel recovery-panel recovery-panel-password">
+        <header class="recovery-header">
+            <a class="recovery-back" href="/recuperar-senha/confirmar" aria-label="Voltar">
+                <img src="/static/images/icon-voltar.png" alt="">
+            </a>
+            <h1>Alterando senha</h1>
+        </header>
+        <div class="recovery-divider"></div>
+        <p class="recovery-copy">Use de 8 a 25 caracteres, incluindo uma letra maiúscula e um caractere especial.</p>
+        <form id="form-recuperacao-nova" class="recovery-form" novalidate>
+            <div class="input-group">
+                <label for="recuperacao-nova-senha">Nova senha</label>
+                <div class="password-input-wrap">
+                    <input id="recuperacao-nova-senha" type="password" autocomplete="new-password" minlength="8" maxlength="25" required>
+                    <button class="password-toggle" type="button" data-password-toggle="recuperacao-nova-senha" aria-label="Mostrar nova senha"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
+                </div>
+            </div>
+            <div class="input-group">
+                <label for="recuperacao-confirma-senha">Confirmar senha</label>
+                <div class="password-input-wrap">
+                    <input id="recuperacao-confirma-senha" type="password" autocomplete="new-password" minlength="8" maxlength="25" required>
+                    <button class="password-toggle" type="button" data-password-toggle="recuperacao-confirma-senha" aria-label="Mostrar confirmação da senha"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
+                </div>
+            </div>
+            <p class="auth-message" id="auth-message" role="alert" hidden></p>
+            <button class="recovery-submit" type="submit">Alterar senha</button>
+        </form>
+    </main>
+    {% include "_legal_links.html" %}
+    <script src="/static/js/auth.js?v=20260926-2"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+# Framework Web e Servidor
+fastapi==0.141.1
+uvicorn==0.52.4
+starlette==1.6.0
+Jinja2==3.1.6
+python-multipart==0.0.32
+websockets==17.1
+
+# Banco de Dados
+SQLAlchemy==2.0.52
+psycopg2-binary
+PyMySQL==1.1.2
+
+# Segurança e Autenticação
+bcrypt==5.0.0
+PyJWT==2.13.0
+cryptography==50.0.1
+pyotp==2.9.0
+
+# Variáveis de Ambiente e Utilidades
+python-dotenv==1.2.3
+qrcode[pil]==8.2
+emec-api==0.1.10; python_version < "3.12"
+PyYAML==6.0.3
+click==8.5.0
+watchfiles==1.2.0
+
+# Dependências Internas e Tipagem
+pydantic==2.13.5
+pydantic_core==2.46.5
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.15.1
+greenlet==3.5.5
+h11==0.16.0
+httptools==0.8.0
+idna==3.19
+MarkupSafe==3.0.3
+typing-inspection==0.4.4
+typing_extensions==4.16.0

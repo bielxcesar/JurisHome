@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JurisHome - Autenticação</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/login.css?v=20260925-4">
+    <link rel="stylesheet" href="/static/css/auth-figma.css?v=20260925-1">
+    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+</head>
+<body class="bg-recovery">
+
+    <div class="overlay-login"></div>
+
+    <main class="card-2fatores auth-panel auth-two-factor">
+        <header class="header-2fatores">
+            <a href="/" class="btn-voltar-circle">
+                <i class="fa-regular fa-circle-left"></i>
+            </a>
+            <h2 id="2fa-titulo">Duas etapas</h2>
+        </header>
+
+        <div class="linha-divisoria"></div>
+
+        <p class="texto-instrucao" id="2fa-instrucao">
+            Abra seu aplicativo autenticador e informe o código de seis números para concluir o acesso.
+        </p>
+
+        <section class="setup-cadastro-2fa" id="2fa-setup" hidden>
+            <p>Use um aplicativo autenticador compatível com códigos TOTP.</p>
+            <img id="2fa-qrcode" alt="QR Code para configurar o autenticador" width="180" height="180">
+            <p>Ou informe esta chave manual:</p>
+            <code id="2fa-segredo"></code>
+        </section>
+
+        <form id="form-2fatores" class="form-2fatores">
+            <label for="code">Código</label>
+            <input type="text" id="code" placeholder="000000" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
+            <p class="auth-message" id="auth-message" role="alert" hidden></p>
+
+            <button id="2fa-botao" type="submit" class="btn-proximo">Próximo</button>
+        </form>
+    </main>
+
+    {% include "_legal_links.html" %}
+    <script src="/static/js/auth.js?v=20260926-2"></script>
+</body>
+</html>
