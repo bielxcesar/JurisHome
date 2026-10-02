@@ -14,6 +14,19 @@
         configurarFiltros();
         configurarNavegacaoDasMaterias();
         carregarMaterias();
+        configurarSaida();
+    }
+
+    function configurarSaida() {
+        document.querySelectorAll(".btn-desconectar").forEach((link) => {
+            link.addEventListener("click", (evento) => {
+                evento.preventDefault();
+                window.localStorage.removeItem("jurishome_access_token");
+                window.sessionStorage.removeItem("jurishome_desafio_2fa");
+                window.fetch("/api/auth/logout", { method: "POST" })
+                    .finally(() => { window.location.href = "/"; });
+            });
+        });
     }
 
     function aplicarTema() {
@@ -185,6 +198,8 @@
         categorias.forEach((categoria) => {
             lista.append(criarBotaoCategoria(categoria, categoria, false));
         });
+        const vazio = document.getElementById("categorias-vazio");
+        if (vazio) vazio.hidden = categorias.length > 0;
     }
 
     function criarBotaoCategoria(rotulo, valor, ativo) {
@@ -257,13 +272,11 @@
         card.classList.remove("card-sem-conteudo");
         document.getElementById(categoriaId).textContent = materia.categoria || "Direito";
         document.getElementById(tituloId).textContent = materia.titulo;
-        aplicarImagem(card, materia.imagem_miniatura);
     }
 
     function preencherEstadoVazio(card) {
         delete card.dataset.conteudoId;
         card.classList.add("card-sem-conteudo");
-        card.style.backgroundImage = "none";
         document.getElementById("hero-cat-1").textContent = "Acervo JurisHome";
         document.getElementById("hero-titulo-1").textContent = materias.length
             ? "Nenhuma matéria corresponde aos filtros."
@@ -278,40 +291,35 @@
         if (recomendadas.length === 0) {
             const aviso = document.createElement("p");
             aviso.className = "mensagem-recomendados";
-            aviso.textContent = materias.length
-                ? "Outras matérias aparecerão aqui quando forem cadastradas."
-                : "O acervo ainda não possui matérias.";
-            grade.append(aviso);
+            aviso.textContent = !materias.length
+                ? "O acervo ainda não possui matérias cadastradas."
+                : categoriaAtiva
+                    ? `Todas as matérias de ${categoriaAtiva} estão nos destaques.`
+                    : "Todas as matérias aprovadas estão nos destaques.";
+            const link = document.createElement("a");
+            link.className = "link-acervo";
+            link.href = "/pesquisa";
+            link.textContent = "Pesquisar no acervo";
+            grade.append(aviso, link);
             return;
         }
 
         recomendadas.forEach((materia) => {
-            const card = document.createElement("article");
-            card.className = "card-recomendado";
-            card.tabIndex = 0;
-            card.dataset.conteudoId = materia.uuid;
-            aplicarImagem(card, materia.imagem_miniatura);
+        const card = document.createElement("article");
+        card.className = "card-recomendado";
+        card.tabIndex = 0;
+        card.setAttribute("role", "link");
+        card.dataset.conteudoId = materia.uuid;
 
-            const categoria = document.createElement("span");
-            categoria.className = "categoria-tag";
-            categoria.textContent = materia.categoria || "Direito";
+        const categoria = document.createElement("span");
+        categoria.className = "categoria-tag";
+        categoria.textContent = materia.categoria || "Direito";
 
-            const titulo = document.createElement("h3");
-            titulo.textContent = materia.titulo;
-            card.append(categoria, titulo);
-            grade.append(card);
+        const titulo = document.createElement("h3");
+        titulo.textContent = materia.titulo;
+        card.append(categoria, titulo);
+        grade.append(card);
         });
-    }
-
-    function aplicarImagem(card, url) {
-        const imagem = String(url || "")
-            .replace(/\\/g, "%5C")
-            .replace(/"/g, "%22")
-            .replace(/[\r\n]/g, "");
-        const gradiente = "linear-gradient(180deg, rgba(0,0,0,.2), rgba(0,0,0,.88))";
-        card.style.backgroundImage = imagem ? `${gradiente}, url("${imagem}")` : gradiente;
-        card.style.backgroundSize = "cover";
-        card.style.backgroundPosition = "center";
     }
 
     function abrirMateria(uuid) {

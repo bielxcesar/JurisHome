@@ -2,6 +2,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnVoltar = document.getElementById("btn-voltar");
     const formSenha = document.getElementById("form-troca-senha");
     const alertSucesso = document.getElementById("alert-sucesso");
+    const formAnonimizacao = document.getElementById("form-anonimizacao");
+    const privacySuccess = document.getElementById("privacy-success");
+    const privacyError = document.getElementById("privacy-error");
+    const btnAnonimizar = document.getElementById("btn-anonimizar");
     const btnTema = document.querySelector(".btn-theme");
     const iconeTema = btnTema ? btnTema.querySelector("i") : null;
     const atalhosSecao = Array.from(document.querySelectorAll("[data-config-section]"));
@@ -69,16 +73,27 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     const secaoInicial = window.location.hash.slice(1);
-    exibirSecao(secaoInicial === "feedback" ? "feedback" : "senha", false);
+    const secaoDisponivel = paineisSecao.some((painel) => painel.dataset.configPanel === secaoInicial);
+    exibirSecao(secaoDisponivel ? secaoInicial : "senha", false);
 
     if (btnVoltar) {
         btnVoltar.addEventListener("click", () => {
-            window.location.href = document.body.dataset.destinoVoltar || "/templates/home_Usuario.html";
+            window.location.href = document.body.dataset.destinoVoltar || "/home_usuario";
         });
     }
 
+    document.querySelectorAll(".btn-desconectar-side").forEach((link) => {
+        link.addEventListener("click", (evento) => {
+            evento.preventDefault();
+            localStorage.removeItem("jurishome_access_token");
+            sessionStorage.removeItem("jurishome_desafio_2fa");
+            fetch("/api/auth/logout", { method: "POST" })
+                .finally(() => { window.location.href = "/"; });
+        });
+    });
+
     if (formSenha) {
-        formSenha.addEventListener("submit", (e) => {
+        formSenha.addEventListener("submit", async (e) => {
             e.preventDefault();
 
             const novaSenha = document.getElementById("nova-senha").value;
@@ -89,12 +104,78 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            alertSucesso.classList.add("exibir");
-            formSenha.reset();
+            try {
+                const resposta = await fetch("/api/usuarios/me/senha", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        senha_atual: document.getElementById("senha-atual").value,
+                        nova_senha: novaSenha
+                    })
+                });
+                const dados = await resposta.json();
+                if (!resposta.ok) throw new Error(dados.detail || "Não foi possível alterar a senha.");
 
-            setTimeout(() => {
-                alertSucesso.classList.remove("exibir");
-            }, 4000);
+                alertSucesso.style.display = "block";
+                alertSucesso.classList.add("exibir");
+                formSenha.reset();
+
+                setTimeout(() => {
+                    alertSucesso.classList.remove("exibir");
+                    alertSucesso.style.display = "none";
+                }, 4000);
+            } catch (erro) {
+                alert(erro.message || "Não foi possível alterar a senha.");
+            }
         });
     }
+
+    if (formAnonimizacao) {
+        formAnonimizacao.addEventListener("submit", async (evento) => {
+            evento.preventDefault();
+            privacySuccess.hidden = true;
+            privacyError.hidden = true;
+
+            const senha = document.getElementById("senha-anonimizacao").value;
+            const confirmado = document.getElementById("confirmar-anonimizacao").checked;
+            if (!senha || !confirmado) {
+                privacyError.textContent = "Informe sua senha e confirme que entendeu a anonimização.";
+                privacyError.hidden = false;
+                return;
+            }
+
+            const desejaContinuar = window.confirm(
+                "Esta ação removerá seus dados pessoais, encerrará a conta e não poderá ser desfeita. Deseja continuar?"
+            );
+            if (!desejaContinuar) return;
+
+            btnAnonimizar.disabled = true;
+            btnAnonimizar.classList.add("is-loading");
+
+            try {
+                const resposta = await fetch("/api/usuarios/me/dados-pessoais", {
+                    method: "DELETE",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ senha, confirmacao: "ANONIMIZAR" })
+                });
+                const dados = await resposta.json();
+                if (!resposta.ok) throw new Error(dados.detail || "Não foi possível anonimizar os dados.");
+
+                formAnonimizacao.reset();
+                privacySuccess.textContent = dados.mensagem;
+                privacySuccess.hidden = false;
+                localStorage.removeItem("jurishome_access_token");
+                sessionStorage.removeItem("jurishome_desafio_2fa");
+                window.setTimeout(() => { window.location.href = "/?dados=anonimizados"; }, 1200);
+            } catch (erro) {
+                document.getElementById("senha-anonimizacao").value = "";
+                privacyError.textContent = erro.message || "Não foi possível anonimizar os dados.";
+                privacyError.hidden = false;
+            } finally {
+                btnAnonimizar.disabled = false;
+                btnAnonimizar.classList.remove("is-loading");
+            }
+        });
+    }
+
 });

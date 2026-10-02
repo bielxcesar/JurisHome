@@ -53,7 +53,7 @@ def pagina_glossario(
             "url_todas": url_glossario(q=resultado["q"]),
             "url_glossario": url_glossario(),
             "url_limpar": url_glossario(),
-            "url_inicio": "/static/pages/home-usuario.html" if origem_usuario else "/home_admin",
+            "url_inicio": "/home_usuario" if origem_usuario else "/home_admin",
             "origem": "usuario" if origem_usuario else "",
         },
     )

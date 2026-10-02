@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Consulta administrativa dos registros de auditoria do JurisHome">
+    <title>Logs de auditoria | JurisHome</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/homeAdmin.css?v=20260925-1">
+    <link rel="stylesheet" href="/static/css/figma-app.css?v=20260925-2">
+    <link rel="stylesheet" href="/static/css/auditoria.css?v=20260925-2">
+    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+</head>
+<body class="audit-shell">
+    <a class="audit-skip-link" href="#audit-main">Ir para os registros</a>
+
+    <header class="navbar audit-navbar">
+        <div class="nav-data" id="data-atual" aria-label="Data atual">--/--/----</div>
+
+        <nav class="nav-menu" aria-label="Navegação administrativa">
+            <a href="/home_admin" class="nav-link"><i class="fa-solid fa-house" aria-hidden="true"></i> Home</a>
+            <a href="/exibir-mais" class="nav-link"><i class="fa-solid fa-square-plus" aria-hidden="true"></i> Exibir mais</a>
+            <a href="/admin-feedbacks" class="nav-link"><i class="fa-solid fa-inbox" aria-hidden="true"></i> Feedbacks</a>
+            <a href="/admin/auditoria" class="nav-link active" aria-current="page"><i class="fa-solid fa-list-check" aria-hidden="true"></i> Auditoria</a>
+            <span class="nav-link nav-link-indisponivel" aria-disabled="true" title="Página ainda não disponível"><i class="fa-solid fa-user-group" aria-hidden="true"></i> Sobre nós</span>
+            <a href="/categorias" class="nav-link"><i class="fa-solid fa-newspaper" aria-hidden="true"></i> Categorias</a>
+            <a href="/pesquisa" class="nav-link"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Pesquisa</a>
+            <a href="/glossario" class="nav-link"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Glossário</a>
+        </nav>
+
+        <div class="nav-perfil">
+            <button class="avatar-icon" id="btn-perfil" type="button" aria-label="Abrir configurações do administrador" aria-expanded="false" aria-controls="dropdown-perfil">
+                <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
+            </button>
+            <div class="menu-perfil-dropdown" id="dropdown-perfil">
+                <a href="/configuracao" class="dropdown-item">Configuração <i class="fa-solid fa-gear" aria-hidden="true"></i></a>
+                <a href="/admin-feedbacks" class="dropdown-item">Feedbacks <i class="fa-solid fa-inbox" aria-hidden="true"></i></a>
+                <a href="/termos-de-aceite" class="dropdown-item">Termo de Aceite <i class="fa-regular fa-file-lines" aria-hidden="true"></i></a>
+                <a href="/politica-de-privacidade" class="dropdown-item">Privacidade <i class="fa-solid fa-shield-halved" aria-hidden="true"></i></a>
+                <a href="/" class="dropdown-item btn-desconectar">Desconectar <i class="fa-solid fa-power-off" aria-hidden="true"></i></a>
+            </div>
+        </div>
+    </header>
+
+    <header class="audit-header">
+        <div>
+            <p><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Painel administrativo</p>
+            <h1>Logs de auditoria</h1>
+            <span>Rastreabilidade das operações relevantes do JurisHome.</span>
+        </div>
+    </header>
+
+    <main class="audit-main" id="audit-main">
+        <section class="audit-summary" aria-label="Resumo dos registros">
+            <article><span>Registros exibidos</span><strong id="audit-total">–</strong></article>
+            <article><span>Última atualização</span><strong id="audit-updated">–</strong></article>
+            <article><span>Limite da consulta</span><strong>100</strong></article>
+        </section>
+
+        <section class="audit-panel" aria-labelledby="audit-list-title">
+            <div class="audit-panel-heading">
+                <div>
+                    <h2 id="audit-list-title">Operações registradas</h2>
+                    <p>Os logs exibem identificadores técnicos, sem senhas, tokens ou conteúdo completo dos formulários.</p>
+                </div>
+                <button id="audit-refresh" type="button"><i class="fa-solid fa-rotate" aria-hidden="true"></i> Atualizar</button>
+            </div>
+
+            <form class="audit-filters" id="audit-filters" role="search">
+                <div>
+                    <label for="audit-search">Pesquisar</label>
+                    <input id="audit-search" type="search" maxlength="100" placeholder="Correlação, usuário ou recurso">
+                </div>
+                <div>
+                    <label for="audit-action">Ação</label>
+                    <select id="audit-action"><option value="">Todas as ações</option></select>
+                </div>
+                <div>
+                    <label for="audit-result">Resultado</label>
+                    <select id="audit-result">
+                        <option value="">Todos os resultados</option>
+                        <option value="sucesso">Sucesso</option>
+                        <option value="falha">Falha</option>
+                        <option value="bloqueado">Bloqueado</option>
+                    </select>
+                </div>
+                <button type="submit">Aplicar</button>
+                <button id="audit-clear" type="button" class="secondary">Limpar</button>
+            </form>
+
+            <div class="audit-alert" id="audit-alert" role="alert" hidden></div>
+            <div class="audit-loading" id="audit-loading" role="status">Carregando registros…</div>
+            <div class="audit-empty" id="audit-empty" hidden>Nenhum registro corresponde aos filtros.</div>
+
+            <div class="audit-table-wrap" id="audit-table-wrap" hidden tabindex="0" role="region" aria-label="Tabela de logs de auditoria">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data e hora</th>
+                            <th>Usuário</th>
+                            <th>Ação</th>
+                            <th>Recurso</th>
+                            <th>Resultado</th>
+                            <th>Correlação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="audit-table-body"></tbody>
+                </table>
+            </div>
+            <div class="audit-cards" id="audit-cards" hidden></div>
+        </section>
+    </main>
+
+    {% include "_legal_links.html" %}
+    <script src="/static/js/auditoria.js?v=20260925-2"></script>
+</body>
+</html>

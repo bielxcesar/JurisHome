@@ -6,17 +6,19 @@
     <meta name="description" content="Termos jurídicos explicados para estudantes iniciantes, com exemplos e referências legais.">
     <title>Glossário jurídico | JurisHome</title>
     <link rel="stylesheet" href="/static/css/glossario.css">
+    <link rel="stylesheet" href="/static/css/figma-app.css?v=20260925-2">
+    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
     <script src="/static/js/glossario.js"></script>
 </head>
 <body>
     <a class="pular-conteudo" href="#conteudo">Pular para o conteúdo</a>
     <header class="cabecalho">
-        <a class="marca" href="/home_admin" aria-label="JurisHome — página inicial">
+        <a class="marca" href="{{ url_inicio }}" aria-label="JurisHome — página inicial">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 5v15M3 4.5c3-1 6-.5 9 1.5 3-2 6-2.5 9-1.5V19c-3-1-6-.5-9 1.5-3-2-6-2.5-9-1.5z"/></svg>
             Juris<span>Home</span>
         </a>
         <nav class="navegacao" aria-label="Navegação principal">
-            <a href="/templates/home_Usuario.html">Início</a>
+            <a href="{{ url_inicio }}">Início</a>
             <a href="{{ url_glossario }}" aria-current="page">Glossário</a>
         </nav>
         <button class="botao-tema" type="button" id="alternar-tema" hidden>Modo claro</button>
@@ -104,5 +106,6 @@
             <a href="#conteudo">Voltar ao início <span aria-hidden="true">↑</span></a>
         </footer>
     </main>
+    {% include "_legal_links.html" %}
 </body>
 </html>

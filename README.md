@@ -1,131 +1,106 @@
-<div align="center">
+# JurisHome
 
-# ⚖️ JurisHome
+Aplicação web acadêmica para consultar conteúdos jurídicos, pesquisar no acervo, navegar por categorias e usar um glossário. O sistema tem cadastro de estudantes, autenticação em duas etapas e um painel administrativo para feedbacks e auditoria.
 
-**Plataforma Web para Centralização, Curadoria e Pesquisa de Conteúdo Jurídico**
+## O que funciona
 
-  <img alt="Python 3.12" src="https://img.shields.io/badge/Python_3.12-3776AB?style=for-the-badge&logo=python&logoColor=white"/>
-  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white"/>
-  <img alt="SQLAlchemy" src="https://img.shields.io/badge/SQLAlchemy-D71F00?style=for-the-badge&logo=sqlalchemy&logoColor=white"/>
-  <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white"/>
-  <img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white"/>
-  <img alt="Swagger" src="https://img.shields.io/badge/Swagger-85EA2D?style=for-the-badge&logo=swagger&logoColor=black"/>
-  <img alt="Railway" src="https://img.shields.io/badge/Railway-131415?style=for-the-badge&logo=railway&logoColor=white"/>
+- Cadastro de estudante e login com senha e código de aplicativo autenticador (TOTP).
+- Pesquisa, filtros, listagem de matérias aprovadas e glossário jurídico.
+- Consulta opcional de instituição pelo código e-MEC.
+- Envio de feedback pelo estudante; resposta e organização dos atendimentos pelo administrador.
+- Consulta dos registros de auditoria pelo administrador.
 
-</div>
+O projeto não tem tela para cadastrar ou editar matérias, não envia e-mail para recuperação de senha, não oferece login Google e não faz upload de imagens para o Cloudinary. A recuperação de senha confirma o código do autenticador. A consulta e-MEC depende de serviços externos.
 
-<br/>
+## Requisitos
 
-## 📌 Sobre o Projeto
+- Python 3.11 recomendado. Python 3.12 ou superior também é aceito; nessa versão a consulta de instituição usa diretamente a API pública do CAU/BR.
+- Git e conexão com a Internet para baixar o projeto e as dependências.
 
-O JurisHome é uma plataforma web criada para facilitar o acesso a conteúdos jurídicos confiáveis, oferecendo aos estudantes uma experiência de consulta e aprendizado mais simples, organizada e segura.
+## Executar no Windows
 
-O sistema foi concebido para resolver a alta dispersão de informações na rotina acadêmica dos estudantes de Direito, oferecendo um ambiente centralizado com fontes verificadas, linguagem didática e categorização por áreas do conhecimento jurídico.
+No PowerShell:
 
----
+```powershell
+git clone https://github.com/bielxcesar/JurisHome.git
+cd JurisHome
 
-## 🚀 Principais Funcionalidades
+py -3.11 -m venv venv
 
-- 🔒 **Autenticação Segura & Múltiplos Perfis**: Cadastro com distinção entre **Estudantes** e **Administradores**, suporte a login via Google OAuth 2.0 e segundo fator de autenticação (2FA/TOTP).
-- 🛡️ **Curadoria de Conteúdo**: Sistema de aprovação em etapas — matérias submetidas passam pelo status `EM_ANALISE` antes de ficarem visíveis publicamente.
-- 📚 **Acervo Organizado**: Navegação e busca inteligente por Doutrinas, Legislações e Acórdãos divididos por **Categorias** (ex: Direito Penal) e **Subtemas**.
-- 📖 Glossário Jurídico: Consulta de termos jurídicos em linguagem simples, com busca, filtro por letra inicial, exemplos práticos e referências oficiais para apoiar estudantes iniciantes.
-- 🖼️ **Otimização de Mídias**: Integração com Cloudinary CDN para armazenamento de imagens, mantendo o banco de dados leve.
-- 💬 **Canal de Feedback**: Envio direto de dúvidas, sugestões e relatórios de uso pelos alunos.
+.\venv\Scripts\python.exe -m pip install --upgrade pip
+.\venv\Scripts\python.exe -m pip install -r requirements.txt
 
----
+.\venv\Scripts\python.exe setup_local.py
 
-## 🛠️ Arquitetura e Tecnologias
+.\venv\Scripts\python.exe -m uvicorn main:app --reload
+```
 
-A aplicação segue uma **Arquitetura Monolítica em Camadas** no Back-end, separando Apresentação, Lógica de Negócio e Persistência de Dados.
+Abra http://127.0.0.1:8000. A documentação interativa da API fica em http://127.0.0.1:8000/docs.
 
-- **Back-end**: Python 3.12, FastAPI, SQLAlchemy (ORM), PyJWT, Bcrypt.
-- **Front-end**: HTML5, JavaScript (SPA), Tailwind CSS.
-- **Banco de Dados**: PostgreSQL (Hospedado no Railway).
-- **Serviços de Terceiros**: Google OAuth 2.0, Cloudinary (CDN).
-- **Infraestrutura & Gestão**: Git/GitHub, Railway, Figma, Jira, Swagger UI.
+## Executar no Linux ou macOS
 
----
-
-<details>
- <summary><b>🔍 Clique para ler Problemática é Solução</b></summary>
-
-## 📄 Problemática é Solução
-
-Estudar Direito exige pesquisa constante. Seja para preparar aulas, montar peças práticas ou acompanhar alterações legislativas, os estudantes perdem horas valiosas navegando por múltiplos portais sem garantia da veracidade ou atualização do conteúdo.
-
-Em pesquisa realizada com acadêmicos de Direito, evidenciou-se a frustração com o excesso de abas abertas, o vocabulário excessivamente rebuscado para iniciantes e layouts confusos. O **JurisHome** nasce para unificar e traduzir esse acervo de forma fluida e confiável.
-
-</details>
-
----
-
-## 💻 Como Executar o Projeto Localmente
-
-
-### Pré-requisitos
-- **Python 3.12+** instalado.
-- Git instalado.
-
-### Passo a Passo
-
-**Clone o repositório:**
 ```bash
 git clone https://github.com/bielxcesar/JurisHome.git
 cd JurisHome
-```
-
-**Crie e ative o ambiente virtual no Windows:**
-```powershell
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-```
-
-**No Linux ou macOS:**
-```bash
 python3 -m venv venv
 source venv/bin/activate
-```
-
-**Instale as dependências:**
-```bash
-pip install -r requirements.txt
-```
-
-**Configure o ambiente local:**
-
-Crie um arquivo `.env` na raiz do projeto. `JurisHome_senha` é obrigatória;
-sem `DATABASE_URL`, a aplicação usa automaticamente o SQLite local.
-
-```dotenv
-JurisHome_senha=troque-por-uma-chave-local-segura
-# DATABASE_URL=postgresql://usuario:senha@localhost:5432/jurishome
-# CLOUDINARY_URL=sua_url_cloudinary
-```
-
-**Carregue as matérias e categorias de demonstração:**
-```bash
-python seed.py
-```
-
-O seed pode ser executado novamente sem duplicar os três conteúdos demonstrativos.
-
-**Inicie o servidor local:**
-```bash
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python setup_local.py
 python -m uvicorn main:app --reload
 ```
 
----
+## Banco de dados
 
-<details>
-  
-   <summary><b>👥Desenvolvedores</b></summary>
+Por padrão, `setup_local.py` cria um `.env` com uma chave aleatória e configura o SQLite em `jurishome_local.db`. O arquivo `.env` não é sobrescrito se já existir. As tabelas são criadas ao iniciar a aplicação; o projeto não usa Alembic e não atualiza automaticamente tabelas existentes.
 
-## Projeto desenvolvido por:
-- **Pedro Henrique Harada Pecegueiro** — [GitHub](https://github.com/Pedro-Pecegueiro)
-- **Erick Santos Barbosa** — [GitHub](https://github.com/ErickSantosBarbosa04)
-- **Gabriel Agustín Fernández Alves** — [GitHub](https://github.com/bielxcesar)
-</details>
+PostgreSQL é opcional. Instale e inicie o serviço, crie o banco e altere `DATABASE_URL` no `.env`:
 
+```powershell
+psql -U postgres -c "CREATE DATABASE juris_home;"
+```
 
+Use `postgresql+psycopg2://postgres:SUA_SENHA@localhost:5432/juris_home` como valor de `DATABASE_URL` e reinicie o servidor. Não execute `seed.py` em PostgreSQL: o script aceita apenas SQLite.
 
+## Contas e conteúdo de demonstração
+
+O projeto não cria uma senha administrativa padrão. Com o ambiente virtual ativado, execute:
+
+```powershell
+.\venv\Scripts\python.exe criar_admin.py
+```
+
+No Linux/macOS, execute `python criar_admin.py` com o ambiente virtual ativado.
+Informe o e-mail e a senha quando solicitado. No primeiro login, configure o aplicativo autenticador e confirme o código. Para testar o perfil de estudante, crie uma conta pela tela de cadastro.
+
+Opcionalmente, execute o seed para inserir três matérias e dois feedbacks fictícios identificados como demonstração. No Windows:
+
+```powershell
+.\venv\Scripts\python.exe seed.py
+```
+
+No Linux/macOS, com o ambiente virtual ativado, use `python seed.py`. O script pode ser repetido sem duplicar esses registros.
+
+## Testes
+
+Com o ambiente virtual ativado:
+
+```bash
+python -m unittest discover -s tests -v
+python -m pip check
+```
+
+No Windows, use `venv\Scripts\python.exe` no lugar de `python`.
+
+## Observações
+
+- A consulta e-MEC precisa de Internet. Se os serviços externos estiverem indisponíveis, o cadastro continua sem preencher a instituição.
+- Os registros do seed são fictícios e não devem ser apresentados como notícia, lei, decisão judicial ou orientação jurídica real.
+- A retenção de dados é executada manualmente por `python manutencao_lgpd.py`; para aplicar alterações, use `python manutencao_lgpd.py --executar` após revisar o resultado.
+- O funcionamento com PostgreSQL deve ser testado em uma instalação com esse serviço disponível. O caminho local recomendado para demonstração usa SQLite.
+
+## Equipe
+
+- Pedro Henrique Harada Pecegueiro — [GitHub](https://github.com/Pedro-Pecegueiro)
+- Erick Santos Barbosa — [GitHub](https://github.com/ErickSantosBarbosa04)
+- Gabriel Agustín Fernández Alves — [GitHub](https://github.com/bielxcesar)

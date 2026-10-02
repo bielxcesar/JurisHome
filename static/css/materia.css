@@ -356,3 +356,12 @@ body.modo-claro .nav-link {
     from { opacity: 0; transform: translateX(-5px); }
     to { opacity: 1; transform: translateX(0); }
 }
+
+.nav-link.nav-link-indisponivel {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.nav-link.nav-link-indisponivel:hover {
+  color: inherit;
+}

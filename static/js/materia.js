@@ -17,6 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
   exibirDataAtual();
   configurarMenuPerfil();
   configurarLinksExternos();
+  configurarSaida();
 });
 
 function carregarTemaSalvo() {
@@ -97,5 +98,17 @@ function configurarBotaoCopiarLink() {
     } catch (err) {
       console.error("Erro ao copiar o link: ", err);
     }
+  });
+}
+
+function configurarSaida() {
+  document.querySelectorAll(".btn-desconectar").forEach((link) => {
+    link.addEventListener("click", (evento) => {
+      evento.preventDefault();
+      localStorage.removeItem("jurishome_access_token");
+      sessionStorage.removeItem("jurishome_desafio_2fa");
+      fetch("/api/auth/logout", { method: "POST" })
+        .finally(() => { window.location.href = "/"; });
+    });
   });
 }

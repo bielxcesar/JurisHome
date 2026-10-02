@@ -6,8 +6,10 @@
     <meta name="description" content="Canal direto de opiniões e suporte do JurisHome">
     <title>Feedback e Suporte | JurisHome</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/homeAdmin.css?v=20260913">
+    <link rel="stylesheet" href="/static/css/homeAdmin.css?v=20260925-1">
+    <link rel="stylesheet" href="/static/css/figma-app.css?v=20260925-2">
     <link rel="stylesheet" href="/static/css/feedbacks.css?v=20260913-2">
+    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
 </head>
 <body class="feedback-shell">
     <a class="feedback-skip-link" href="#conteudo-principal">Ir para o conteúdo</a>
@@ -16,11 +18,11 @@
         <div class="nav-data" id="data-atual" aria-label="Data atual">--/--/----</div>
 
         <nav class="nav-menu" aria-label="Navegação principal">
-            <a href="/static/pages/home-usuario.html" class="nav-link"><i class="fa-solid fa-house" aria-hidden="true"></i> Início</a>
-            <a href="/static/pages/feedback-suporte.html?v=20260913-3" class="nav-link active" aria-current="page"><i class="fa-solid fa-headset" aria-hidden="true"></i> Feedback e Suporte</a>
-            <a href="#" class="nav-link"><i class="fa-solid fa-user-group" aria-hidden="true"></i> Sobre nós</a>
-            <a href="#" class="nav-link"><i class="fa-solid fa-newspaper" aria-hidden="true"></i> Categoria</a>
-            <a href="#" class="nav-link"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Pesquisa</a>
+            <a href="/home_usuario" class="nav-link"><i class="fa-solid fa-house" aria-hidden="true"></i> Início</a>
+            <a href="/configuracoes-usuario#feedback" class="nav-link active" aria-current="page"><i class="fa-solid fa-headset" aria-hidden="true"></i> Feedback e Suporte</a>
+            <span class="nav-link nav-link-indisponivel" aria-disabled="true" title="Página ainda não disponível"><i class="fa-solid fa-user-group" aria-hidden="true"></i> Sobre nós</span>
+            <a href="/categorias" class="nav-link"><i class="fa-solid fa-newspaper" aria-hidden="true"></i> Categorias</a>
+            <a href="/pesquisa" class="nav-link"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Pesquisa</a>
         </nav>
 
         <div class="nav-perfil">
@@ -29,7 +31,9 @@
             </button>
             <div class="menu-perfil-dropdown" id="dropdown-perfil" aria-label="Configurações do usuário">
                 <a href="/configuracoes-usuario" class="dropdown-item">Configurações <i class="fa-solid fa-gear" aria-hidden="true"></i></a>
-                <a href="#" class="dropdown-item">Perfil <i class="fa-solid fa-user" aria-hidden="true"></i></a>
+                <a href="/termos-de-aceite" class="dropdown-item">Termo de Aceite <i class="fa-regular fa-file-lines" aria-hidden="true"></i></a>
+                <a href="/politica-de-privacidade" class="dropdown-item">Privacidade <i class="fa-solid fa-shield-halved" aria-hidden="true"></i></a>
+                <a href="/configuracoes-usuario" class="dropdown-item">Perfil <i class="fa-solid fa-user" aria-hidden="true"></i></a>
                 <a href="/" class="dropdown-item btn-desconectar">Sair <i class="fa-solid fa-power-off" aria-hidden="true"></i></a>
             </div>
         </div>
@@ -117,7 +121,8 @@
 
     <div class="feedback-toast" id="feedback-user-toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="/static/js/feedbackMockService.js?v=20260913-3"></script>
+    {% include "_legal_links.html" %}
+    <script src="/static/js/feedbackService.js?v=20260927-1"></script>
     <script src="/static/js/feedbackUsuario.js?v=20260913-3"></script>
 </body>
 </html>

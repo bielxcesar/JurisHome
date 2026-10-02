@@ -6,7 +6,9 @@
     <meta name="description" content="Painel inicial do JurisHome com matérias organizadas por categoria">
     <title>Início | JurisHome</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/homeAdmin.css?v=20260913">
+    <link rel="stylesheet" href="/static/css/homeAdmin.css?v=20260925-2">
+    <link rel="stylesheet" href="/static/css/figma-app.css?v=20260925-5">
+    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
 </head>
 <body>
 
@@ -16,11 +18,12 @@
         
         <nav class="nav-menu">
             <a href="/home_admin" class="nav-link active" aria-current="page"><i class="fa-solid fa-house" aria-hidden="true"></i> Home</a>
-            <a href="#mais-conteudos" class="nav-link"><i class="fa-solid fa-square-plus"></i> Exibir mais</a>
+            <a href="/exibir-mais" class="nav-link"><i class="fa-solid fa-square-plus"></i> Exibir mais</a>
             <a href="/admin-feedbacks" class="nav-link"><i class="fa-solid fa-inbox"></i> Feedbacks</a>
-            <a href="#" class="nav-link"><i class="fa-solid fa-user-group"></i> Sobre nós</a>
-            <a href="#mais-conteudos" class="nav-link"><i class="fa-solid fa-newspaper"></i> Categorias</a>
-            <a href="#" class="nav-link"><i class="fa-solid fa-magnifying-glass"></i> Pesquisa</a>
+            <a href="/admin/auditoria" class="nav-link"><i class="fa-solid fa-list-check"></i> Auditoria</a>
+            <span class="nav-link nav-link-indisponivel" aria-disabled="true" title="Página ainda não disponível"><i class="fa-solid fa-user-group"></i> Sobre nós</span>
+            <a href="/categorias" class="nav-link"><i class="fa-solid fa-newspaper"></i> Categorias</a>
+            <a href="/pesquisa" class="nav-link"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Pesquisa</a>
             <a href="/glossario" class="nav-link"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Glossário</a>
         </nav>
 
@@ -32,8 +35,11 @@
             <div class="menu-perfil-dropdown" id="dropdown-perfil">
                 <a href="/configuracao" class="dropdown-item">Configuração <i class="fa-solid fa-gear"></i></a>
                 <a href="/admin-feedbacks" class="dropdown-item">Feedbacks <i class="fa-solid fa-inbox"></i></a>
-                <a href="#" class="dropdown-item">Perfil <i class="fa-solid fa-user"></i></a>
-                <a href="#mais-conteudos" class="dropdown-item">Ver matérias</a>
+                <a href="/admin/auditoria" class="dropdown-item">Auditoria <i class="fa-solid fa-list-check"></i></a>
+                <a href="/termos-de-aceite" class="dropdown-item">Termo de Aceite <i class="fa-regular fa-file-lines"></i></a>
+                <a href="/politica-de-privacidade" class="dropdown-item">Privacidade <i class="fa-solid fa-shield-halved"></i></a>
+                <a href="/configuracao" class="dropdown-item">Perfil <i class="fa-solid fa-user"></i></a>
+                    <a href="/exibir-mais" class="dropdown-item">Ver matérias</a>
                 <a href="/" class="dropdown-item btn-desconectar">Desconectar <i class="fa-solid fa-power-off"></i></a>
             </div>
         </div>
@@ -79,10 +85,9 @@
         </section>
 
         <!-- Seção Recomendados / Mais Conteúdos -->
-        <section class="secao-recomendados" id="mais-conteudos">
-            <h2>Você pode gostar</h2>
-            <div class="grid-cards" id="grid-voce-pode-gostar">
-            </div>
+        <section class="secao-recomendados" id="mais-conteudos" aria-labelledby="titulo-recomendados">
+            <h2 id="titulo-recomendados">Mais matérias</h2>
+            <div class="grid-cards" id="grid-voce-pode-gostar"></div>
         </section>
 
     </main>
@@ -101,6 +106,7 @@
         </button>
     </div>
 
-    <script src="/static/js/homeAdmin.js?v=20260913-3"></script>
+    {% include "_legal_links.html" %}
+    <script src="/static/js/homeAdmin.js?v=20260925-5"></script>
 </body>
 </html>

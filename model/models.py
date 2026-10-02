@@ -41,7 +41,6 @@ class Usuario(Base):
     nome = Column(String(100), nullable=False)
     email = Column(String(150), unique=True, index=True, nullable=False)
     senha_hash = Column(String(255), nullable=True)
-    google_id = Column(String(255), unique=True, index=True, nullable=True)
 
     tipo_usuario = Column(
         Enum(TipoUsuario, values_callable=lambda x: [e.value for e in x]),
@@ -104,7 +103,7 @@ class Subcategoria(Base):
         UniqueConstraint("nome", "categoria_id", name="uq_subcategoria_nome_por_categoria"),
     )
 
-
+# Area de adição de conteudo 
 class Conteudo(Base):
     __tablename__ = "conteudos"
 
@@ -186,3 +185,20 @@ class FeedbackAtendimento(Base):
     __table_args__ = (
         CheckConstraint("avaliacao IS NULL OR (avaliacao >= 1 AND avaliacao <= 5)", name="ck_feedback_avaliacao"),
     )
+
+
+class LogAuditoria(Base):
+    #Registra operações relevantes realizadas no JurisHome.
+
+    __tablename__ = "logs_auditoria"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    usuario_id = Column(CHAR(36), nullable=True, index=True)
+    usuario_tipo = Column(String(30), nullable=False, default="anonimo")
+    acao = Column(String(80), nullable=False, index=True)
+    recurso_tipo = Column(String(80), nullable=False, index=True)
+    recurso_id = Column(String(100), nullable=True)
+    resultado = Column(String(20), nullable=False, index=True)
+    correlacao_id = Column(String(36), nullable=False, index=True)
+    detalhes_json = Column(Text, nullable=False, default="{}")
+    criado_em = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)

@@ -1,6 +1,9 @@
 (function () {
     "use strict";
 
+    let materias = [];
+    let categoriaAtiva = "";
+
     document.addEventListener("DOMContentLoaded", iniciar);
 
     function iniciar() {
@@ -8,7 +11,22 @@
         mostrarData();
         configurarPerfil();
         configurarMenuJuris();
+        configurarFiltros();
+        configurarNavegacaoMaterias();
         carregarMaterias();
+        configurarSaida();
+    }
+
+    function configurarSaida() {
+        document.querySelectorAll(".btn-desconectar").forEach((link) => {
+            link.addEventListener("click", (evento) => {
+                evento.preventDefault();
+                window.localStorage.removeItem("jurishome_access_token");
+                window.sessionStorage.removeItem("jurishome_desafio_2fa");
+                window.fetch("/api/auth/logout", { method: "POST" })
+                    .finally(() => { window.location.href = "/"; });
+            });
+        });
     }
 
     function aplicarTema() {
@@ -97,50 +115,157 @@
         });
     }
 
+    function configurarFiltros() {
+        const lista = document.getElementById("lista-categorias");
+        if (!lista) return;
+
+        lista.addEventListener("click", (evento) => {
+            const botao = evento.target.closest("button[data-categoria]");
+            if (!botao) return;
+
+            categoriaAtiva = botao.dataset.categoria || "";
+            lista.querySelectorAll("button[data-categoria]").forEach((item) => {
+                const ativo = item === botao;
+                item.classList.toggle("ativa", ativo);
+                item.setAttribute("aria-pressed", String(ativo));
+            });
+            aplicarFiltros();
+        });
+    }
+
+    function configurarNavegacaoMaterias() {
+        const conteudo = document.getElementById("conteudo-principal");
+        if (!conteudo) return;
+
+        conteudo.addEventListener("click", (evento) => {
+            const card = evento.target.closest("[data-conteudo-id]");
+            if (card) abrirMateria(card.dataset.conteudoId);
+        });
+
+        conteudo.addEventListener("keydown", (evento) => {
+            if (evento.key !== "Enter" && evento.key !== " ") return;
+            const card = evento.target.closest("[data-conteudo-id]");
+            if (!card) return;
+            evento.preventDefault();
+            abrirMateria(card.dataset.conteudoId);
+        });
+    }
+
     async function carregarMaterias() {
         try {
             const resposta = await window.fetch("/api/conteudos");
             if (!resposta.ok) throw new Error("Não foi possível carregar as matérias.");
-            const materias = await resposta.json();
-            if (!Array.isArray(materias) || materias.length === 0) {
-                mostrarEstadoVazio();
-                return;
-            }
-
-            preencherDestaque("card-destaque-principal", "hero-cat-1", "hero-titulo-1", materias[0]);
-            preencherDestaque("card-destaque-2", "hero-cat-2", "hero-titulo-2", materias[1] || materias[0]);
-            preencherDestaque("card-destaque-3", "hero-cat-3", "hero-titulo-3", materias[2] || materias[0]);
-            preencherRecomendados(materias.slice(3));
+            const dados = await resposta.json();
+            materias = Array.isArray(dados) ? dados : [];
+            renderizarCategorias();
+            aplicarFiltros();
         } catch (erro) {
-            mostrarEstadoVazio("Não foi possível carregar as matérias agora.");
+            materias = [];
+            renderizarCategorias();
+            renderizarDestaques([]);
+            atualizarStatus("Não foi possível carregar as matérias agora.");
             console.error(erro);
         }
     }
 
-    function preencherDestaque(cardId, categoriaId, tituloId, materia) {
-        const card = document.getElementById(cardId);
-        document.getElementById(categoriaId).textContent = materia.categoria || "Direito";
-        document.getElementById(tituloId).textContent = materia.titulo;
-        card.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,.2), rgba(0,0,0,.88)), url('${materia.imagem_miniatura || ""}')`;
-        tornarClicavel(card, materia.uuid);
+    function renderizarCategorias() {
+        const lista = document.getElementById("lista-categorias");
+        const vazio = document.getElementById("categorias-vazio");
+        if (!lista) return;
+
+        const categorias = [...new Set(
+            materias.map((materia) => materia.categoria || "Direito")
+        )].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+        lista.replaceChildren(criarBotaoCategoria("Todas", "", !categoriaAtiva));
+        categorias.forEach((categoria) => {
+            lista.append(criarBotaoCategoria(categoria, categoria, categoriaAtiva === categoria));
+        });
+        if (vazio) vazio.hidden = categorias.length > 0;
     }
 
-    function preencherRecomendados(materias) {
-        const grade = document.getElementById("grid-voce-pode-gostar");
-        grade.replaceChildren();
+    function criarBotaoCategoria(rotulo, valor, ativo) {
+        const botao = document.createElement("button");
+        botao.type = "button";
+        botao.className = `categoria-filtro${ativo ? " ativa" : ""}`;
+        botao.dataset.categoria = valor;
+        botao.setAttribute("aria-pressed", String(ativo));
+        botao.textContent = rotulo;
+        return botao;
+    }
 
-        if (materias.length === 0) {
-            const aviso = document.createElement("p");
-            aviso.textContent = "Novas matérias aparecerão aqui.";
-            grade.append(aviso);
+    function aplicarFiltros() {
+        const categoria = normalizar(categoriaAtiva);
+        const resultados = materias.filter((materia) =>
+            !categoria || normalizar(materia.categoria || "Direito") === categoria
+        );
+
+        renderizarDestaques(resultados);
+        const quantidade = resultados.length;
+        atualizarStatus(`${quantidade} ${quantidade === 1 ? "matéria encontrada" : "matérias encontradas"}${categoriaAtiva ? ` em ${categoriaAtiva}` : ""}.`);
+    }
+
+    function renderizarDestaques(resultados) {
+        const principal = document.getElementById("card-destaque-principal");
+        const segundo = document.getElementById("card-destaque-2");
+        const terceiro = document.getElementById("card-destaque-3");
+        const coluna = document.getElementById("coluna-destaques-secundarios");
+        const grade = document.getElementById("destaques-home");
+
+        if (resultados.length === 0) {
+            preencherEstadoVazio(principal);
+            segundo.hidden = true;
+            terceiro.hidden = true;
+            coluna.hidden = true;
+            grade.classList.add("um-resultado");
+            preencherRecomendados([]);
             return;
         }
 
-        materias.forEach((materia) => {
+        preencherDestaque(principal, "hero-cat-1", "hero-titulo-1", resultados[0]);
+        preencherDestaque(segundo, "hero-cat-2", "hero-titulo-2", resultados[1]);
+        preencherDestaque(terceiro, "hero-cat-3", "hero-titulo-3", resultados[2]);
+        coluna.hidden = resultados.length < 2;
+        grade.classList.toggle("um-resultado", resultados.length < 2);
+        preencherRecomendados(resultados.slice(3));
+    }
+
+    function preencherDestaque(card, categoriaId, tituloId, materia) {
+        card.hidden = !materia;
+        if (!materia) return;
+        card.dataset.conteudoId = materia.uuid;
+        card.setAttribute("role", "link");
+        card.classList.remove("card-sem-conteudo");
+        document.getElementById(categoriaId).textContent = materia.categoria || "Direito";
+        document.getElementById(tituloId).textContent = materia.titulo;
+    }
+
+    function preencherRecomendados(recomendadas) {
+        const grade = document.getElementById("grid-voce-pode-gostar");
+        grade.replaceChildren();
+
+        if (recomendadas.length === 0) {
+            const aviso = document.createElement("p");
+            aviso.className = "mensagem-recomendados";
+            aviso.textContent = !materias.length
+                ? "O acervo ainda não possui matérias cadastradas."
+                : categoriaAtiva
+                    ? `Todas as matérias de ${categoriaAtiva} estão nos destaques.`
+                    : "Todas as matérias aprovadas estão nos destaques.";
+            const link = document.createElement("a");
+            link.className = "link-acervo";
+            link.href = "/pesquisa";
+            link.textContent = "Pesquisar no acervo";
+            grade.append(aviso, link);
+            return;
+        }
+
+        recomendadas.forEach((materia) => {
             const card = document.createElement("article");
             card.className = "card-recomendado";
             card.tabIndex = 0;
-            card.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,.2), rgba(0,0,0,.88)), url('${materia.imagem_miniatura || ""}')`;
+            card.setAttribute("role", "link");
+            card.dataset.conteudoId = materia.uuid;
 
             const categoria = document.createElement("span");
             categoria.className = "categoria-tag";
@@ -148,26 +273,36 @@
             const titulo = document.createElement("h3");
             titulo.textContent = materia.titulo;
             card.append(categoria, titulo);
-            tornarClicavel(card, materia.uuid);
             grade.append(card);
         });
     }
 
-    function tornarClicavel(elemento, uuid) {
-        if (!uuid) return;
-        const abrir = () => { window.location.href = `/materia/${uuid}`; };
-        elemento.addEventListener("click", abrir);
-        elemento.addEventListener("keydown", (evento) => {
-            if (evento.key === "Enter" || evento.key === " ") {
-                evento.preventDefault();
-                abrir();
-            }
-        });
+    function preencherEstadoVazio(card) {
+        delete card.dataset.conteudoId;
+        card.setAttribute("role", "status");
+        card.classList.add("card-sem-conteudo");
+        document.getElementById("hero-cat-1").textContent = "Acervo JurisHome";
+        document.getElementById("hero-titulo-1").textContent = materias.length
+            ? "Nenhuma matéria corresponde a esta categoria."
+            : "Nenhuma matéria cadastrada no momento.";
     }
 
-    function mostrarEstadoVazio(mensagem = "Nenhuma matéria disponível.") {
-        document.getElementById("hero-titulo-1").textContent = mensagem;
-        document.getElementById("hero-titulo-2").textContent = "Tente novamente mais tarde.";
-        document.getElementById("hero-titulo-3").textContent = "";
+    function abrirMateria(uuid) {
+        if (uuid) window.location.href = `/materia/${encodeURIComponent(uuid)}`;
     }
+
+    function atualizarStatus(mensagem) {
+        const elemento = document.getElementById("status-conteudos");
+        if (elemento) elemento.textContent = mensagem;
+    }
+
+    function normalizar(valor) {
+        return String(valor || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/\s+/g, " ")
+            .trim()
+            .toLocaleLowerCase("pt-BR");
+    }
+
 })();

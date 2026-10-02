@@ -6,6 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database import Base
+from model.models import LogAuditoria, TipoUsuario, Usuario
 from routes.feedbacks import (
     AlteracaoStatus,
     FeedbackCriacao,
@@ -56,6 +57,33 @@ class FeedbackApiTests(unittest.TestCase):
         self.assertEqual(1, len(registros))
         self.assertEqual(criado["id"], registros[0]["id"])
         self.assertEqual("Melhoria na pesquisa", registros[0]["assunto"])
+
+    def test_criacao_de_feedback_gera_log_sem_copiar_mensagem(self):
+        usuario = Usuario(
+            uuid="usr-teste-auditoria",
+            nome="Usuário de teste",
+            email="usuario.teste@example.local",
+            tipo_usuario=TipoUsuario.ESTUDANTE,
+        )
+        texto_feedback = "Mensagem reservada que não deve aparecer no log."
+
+        criado = criar_feedback(
+            FeedbackCriacao(
+                tipo="Sugestão",
+                assunto="Teste de auditoria",
+                mensagem=texto_feedback,
+            ),
+            self.db,
+            usuario,
+            self.db,
+        )
+
+        registro = self.db.query(LogAuditoria).one()
+        self.assertEqual("feedback_criado", registro.acao)
+        self.assertEqual(criado["id"], registro.recurso_id)
+        self.assertEqual(usuario.uuid, registro.usuario_id)
+        self.assertNotIn(texto_feedback, registro.detalhes_json)
+        self.assertNotIn(usuario.email, registro.detalhes_json)
 
     def test_admin_atualiza_e_responde_feedback(self):
         criado = criar_feedback(

@@ -1,7 +1,7 @@
 (function () {
     "use strict";
 
-    const service = window.FeedbackMockService;
+    const service = window.FeedbackService;
     if (!service) {
         console.error("Serviço de feedback indisponível.");
         return;
@@ -312,7 +312,6 @@
         textoBotao.textContent = "Enviando...";
 
         try {
-            await service.aguardar(500);
             const atualizado = await service.responder(feedbackSelecionadoId, texto);
             campo.value = "";
             preencherDetalhes(atualizado);

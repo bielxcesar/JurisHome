@@ -6,16 +6,16 @@
     <title>{{ titulo_configuracao }} | JurisHome</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/confAdm.css?v=20260913-3">
+    <link rel="stylesheet" href="/static/css/confAdm.css?v=20260925-1">
+    <link rel="stylesheet" href="/static/css/figma-app.css?v=20260925-2">
+    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
 
-    <!-- Script de verificação imediata do tema para evitar o Flash White -->
     <script>
         (function() {
             const temaSalvo = localStorage.getItem("tema_juris");
             if (temaSalvo === "claro") {
                 document.documentElement.classList.remove("dark");
                 document.documentElement.setAttribute("data-theme", "light");
-                // Adiciona a classe no body caso o confAdm.css use body.modo-claro
                 window.addEventListener('DOMContentLoaded', () => document.body.classList.add("modo-claro"));
             } else {
                 document.documentElement.classList.add("dark");
@@ -41,11 +41,11 @@
         <div class="conf-body">
             <aside class="conf-sidebar">
                 <nav class="sidebar-menu">
-                    <a href="#" class="sidebar-item">
+                    <a href="/termos-de-aceite" class="sidebar-item">
                         <i class="fa-regular fa-file-lines"></i>
-                        <span>Termos de uso</span>
+                        <span>Termo de Aceite</span>
                     </a>
-                    <a href="#" class="sidebar-item">
+                    <a href="/politica-de-privacidade" class="sidebar-item">
                         <i class="fa-solid fa-shield-halved"></i>
                         <span>Privacidade</span>
                     </a>
@@ -53,6 +53,13 @@
                         <i class="fa-solid fa-key"></i>
                         <span>Trocar senha</span>
                     </a>
+
+                    {% if mostrar_exclusao_dados|default(false) %}
+                    <a href="#privacidade" class="sidebar-item" data-config-section="privacidade" aria-controls="config-section-privacidade">
+                        <i class="fa-solid fa-user-shield"></i>
+                        <span>Privacidade e dados</span>
+                    </a>
+                    {% endif %}
                     
                     {% if feedback_interno|default(false) %}
                     <a href="#feedback" class="sidebar-item" data-config-section="feedback" aria-controls="config-section-feedback">
@@ -66,10 +73,12 @@
                     </a>
                     {% endif %}
                     
-                    <a href="#" class="sidebar-item">
+                    {% if mostrar_auditoria|default(false) %}
+                    <a href="/admin/auditoria" class="sidebar-item">
                         <i class="fa-regular fa-clipboard"></i>
-                        <span>Log</span>
+                        <span>Logs de auditoria</span>
                     </a>
+                    {% endif %}
                 </nav>
 
                 <div class="sidebar-footer">
@@ -107,7 +116,48 @@
                     </form>
                 </section>
 
-                <!-- Seção: Feedback -->
+                {% if mostrar_exclusao_dados|default(false) %}
+                <section class="config-section privacy-section" id="config-section-privacidade" data-config-panel="privacidade" hidden>
+                    <div class="config-section-heading">
+                        <span class="config-section-icon"><i class="fa-solid fa-user-shield" aria-hidden="true"></i></span>
+                        <div>
+                            <h2>Privacidade e dados</h2>
+                            <p>Solicite a anonimização dos dados associados à sua conta.</p>
+                        </div>
+                    </div>
+
+                    <div class="privacy-explanation">
+                        <h3>O que será removido</h3>
+                        <ul>
+                            <li>Nome, e-mail e eventuais dados acadêmicos legados.</li>
+                            <li>Senha, vínculo externo e segredo da autenticação em duas etapas.</li>
+                            <li>Assunto, mensagem, avaliação, respostas e observações dos seus feedbacks.</li>
+                        </ul>
+
+                        <h3>O que será preservado</h3>
+                        <p>O identificador técnico da conta, as datas, a versão do Termo aceita, os protocolos e estados dos feedbacks e os logs de auditoria permanecem sem os dados pessoais removidos. Isso permite comprovar que as operações existiram sem manter seu conteúdo sensível.</p>
+                    </div>
+
+                    <div class="privacy-alert privacy-alert-success" id="privacy-success" role="status" aria-live="polite" hidden></div>
+                    <div class="privacy-alert privacy-alert-error" id="privacy-error" role="alert" hidden></div>
+
+                    <form id="form-anonimizacao" class="privacy-form" novalidate>
+                        <div class="form-group">
+                            <label for="senha-anonimizacao">Confirme sua senha atual:</label>
+                            <input type="password" id="senha-anonimizacao" autocomplete="current-password" maxlength="72" required>
+                        </div>
+                        <label class="privacy-confirmation" for="confirmar-anonimizacao">
+                            <input type="checkbox" id="confirmar-anonimizacao" required>
+                            <span>Entendo que a anonimização encerra a conta e não pode ser desfeita.</span>
+                        </label>
+                        <button type="submit" class="privacy-danger-button" id="btn-anonimizar">
+                            <i class="fa-solid fa-user-slash" aria-hidden="true"></i>
+                            <span>Anonimizar meus dados e encerrar conta</span>
+                        </button>
+                    </form>
+                </section>
+                {% endif %}
+
                 {% if feedback_interno|default(false) %}
                 <section class="config-section config-feedback-section" id="config-section-feedback" data-config-panel="feedback" hidden>
                     <div class="config-section-heading">
@@ -180,9 +230,10 @@
         </div>
     </div>
 
-    <script src="/static/js/confAdm.js?v=20260913-3"></script>
+    {% include "_legal_links.html" %}
+    <script src="/static/js/confAdm.js?v=20260925-1"></script>
     {% if feedback_interno|default(false) %}
-    <script src="/static/js/feedbackMockService.js?v=20260913-3"></script>
+    <script src="/static/js/feedbackService.js?v=20260927-1"></script>
     <script src="/static/js/feedbackUsuario.js?v=20260913-3"></script>
     {% endif %}
 </body>

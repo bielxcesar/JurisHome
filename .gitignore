@@ -24,6 +24,7 @@ anotacao.txt
 # Registros de Erros e Logs
 *.log
 logs/
+backups/
 
 # Pastas de IDE e Sistema Operacional
 .vscode/

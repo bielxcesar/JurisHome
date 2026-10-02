@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criar conta | JurisHome</title>
+    <link rel="stylesheet" href="/static/css/login.css?v=20260925-4">
+    <link rel="stylesheet" href="/static/css/auth-figma.css?v=20260925-1">
+    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+</head>
+<body class="bg-login">
+    <div class="overlay-login"></div>
+    <main class="login-container cadastro-container">
+        <div class="logo-box"><img src="/static/images/logo.png" alt="JurisHome Logo" class="logo-img"></div>
+        <h1 class="titulo-bemvindo">Crie sua conta</h1>
+        <p class="subtitulo">Organize seus estudos jurídicos no JurisHome.</p>
+
+        <form id="form-cadastro" class="form-login" novalidate>
+            <div class="input-group">
+                <label for="cadastro-nome">Nome completo</label>
+                <input id="cadastro-nome" type="text" autocomplete="name" minlength="3" maxlength="100" placeholder="Digite seu nome completo" required>
+            </div>
+            <div class="input-group">
+                <label for="cadastro-email">E-mail</label>
+                <input id="cadastro-email" type="email" autocomplete="email" inputmode="email" autocapitalize="none" maxlength="150" placeholder="Digite seu e-mail" required>
+            </div>
+            <div class="input-group">
+                <label for="cadastro-senha">Senha</label>
+                <div class="password-input-wrap">
+                    <input id="cadastro-senha" type="password" autocomplete="new-password" minlength="8" maxlength="72" placeholder="Crie uma senha segura" required>
+                    <button class="password-toggle" type="button" data-password-toggle="cadastro-senha" aria-label="Mostrar senha" aria-pressed="false">Mostrar</button>
+                </div>
+                <small>Use ao menos 8 caracteres, incluindo letras e números.</small>
+            </div>
+            <div class="input-group">
+                <label for="cadastro-confirma-senha">Confirmar senha</label>
+                <div class="password-input-wrap">
+                    <input id="cadastro-confirma-senha" type="password" autocomplete="new-password" minlength="8" maxlength="72" placeholder="Digite a senha novamente" required>
+                    <button class="password-toggle" type="button" data-password-toggle="cadastro-confirma-senha" aria-label="Mostrar confirmação da senha" aria-pressed="false">Mostrar</button>
+                </div>
+            </div>
+            <section class="university-lookup" aria-labelledby="titulo-consulta-ies">
+                <div class="input-group">
+                    <label id="titulo-consulta-ies" for="codigo-emec">Consulta de faculdade <span>(opcional)</span></label>
+                    <div class="emec-control">
+                        <input id="codigo-emec" type="text" inputmode="numeric" pattern="[0-9]{1,10}" maxlength="10" placeholder="Digite o código e-MEC">
+                        <button class="btn-secundario" id="consultar-emec" type="button">Consultar</button>
+                    </div>
+                    <p class="auth-message" id="emec-message" role="status" aria-live="polite" hidden></p>
+                    <div class="emec-result" id="emec-result" hidden></div>
+                </div>
+            </section>
+            <label class="checkbox-lgpd">
+                <input id="cadastro-lgpd" type="checkbox" required>
+                <span>Declaro ter pelo menos 18 anos, li e aceito o <a href="/termos-de-aceite" target="_blank" rel="noopener">Termo de Aceite</a> e declaro ciência da <a href="/politica-de-privacidade" target="_blank" rel="noopener">Política de Privacidade</a>. Este aceite não autoriza usos opcionais ou genéricos dos meus dados.</span>
+            </label>
+            <p class="auth-message" id="auth-message" role="alert" hidden></p>
+            <button type="submit" class="btn-entrar">Criar conta</button>
+        </form>
+        <p class="texto-cadastro">Já possui uma conta? <a href="/">Entrar</a></p>
+    </main>
+    {% include "_legal_links.html" %}
+    <script src="/static/js/auth.js?v=20260926-2"></script>
+</body>
+</html>

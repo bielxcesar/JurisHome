@@ -4,11 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ materia.titulo }} - JurisHome</title>
+    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
   
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="{{ url_for('static', path='/css/materia.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', path='/css/materia.css') }}?v=20260925-1" />
+  <link rel="stylesheet" href="/static/css/figma-app.css?v=20260925-2">
 
-  <!-- Verificação imediata do tema para evitar o Flash White -->
   <script>
     (function() {
       const temaSalvo = localStorage.getItem("tema_juris");
@@ -24,12 +25,10 @@
 </head>
 <body>
 
-  <!-- Barra de Navegação / Cabeçalho alinhada com a navbar do Admin -->
   <header class="navbar">
     
-    <!-- Lado Esquerdo: Seta de Retorno + Data Dinâmica -->
     <div style="display: flex; align-items: center; gap: 1rem;">
-      <a href="/templates/home_Usuario.html" class="btn-voltar">
+      <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="btn-voltar">
         <i class="fa-solid fa-arrow-left"></i>
         <span>Voltar ao início</span>
       </a>
@@ -37,36 +36,31 @@
       <span id="data-atual" class="nav-data">--/--/----</span>
     </div>
 
-    <!-- Menu Principal da Navbar -->
     <nav class="nav-menu">
-      <a href="/templates/home_Usuario.html" class="nav-link"><i class="fa-solid fa-house"></i> Início</a>
-      <a href="#" class="nav-link"><i class="fa-solid fa-square-plus"></i> Exibir mais</a>
-      <a href="/templates/feedback-suporte.html?v=20260913-2" class="nav-link"><i class="fa-solid fa-headset"></i> Feedback e Suporte</a>
-      <a href="#" class="nav-link"><i class="fa-solid fa-user-group"></i> Sobre nós</a>
-      <a href="#" class="nav-link active"><i class="fa-solid fa-newspaper"></i> Categoria</a>
-      <a href="#" class="nav-link"><i class="fa-solid fa-magnifying-glass"></i> Pesquisa</a>
+      <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="nav-link"><i class="fa-solid fa-house"></i> Início</a>
+      <a href="/exibir-mais" class="nav-link"><i class="fa-solid fa-square-plus"></i> Exibir mais</a>
+      <a href="{% if tipo_usuario == 'administrador' %}/admin-feedbacks{% else %}/configuracoes-usuario#feedback{% endif %}" class="nav-link"><i class="fa-solid fa-headset"></i> Feedback e Suporte</a>
+      <span class="nav-link nav-link-indisponivel" aria-disabled="true" title="Página ainda não disponível"><i class="fa-solid fa-user-group"></i> Sobre nós</span>
+      <a href="/categorias" class="nav-link active"><i class="fa-solid fa-newspaper"></i> Categorias</a>
+      <a href="/pesquisa" class="nav-link"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Pesquisa</a>
     </nav>
 
-    <!-- Área de Perfil e Menu Dropdown -->
     <div class="nav-perfil">
       <div id="btn-perfil" class="avatar-icon">
         <i class="fa-solid fa-user-group"></i>
       </div>
 
-      <!-- Menu Suspenso (Dropdown) -->
       <div id="dropdown-perfil" class="menu-perfil-dropdown hidden">
-        <a href="#" class="dropdown-item">Perfil <i class="fa-solid fa-user"></i></a>
-        <a href="/templates/feedback-suporte.html?v=20260913-2" class="dropdown-item">Feedback e suporte <i class="fa-solid fa-headset"></i></a>
-        <a href="/templates/home_Usuario.html" class="dropdown-item btn-desconectar">Desconectar <i class="fa-solid fa-power-off"></i></a>
+        <a href="{% if tipo_usuario == 'administrador' %}/configuracao{% else %}/configuracoes-usuario{% endif %}" class="dropdown-item">Perfil <i class="fa-solid fa-user"></i></a>
+        <a href="{% if tipo_usuario == 'administrador' %}/admin-feedbacks{% else %}/configuracoes-usuario#feedback{% endif %}" class="dropdown-item">Feedback e suporte <i class="fa-solid fa-headset"></i></a>
+        <a href="/" class="dropdown-item btn-desconectar">Desconectar <i class="fa-solid fa-power-off"></i></a>
       </div>
     </div>
 
   </header>
 
-  <!-- Conteúdo Principal da Matéria -->
   <main class="main-content">
     
-    <!-- Título & Subtítulo -->
     <h1 class="titulo-materia">
       {{ materia.titulo }}
     </h1>
@@ -77,7 +71,6 @@
       </h2>
     {% endif %}
 
-    <!-- Metadados (Autor, Data, Fonte) -->
     <div class="meta-info">
       <div>
         <span>Divulgado por: <strong class="autor-destaque">{{ materia.autor.nome if materia.autor else 'Redação' }}</strong></span>
@@ -95,7 +88,6 @@
       {% endif %}
     </div>
 
-    <!-- Imagem de Capa/Corpo -->
     {% if materia.imagem_corpo or materia.imagem_miniatura %}
       <figure class="figura-materia">
         <img 
@@ -110,16 +102,13 @@
       </figure>
     {% endif %}
 
-    <!-- Corpo da Notícia -->
     <article class="corpo-artigo">
       {{ materia.corpo_texto }}
     </article>
-    <!-- Botões de Compartilhamento -->
 <div class="share-container">
   <span class="share-title">Compartilhar:</span>
   
   <div class="share-buttons">
-    <!-- WhatsApp -->
     <a href="https://api.whatsapp.com/send?text={{ materia.titulo|urlencode }}%20{{ request.url }}" 
        target="_blank" 
        rel="noopener noreferrer" 
@@ -128,26 +117,22 @@
       <i class="fa-brands fa-whatsapp"></i>
     </a>
 
-    <!-- Email -->
     <a href="mailto:?subject={{ materia.titulo|urlencode }}&body=Confira%20esta%20mat%C3%A9ria:%20{{ request.url }}" 
        class="btn-share btn-email" 
        title="Compartilhar por E-mail">
       <i class="fa-solid fa-envelope"></i>
     </a>
 
-    <!-- Copiar Link com aviso -->
     <button type="button" id="btn-copiar-link" class="btn-share btn-copiar" title="Copiar Link">
       <i class="fa-solid fa-share-nodes"></i>
     </button>
   </div>
 
-  <!-- Span de confirmação oculto -->
   <span id="msg-copiado" class="msg-copiado hidden">
     <i class="fa-solid fa-check"></i> Link copiado com sucesso!
   </span>
 </div>
 
-    <!-- Rodapé da Notícia / Tags -->
     <footer>
       {% if tags %}
         <div class="tags-container">
@@ -172,6 +157,7 @@
 
   </main>
 
+  {% include "_legal_links.html" %}
   <script src="{{ url_for('static', path='/js/materia.js') }}"></script>
 </body>
 </html>
