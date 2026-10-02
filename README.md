@@ -1,103 +1,118 @@
-# JurisHome
+<div align="center">
 
-Aplicação web acadêmica para consultar conteúdos jurídicos, pesquisar no acervo, navegar por categorias e usar um glossário. O sistema tem cadastro de estudantes, autenticação em duas etapas e um painel administrativo para feedbacks e auditoria.
+# ⚖️ JurisHome
 
-## O que funciona
+**Plataforma Web Acadêmica para Consulta, Curadoria e Pesquisa de Conteúdo Jurídico**
 
-- Cadastro de estudante e login com senha e código de aplicativo autenticador (TOTP).
-- Pesquisa, filtros, listagem de matérias aprovadas e glossário jurídico.
-- Consulta opcional de instituição pelo código e-MEC.
-- Envio de feedback pelo estudante; resposta e organização dos atendimentos pelo administrador.
-- Consulta dos registros de auditoria pelo administrador.
+  <img alt="Python 3.12" src="https://img.shields.io/badge/Python_3.12-3776AB?style=for-the-badge&logo=python&logoColor=white"/>
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white"/>
+  <img alt="SQLAlchemy" src="https://img.shields.io/badge/SQLAlchemy-D71F00?style=for-the-badge&logo=sqlalchemy&logoColor=white"/>
+  <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white"/>
+  <img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white"/>
+  <img alt="Swagger" src="https://img.shields.io/badge/Swagger-85EA2D?style=for-the-badge&logo=swagger&logoColor=black"/>
 
-O projeto não tem tela para cadastrar ou editar matérias, não envia e-mail para recuperação de senha, não oferece login Google e não faz upload de imagens para o Cloudinary. A recuperação de senha confirma o código do autenticador. A consulta e-MEC depende de serviços externos.
+</div>
 
-## Requisitos
+<br/>
 
-- Python 3.11 recomendado. Python 3.12 ou superior também é aceito; nessa versão a consulta de instituição usa diretamente a API pública do CAU/BR.
-- Git e conexão com a Internet para baixar o projeto e as dependências.
+## 📌 Sobre o Projeto
 
-## Executar no Windows
+O **JurisHome** é uma plataforma web desenvolvida como **Projeto de Final de Curso (PFC)** do bacharelado em **Engenharia de Software** da **Universidade de Mogi das Cruzes (UMC)**. 
 
-No PowerShell:
+O sistema foi concebido para resolver a alta dispersão de informações na rotina acadêmica dos estudantes de Direito, oferecendo um ambiente centralizado com fontes verificadas, linguagem didática e categorização por áreas do conhecimento jurídico.
 
-```powershell
-git clone https://github.com/bielxcesar/JurisHome.git
-cd JurisHome
+<details>
+ <summary><b>🔍 Clique para ler sobre a Problemática e Solução</b></summary>
 
-py -3.11 -m venv venv
+Estudar Direito exige pesquisa constante. Seja para preparar aulas, montar peças práticas ou acompanhar alterações legislativas, os estudantes perdem horas valiosas navegando por múltiplos portais sem garantia da veracidade ou atualização do conteúdo.
 
-.\venv\Scripts\python.exe -m pip install --upgrade pip
-.\venv\Scripts\python.exe -m pip install -r requirements.txt
+Em pesquisa realizada com acadêmicos, evidenciou-se a frustração com o excesso de abas abertas, o vocabulário excessivamente rebuscado para iniciantes e layouts confusos. O **JurisHome** nasce para unificar e traduzir esse acervo de forma fluida e confiável.
+</details>
 
-.\venv\Scripts\python.exe setup_local.py
+---
 
-.\venv\Scripts\python.exe -m uvicorn main:app --reload
-```
+## 🚀 Funcionalidades Entregues
 
-Abra http://127.0.0.1:8000. A documentação interativa da API fica em http://127.0.0.1:8000/docs.
+- 🔒 **Autenticação Segura & Múltiplos Perfis**: Cadastro de estudantes, login com senha e segundo fator de autenticação por aplicativo (2FA/TOTP).
+- 📚 **Acervo Organizado & Pesquisa**: Navegação, filtros e listagem de matérias aprovadas.
+- 📖 **Glossário Jurídico (Funcionalidade 4)**: Página dedicada com 25 termos introdutórios, explicações simples, exemplos e referências legais (CPC e CF). A busca é inteligente (ignora acentos e maiúsculas) e funciona mesmo sem JavaScript.
+- 🏛️ **Integração e-MEC**: Consulta opcional da instituição de ensino pelo código e-MEC (usando a API pública do CAU/BR).
+- 💬 **Canal de Feedback e Auditoria**: Envio de dúvidas e sugestões pelos alunos, com painel administrativo para respostas, organização de atendimentos e consulta de registros de auditoria.
+- 🛡️ **Privacidade (LGPD)**: Rotina de retenção e manutenção de dados disponível no sistema.
 
-## Executar no Linux ou macOS
+*Nota sobre o escopo:* Nesta versão de entrega, as funções de cadastro/edição de novas matérias, recuperação de senha por e-mail, login via Google e upload de imagens (Cloudinary) não estão ativas na interface.
 
+---
+
+## 💻 Como Executar o Projeto Localmente
+
+**Pré-requisitos:**
+- Python 3.11 ou superior.
+- Git e conexão com a internet.
+
+### Passo 1: Baixar e Preparar o Ambiente
+
+No seu terminal, baixe o projeto e entre na pasta:
 ```bash
-git clone https://github.com/bielxcesar/JurisHome.git
+git clone [https://github.com/bielxcesar/JurisHome.git](https://github.com/bielxcesar/JurisHome.git)
 cd JurisHome
+```
+Crie o ambiente virtual e ative:
+
+Windows (PowerShell):
+```bash
+py -3.11 -m venv venv
+.\venv\Scripts\Activate.ps1
+```
+Linux ou macOS:
+```bash
 python3 -m venv venv
 source venv/bin/activate
+```
+### Passo 2: Instalação e Configuração
+Instale as dependências necessárias:
+```bash
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+```
+Rode o arquivo de configuração. Ele criará automaticamente o seu arquivo .env com uma chave segura e preparará o banco de dados local (SQLite):
+```bash
 python setup_local.py
+```
+
+### Passo 3: Criar Contas e Dados de Teste
+O projeto não vem com uma senha administrativa padrão. Para criar o seu acesso de Administrador, rode:
+```bash
+python criar_admin.py
+```
+
+(Informe o e-mail e a senha desejada. No primeiro login, o sistema pedirá para configurar o aplicativo autenticador).
+
+Para carregar os 25 termos do glossário, 3 matérias e feedbacks de demonstração para não começar com a plataforma vazia, rode o alimentador:
+```bash
+python seed.py
+```
+
+### Passo 4: Iniciar o Servidor
+```bash
 python -m uvicorn main:app --reload
 ```
+Acesse http://127.0.0.1:8000 no seu navegador. A documentação interativa da API (Swagger) fica em http://127.0.0.1:8000/docs.
 
-## Banco de dados
+---
 
-Por padrão, `setup_local.py` cria um `.env` com uma chave aleatória e configura o SQLite em `jurishome_local.db`. O arquivo `.env` não é sobrescrito se já existir. As tabelas são criadas ao iniciar a aplicação; o projeto não usa Alembic e não atualiza automaticamente tabelas existentes.
+### Banco de Dados (Avançado)
+Por padrão, o projeto roda perfeitamente em SQLite (jurishome_local.db). Caso deseje utilizar o PostgreSQL, crie o banco manualmente no seu serviço local, abra o arquivo .env gerado e altere a linha do banco para o formato:
+DATABASE_URL=postgresql+psycopg2://postgres:SUA_SENHA@localhost:5432/juris_home
+(Atenção: O script seed.py foi feito apenas para alimentar o banco local SQLite).
 
-PostgreSQL é opcional. Instale e inicie o serviço, crie o banco e altere `DATABASE_URL` no `.env`:
 
-```powershell
-psql -U postgres -c "CREATE DATABASE juris_home;"
-```
 
-Use `postgresql+psycopg2://postgres:SUA_SENHA@localhost:5432/juris_home` como valor de `DATABASE_URL` e reinicie o servidor. Não execute `seed.py` em PostgreSQL: o script aceita apenas SQLite.
-
-## Contas e conteúdo de demonstração
-
-O projeto não cria uma senha administrativa padrão. Com o ambiente virtual ativado, execute:
-
-```powershell
-.\venv\Scripts\python.exe criar_admin.py
-```
-
-No Linux/macOS, execute `python criar_admin.py` com o ambiente virtual ativado.
-Informe o e-mail e a senha quando solicitado. No primeiro login, configure o aplicativo autenticador e confirme o código. Para testar o perfil de estudante, crie uma conta pela tela de cadastro.
-
-Opcionalmente, execute o seed para inserir três matérias e dois feedbacks fictícios identificados como demonstração. No Windows:
-
-```powershell
-.\venv\Scripts\python.exe seed.py
-```
-
-No Linux/macOS, com o ambiente virtual ativado, use `python seed.py`. O script pode ser repetido sem duplicar esses registros.
-
-## Testes
-
-Com o ambiente virtual ativado:
-
+### Validação e Testes
+Para rodar a bateria de testes automatizados do sistema, certifique-se de que o ambiente virtual está ativo e execute:
 ```bash
 python -m unittest discover -s tests -v
-python -m pip check
 ```
-
-No Windows, use `venv\Scripts\python.exe` no lugar de `python`.
-
-## Observações
-
-- A consulta e-MEC precisa de Internet. Se os serviços externos estiverem indisponíveis, o cadastro continua sem preencher a instituição.
-- Os registros do seed são fictícios e não devem ser apresentados como notícia, lei, decisão judicial ou orientação jurídica real.
-- A retenção de dados é executada manualmente por `python manutencao_lgpd.py`; para aplicar alterações, use `python manutencao_lgpd.py --executar` após revisar o resultado.
-- O funcionamento com PostgreSQL deve ser testado em uma instalação com esse serviço disponível. O caminho local recomendado para demonstração usa SQLite.
 
 ## Equipe
 
