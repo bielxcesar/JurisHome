@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pré-visualização da Matéria - JurisHome</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+    <link rel="stylesheet" href="/static/css/figma-app.css?v=20260925-2">
+    <link rel="stylesheet" href="/static/css/materia.css?v=20260925-1">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #1e1e1e; color: #fff; font-family: sans-serif; }
+    </style>
+</head>
+<body class="bg-[#1e1e1e] text-white min-h-screen">
+
+  <!-- Barra de Navegação padrão do site com botão de Retornar (Fechar aba) -->
+  <header class="navbar">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <button onclick="window.close()" class="btn-voltar" style="background: none; border: none; cursor: pointer; color: inherit; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fa-solid fa-xmark"></i>
+        <span>Retornar (Fechar aba)</span>
+      </button>
+      <span id="data-atual" class="nav-data">12/08/2026</span>
+    </div>
+
+    <nav class="nav-menu">
+      <a href="/home_admin" class="nav-link"><i class="fa-solid fa-house"></i> Início</a>
+      <a href="/exibir-mais" class="nav-link"><i class="fa-solid fa-square-plus"></i> Exibir mais</a>
+      <a href="/admin-feedbacks" class="nav-link"><i class="fa-solid fa-headset"></i> Feedback</a>
+      <a href="/categorias" class="nav-link active"><i class="fa-solid fa-newspaper"></i> Categorias</a>
+      <a href="/pesquisa" class="nav-link"><i class="fa-solid fa-magnifying-glass"></i> Pesquisa</a>
+    </nav>
+  </header>
+
+  <main class="main-content" style="max-width: 800px; margin: 40px auto; padding: 0 20px;">
+    
+    <h1 id="ex-titulo" class="titulo-materia" style="font-size: 2.5rem; font-weight: bold; margin-bottom: 10px;"></h1>
+    <h2 id="ex-subtitulo" class="subtitulo-materia" style="font-size: 1.2rem; color: #9ca3af; margin-bottom: 20px;"></h2>
+
+    <div class="meta-info" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #374151; padding-bottom: 15px; margin-bottom: 25px; font-size: 0.9rem; color: #9ca3af;">
+      <div>
+        <span>Divulgado por: <strong class="autor-destaque" style="color: #F59E0B;">Administrador</strong></span>
+        <span style="margin: 0 0.5rem;">•</span>
+        <span>12/08/2026 11:00</span>
+      </div>
+      <div id="ex-link-container"></div>
+    </div>
+
+    <!-- Imagem Principal / Miniatura -->
+    <div id="container-img-principal" class="hidden" style="margin-bottom: 30px;">
+      <figure class="figura-materia">
+        <img id="ex-img-principal" src="" alt="Miniatura da matéria" style="width: 100%; max-height: 450px; object-fit: cover; border-radius: 6px;" />
+        <figcaption id="ex-fonte-miniatura" class="legenda-imagem" style="font-size: 0.8rem; color: #9ca3af; margin-top: 8px; font-style: italic;"></figcaption>
+      </figure>
+    </div>
+
+    <!-- Corpo do Artigo com Distribuição Automática das Imagens Extras -->
+    <article id="ex-corpo-artigo" class="corpo-artigo" style="font-size: 1.1rem; line-height: 1.8; color: #e5e7eb;">
+      <!-- O texto e as imagens extras serão injetados aqui ordenadamente -->
+    </article>
+
+    <!-- Rodapé e Tags -->
+    <footer style="margin-top: 50px; border-top: 1px solid #374151; padding-top: 20px;">
+      <div class="tags-container" style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+        <span style="font-weight: 700; font-size: 0.9rem;">Tags:</span>
+        <span class="tag-item" style="background: #27272a; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; color: #F59E0B;">direito</span>
+        <span class="tag-item" style="background: #27272a; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; color: #F59E0B;">noticia</span>
+        <span class="tag-item" style="background: #27272a; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; color: #F59E0B;">juridico</span>
+      </div>
+      <div id="ex-rodape-fonte" style="font-size: 0.8rem; color: #9ca3af;"></div>
+    </footer>
+
+  </main>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+        const dados = JSON.parse(localStorage.getItem('temp_materia_preview') || '{}');
+
+        // Preenche Títulos
+        document.getElementById('ex-titulo').textContent = dados.titulo || 'Título não informado';
+        document.getElementById('ex-subtitulo').textContent = dados.sub_titulo || '';
+
+        // Link da Fonte Original
+        const linkContainer = document.getElementById('ex-link-container');
+        const rodapeFonte = document.getElementById('ex-rodape-fonte');
+        if (dados.fonte_original) {
+            try {
+                const host = new URL(dados.fonte_original).hostname;
+                linkContainer.innerHTML = `<span>Fonte original: <a href="${dados.fonte_original}" target="_blank" style="color: #F59E0B; text-decoration: underline;">${host}</a></span>`;
+                rodapeFonte.innerHTML = `Consulte a matéria fonte original: <a href="${dados.fonte_original}" target="_blank" style="color: #F59E0B; text-decoration: underline;">${dados.fonte_original}</a>`;
+            } catch {
+                linkContainer.innerHTML = `<span>Fonte original: <a href="${dados.fonte_original}" target="_blank" style="color: #F59E0B; text-decoration: underline;">Acessar Link</a></span>`;
+            }
+        }
+
+        // Imagem Principal / Miniatura
+        if (dados.miniatura) {
+            document.getElementById('ex-img-principal').src = dados.miniatura;
+            document.getElementById('container-img-principal').classList.remove('hidden');
+            if (dados.fonte_miniatura) {
+                document.getElementById('ex-fonte-miniatura').textContent = "Imagem proporcionada por: " + dados.fonte_miniatura;
+            }
+        }
+
+        // Distribuição do Texto e Imagens Extras no Corpo
+        const corpoArtigo = document.getElementById('ex-corpo-artigo');
+        const textoBruto = dados.corpo_texto || 'Nenhum texto informado.';
+        const paragrafos = textoBruto.split('\n').filter(p => p.trim() !== '');
+
+        // Coleta todas as imagens extras preenchidas
+        const imagensExtras = [];
+        if (dados.corpo_1) imagensExtras.push({ url: dados.corpo_1, fonte: dados.fonte_corpo_1 });
+        if (dados.corpo_2) imagensExtras.push({ url: dados.corpo_2, fonte: dados.fonte_corpo_2 });
+        if (dados.corpo_3) imagensExtras.push({ url: dados.corpo_3, fonte: dados.fonte_corpo_3 });
+
+        let imgIndex = 0;
+
+        paragrafos.forEach((paragrafo, index) => {
+            const p = document.createElement('p');
+            p.style.marginBottom = "20px";
+            p.textContent = paragrafo;
+            corpoArtigo.appendChild(p);
+
+            // Insere uma imagem extra a cada 2 parágrafos até esgotar o estoque enviado
+            if ((index + 1) % 2 === 0 && imgIndex < imagensExtras.length) {
+                const imgInfo = imagensExtras[imgIndex];
+                const figure = document.createElement('figure');
+                figure.className = "figura-materia";
+                figure.style.margin = "30px 0";
+                
+                let htmlImg = `<img src="${imgInfo.url}" alt="Imagem complementar" style="width: 100%; max-height: 400px; object-fit: cover; border-radius: 6px;" />`;
+                if (imgInfo.fonte) {
+                    htmlImg += `<figcaption style="font-size: 0.8rem; color: #9ca3af; margin-top: 8px; font-style: italic;">Imagem proporcionada por: ${imgInfo.fonte}</figcaption>`;
+                }
+                figure.innerHTML = htmlImg;
+                corpoArtigo.appendChild(figure);
+                
+                imgIndex++;
+            }
+        });
+    });
+  </script>
+</body>
+</html>

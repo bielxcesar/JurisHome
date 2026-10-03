@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arquivos Notícias - JurisHome</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .borda-destaque { border-color: #F59E0B; } 
+        .bg-destaque { background-color: #F59E0B; }
+    </style>
+</head>
+<body class="bg-[#1e1e1e] text-white font-sans antialiased min-h-screen flex items-center justify-center p-6">
+
+    <!-- Caixa Principal com Borda Laranja -->
+    <div class="w-full max-w-5xl border-4 borda-destaque rounded-lg p-6 relative bg-[#121212] shadow-2xl">
+        
+        <!-- Topo: Botão de voltar e Título -->
+        <div class="flex items-center justify-between border-b border-gray-700 pb-4 mb-6">
+            <a href="/home_admin" class="text-gray-400 hover:text-white flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left text-xl"></i>
+            </a>
+            <h1 class="text-2xl font-semibold text-center flex-1">Arquivos Noticias</h1>
+            <i class="fa-solid fa-moon text-xl text-gray-300"></i>
+        </div>
+
+        <!-- Layout de Duas Colunas (Menu Lateral + Tabela) -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            
+            <!-- Menu Lateral Esquerdo -->
+            <div class="border-r border-gray-700 pr-4 space-y-6 text-sm text-gray-300">
+                <a href="#" class="block hover:text-amber-500 transition">Tabela usuario</a>
+                <a href="#" class="block text-amber-500 font-bold">Arquivos noticias</a>
+                <a href="#" class="block hover:text-amber-500 transition">Graficos</a>
+            </div>
+
+            <!-- Tabela Principal de Notícias -->
+            <div class="md:col-span-3 bg-[#1a1a1a] border border-gray-700 rounded-lg p-4 overflow-x-auto">
+                
+                <!-- Cabeçalho da Tabela -->
+                <div class="bg-amber-500 text-black font-bold p-3 rounded flex justify-between items-center mb-4 text-sm">
+                    <span class="w-1/3">Nome da Matéria</span>
+                    <span class="w-1/4 text-center">Horário / Dia</span>
+                    <span class="w-1/6 text-center">Status</span>
+                    <span class="w-1/4 text-right">Ações</span>
+                </div>
+
+                <!-- Lista de Matérias vindas do Banco -->
+                <div class="space-y-3">
+                    {% for mat in materias %}
+                    <div class="bg-[#121212] border border-gray-800 p-3 rounded flex justify-between items-center text-sm">
+                        
+                        <!-- Nome / Título -->
+                        <span class="w-1/3 truncate font-medium" title="{{ mat.titulo }}">{{ mat.titulo }}</span>
+                        
+                        <!-- Horário e Dia -->
+                        <span class="w-1/4 text-center text-gray-400 text-xs">
+                            {{ mat.criado_em.strftime('%d/%m/%Y %H:%M') if mat.criado_em else 'N/D' }}
+                        </span>
+                        
+                        <!-- Status -->
+                        <span class="w-1/6 text-center">
+                            {% if mat.status.value == 'aprovado' %}
+                                <span class="bg-green-900 text-green-300 px-2 py-0.5 rounded text-xs font-bold">Aprovado</span>
+                            {% else %}
+                                <span class="bg-amber-900 text-amber-300 px-2 py-0.5 rounded text-xs font-bold">Em Análise</span>
+                            {% endif %}
+                        </span>
+                        
+                        <!-- Botões de Ação (Aprovar, Editar e Descartar) -->
+                        <div class="w-1/4 flex justify-end gap-1">
+                            {% if mat.status.value != 'aprovado' %}
+                                <button onclick="aprovarMateria('{{ mat.uuid }}')" class="bg-green-600 hover:bg-green-500 text-white px-2.5 py-1 rounded text-xs font-bold transition">Aprovar</button>
+                            {% endif %}
+                            
+                            <!-- Novo Botão de Edição para corrigir erros de digitação -->
+                            <button onclick="abrirEdicao('{{ mat.uuid }}', '{{ mat.titulo | e }}')" class="bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1 rounded text-xs font-bold transition">Editar</button>
+                            
+                            <button onclick="descartarMateria('{{ mat.uuid }}')" class="bg-red-600 hover:bg-red-500 text-white px-2.5 py-1 rounded text-xs font-bold transition">Descartar</button>
+                        </div>
+
+                    </div>
+                    {% else %}
+                    <div class="text-center text-gray-500 py-8">Nenhuma matéria encontrada no sistema.</div>
+                    {% endfor %}
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal Simples de Edição (Para corrigir erros ortográficos rapidamente) -->
+    <div id="modalEdicao" class="fixed inset-0 bg-black/70 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-[#1a1a1a] border border-gray-700 rounded-lg p-6 w-full max-w-lg shadow-2xl">
+            <h2 class="text-xl font-bold mb-4 text-amber-500">Editar Matéria / Corrigir Texto</h2>
+            <input type="hidden" id="editUuid">
+            <div class="mb-4">
+                <label class="block text-sm text-gray-300 mb-2">Título da Matéria</label>
+                <input type="text" id="editTitulo" class="w-full bg-[#121212] border border-gray-700 rounded p-2.5 text-white focus:outline-none focus:border-amber-500">
+            </div>
+            <div class="flex justify-end gap-2">
+                <button onclick="fecharEdicao()" class="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded text-sm font-bold transition">Cancelar</button>
+                <button onclick="salvarEdicao()" class="bg-amber-500 hover:bg-amber-400 text-black px-4 py-2 rounded text-sm font-bold transition">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script para lidar com as ações e o modal -->
+    <script>
+        function abrirEdicao(uuid, tituloAtual) {
+            document.getElementById('editUuid').value = uuid;
+            document.getElementById('editTitulo').value = tituloAtual;
+            document.getElementById('modalEdicao').classList.remove('hidden');
+        }
+
+        function fecharEdicao() {
+            document.getElementById('modalEdicao').classList.add('hidden');
+        }
+
+        async function salvarEdicao() {
+            const uuid = document.getElementById('editUuid').value;
+            const novoTitulo = document.getElementById('editTitulo').value;
+
+            if (!novoTitulo.trim()) {
+                alert("O título não pode ficar vazio.");
+                return;
+            }
+
+            try {
+                const res = await fetch(`/editar-materia/${uuid}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ titulo: novoTitulo })
+                });
+                
+                if (res.ok) {
+                    alert("Matéria atualizada com sucesso!");
+                    location.reload();
+                } else {
+                    const data = await res.json();
+                    alert("Erro ao atualizar: " + (data.detail || "Erro desconhecido"));
+                }
+            } catch (err) {
+                alert("Erro de comunicação com o servidor.");
+            }
+        }
+
+        async function aprovarMateria(uuid) {
+            if (!confirm("Deseja realmente aprovar e publicar esta matéria para os alunos?")) return;
+            try {
+                const res = await fetch(`/aprovar-materia/${uuid}`, { method: 'PUT' });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.mensagem);
+                    location.reload();
+                } else {
+                    alert("Erro: " + data.detail);
+                }
+            } catch (err) {
+                alert("Erro ao se comunicar com o servidor.");
+            }
+        }
+
+        async function descartarMateria(uuid) {
+            if (!confirm("Deseja realmente descartar/excluir esta matéria?")) return;
+            try {
+                const res = await fetch(`/deletar-materia/${uuid}`, { method: 'DELETE' });
+                if (res.ok) {
+                    alert("Matéria descartada com sucesso!");
+                    location.reload();
+                } else {
+                    alert("Erro ao descartar matéria.");
+                }
+            } catch (err) {
+                alert("Erro ao se comunicar com o servidor.");
+            }
+        }
+    </script>
+</body>
+</html>

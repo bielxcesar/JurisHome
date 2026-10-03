@@ -21,6 +21,11 @@ class TipoFonte(str, enum.Enum):
     ACORDAO = "acordao"
     DOUTRINA = "doutrina"
     LEGISLACAO = "legislacao"
+    G1 = "g1"
+    TERRA = "terra"
+    UOL = "uol"
+    X = "x"
+    INSTAGRAM = "instagram"
 
 
 class StatusConteudo(str, enum.Enum):
@@ -107,19 +112,20 @@ class Subcategoria(Base):
 class Conteudo(Base):
     __tablename__ = "conteudos"
 
-    uuid = Column(CHAR(36), unique=True, primary_key=True, index=True, nullable=False, default=gerar_uuid)
-
-    titulo = Column(String(200), nullable=False)
-    sub_titulo = Column(String(200), nullable=True)
-    resumo_home = Column(String(500), nullable=False)
+    uuid = Column(String, primary_key=True, default=gerar_uuid)
+    titulo = Column(String, nullable=False)
+    sub_titulo = Column(String, nullable=True)
+    resumo_home = Column(String, nullable=False)
     corpo_texto = Column(Text, nullable=False)
-    fonte_original = Column(String(500), nullable=True)
     
-    tags = Column(String(255), nullable=True)
-
-    imagem_miniatura = Column(String(500), nullable=True)
-    imagem_corpo = Column(String(500), nullable=True)
-    fonte_imagem = Column(String(200), nullable=True)
+    # Colunas de imagem grandes (Text)
+    imagem_miniatura = Column(Text, nullable=True)
+    imagem_corpo = Column(Text, nullable=True)
+    imagem_extra_2 = Column(Text, nullable=True)
+    imagem_extra_3 = Column(Text, nullable=True)
+    
+    fonte_original = Column(String, nullable=True)
+    fonte_imagem = Column(String, nullable=True)
 
     tipo_fonte = Column(
         Enum(TipoFonte, values_callable=lambda x: [e.value for e in x]),
@@ -142,8 +148,8 @@ class Conteudo(Base):
     subcategoria = relationship("Subcategoria", back_populates="conteudos")
     autor = relationship("Usuario", back_populates="conteudos_criados")
     feedbacks = relationship("Feedback", back_populates="conteudo", cascade="all, delete-orphan")
-
-
+    tags = Column(String, nullable=True)
+    
 class Feedback(Base):
     __tablename__ = "feedbacks"
 

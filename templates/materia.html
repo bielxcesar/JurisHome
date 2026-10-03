@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ materia.titulo }} - JurisHome</title>
-    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+  <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
   
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="{{ url_for('static', path='/css/materia.css') }}?v=20260925-1" />
@@ -88,10 +88,11 @@
       {% endif %}
     </div>
 
-    {% if materia.imagem_corpo or materia.imagem_miniatura %}
+    <!-- IMAGEM DE CAPA PRINCIPAL (Miniatura) -->
+    {% if materia.imagem_miniatura %}
       <figure class="figura-materia">
         <img 
-          src="{{ materia.imagem_corpo or materia.imagem_miniatura }}" 
+          src="{{ materia.imagem_miniatura }}" 
           alt="{{ materia.titulo }}" 
         />
         {% if materia.fonte_imagem %}
@@ -102,36 +103,76 @@
       </figure>
     {% endif %}
 
-    <article class="corpo-artigo">
-      {{ materia.corpo_texto }}
+    <!-- CAIXA ONDE O TEXTO E AS IMAGENS DO CORPO VÃO SE MISTURAR -->
+    <article class="corpo-artigo" id="corpo-materia" style="white-space: normal;">
+      <!-- O Javascript abaixo vai organizar e colocar os parágrafos e fotos aqui dentro -->
     </article>
-<div class="share-container">
-  <span class="share-title">Compartilhar:</span>
-  
-  <div class="share-buttons">
-    <a href="https://api.whatsapp.com/send?text={{ materia.titulo|urlencode }}%20{{ request.url }}" 
-       target="_blank" 
-       rel="noopener noreferrer" 
-       class="btn-share btn-whatsapp" 
-       title="Compartilhar no WhatsApp">
-      <i class="fa-brands fa-whatsapp"></i>
-    </a>
 
-    <a href="mailto:?subject={{ materia.titulo|urlencode }}&body=Confira%20esta%20mat%C3%A9ria:%20{{ request.url }}" 
-       class="btn-share btn-email" 
-       title="Compartilhar por E-mail">
-      <i class="fa-solid fa-envelope"></i>
-    </a>
+    <script>
+      const textoCompleto = {{ (materia.corpo_texto or '') | tojson | safe }};
+      const imgCorpo1 = {{ (materia.imagem_corpo or '') | tojson | safe }};
+      const imgCorpo2 = {{ (materia.imagem_extra_2 or '') | tojson | safe }};
+      const imgCorpo3 = {{ (materia.imagem_extra_3 or '') | tojson | safe }};
 
-    <button type="button" id="btn-copiar-link" class="btn-share btn-copiar" title="Copiar Link">
-      <i class="fa-solid fa-share-nodes"></i>
-    </button>
-  </div>
+      // Divide o texto a cada vez que tiver uma linha em branco (pulo de parágrafo)
+      const paragrafos = textoCompleto.split(/\n+/).filter(p => p.trim() !== '');
+      let htmlConteudo = '';
 
-  <span id="msg-copiado" class="msg-copiado hidden">
-    <i class="fa-solid fa-check"></i> Link copiado com sucesso!
-  </span>
-</div>
+      // Monta o "sanduíche" de texto e foto
+      if (paragrafos.length > 0) htmlConteudo += `<p style="margin-bottom: 1.5rem; line-height: 1.8;">${paragrafos[0]}</p>`;
+      
+      if (imgCorpo1 && imgCorpo1.length > 10) {
+          htmlConteudo += `<div style="margin: 2rem 0;"><img src="${imgCorpo1}" style="width: 100%; max-height: 500px; object-fit: cover; border-radius: 8px;" alt="Imagem do corpo 1"></div>`;
+      }
+
+      if (paragrafos.length > 1) htmlConteudo += `<p style="margin-bottom: 1.5rem; line-height: 1.8;">${paragrafos[1]}</p>`;
+      
+      if (imgCorpo2 && imgCorpo2.length > 10) {
+          htmlConteudo += `<div style="margin: 2rem 0;"><img src="${imgCorpo2}" style="width: 100%; max-height: 500px; object-fit: cover; border-radius: 8px;" alt="Imagem do corpo 2"></div>`;
+      }
+
+      if (paragrafos.length > 2) htmlConteudo += `<p style="margin-bottom: 1.5rem; line-height: 1.8;">${paragrafos[2]}</p>`;
+      
+      if (imgCorpo3 && imgCorpo3.length > 10) {
+          htmlConteudo += `<div style="margin: 2rem 0;"><img src="${imgCorpo3}" style="width: 100%; max-height: 500px; object-fit: cover; border-radius: 8px;" alt="Imagem do corpo 3"></div>`;
+      }
+
+      // Adiciona o restante dos parágrafos, se o texto for bem longo
+      for (let i = 3; i < paragrafos.length; i++) {
+          htmlConteudo += `<p style="margin-bottom: 1.5rem; line-height: 1.8;">${paragrafos[i]}</p>`;
+      }
+
+      // Despeja tudo formatadinho na tela
+      document.getElementById('corpo-materia').innerHTML = htmlConteudo;
+    </script>
+
+    <div class="share-container">
+      <span class="share-title">Compartilhar:</span>
+      
+      <div class="share-buttons">
+        <a href="https://api.whatsapp.com/send?text={{ materia.titulo|urlencode }}%20{{ request.url }}" 
+           target="_blank" 
+           rel="noopener noreferrer" 
+           class="btn-share btn-whatsapp" 
+           title="Compartilhar no WhatsApp">
+          <i class="fa-brands fa-whatsapp"></i>
+        </a>
+
+        <a href="mailto:?subject={{ materia.titulo|urlencode }}&body=Confira%20esta%20mat%C3%A9ria:%20{{ request.url }}" 
+           class="btn-share btn-email" 
+           title="Compartilhar por E-mail">
+          <i class="fa-solid fa-envelope"></i>
+        </a>
+
+        <button type="button" id="btn-copiar-link" class="btn-share btn-copiar" title="Copiar Link">
+          <i class="fa-solid fa-share-nodes"></i>
+        </button>
+      </div>
+
+      <span id="msg-copiado" class="msg-copiado hidden">
+        <i class="fa-solid fa-check"></i> Link copiado com sucesso!
+      </span>
+    </div>
 
     <footer>
       {% if tags %}
@@ -146,7 +187,7 @@
       {% endif %}
 
       {% if materia.fonte_original %}
-        <p style="font-size: 0.8rem; color: var(--text-muted);">
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 1rem;">
           Consulte a matéria fonte original: 
           <a href="{{ materia.fonte_original }}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color);">
             {{ materia.fonte_original }}

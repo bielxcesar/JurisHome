@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova Matéria - JurisHome</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .borda-destaque { border-color: #F59E0B; } 
+        .bg-destaque { background-color: #F59E0B; }
+        dialog::backdrop { background: rgba(0, 0, 0, 0.9); }
+        .preview-body a { color: #F59E0B; text-decoration: underline; }
+        /* Estilo das caixas de imagem idênticas ao Figma */
+        .box-imagem-fundo {
+            background-color: #1a1a1a;
+            border: 2px dashed #4b5563;
+            transition: all 0.3s ease;
+        }
+        .box-imagem-fundo:hover {
+            border-color: #F59E0B;
+        }
+    </style>
+</head>
+<body class="bg-[#1e1e1e] text-white font-sans antialiased min-h-screen flex items-center justify-center p-6">
+
+    <div class="w-full max-w-4xl border-4 borda-destaque rounded-lg p-8 relative bg-[#121212]">
+        <a href="/home_admin" class="absolute top-4 left-4 text-gray-400 hover:text-white flex items-center">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"></path></svg>
+        </a>
+
+        <h1 class="text-3xl font-semibold text-center mb-8 mt-2">Nova Matéria</h1>
+
+        <form id="form-nova-materia" class="space-y-6">
+            <div class="flex items-center gap-4">
+                <label for="titulo" class="w-32 text-right">Título:*</label>
+                <input type="text" id="titulo" required class="flex-1 bg-transparent border rounded border-gray-500 p-2 text-white focus:outline-none focus:border-[#F59E0B]">
+            </div>
+
+            <div class="flex items-center gap-4">
+                <label for="sub_titulo" class="w-32 text-right">Sub-Título:</label>
+                <input type="text" id="sub_titulo" class="flex-1 bg-transparent border rounded border-gray-500 p-2 text-white focus:outline-none focus:border-[#F59E0B]">
+            </div>
+
+            <div class="flex items-center gap-4">
+                <label for="categoria_id" class="w-32 text-right">Categoria:*</label>
+                <select id="categoria_id" required class="flex-1 bg-[#1e1e1e] border rounded border-gray-500 p-2 text-white focus:outline-none focus:border-[#F59E0B]">
+                    <option value="" disabled selected>Selecione uma categoria</option>
+                    <option value="ID_DIREITO_TRABALHISTA">Direito Trabalhista</option>
+                    <option value="ID_DIREITO_PENAL">Direito Penal</option>
+                </select>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <label for="tipo_fonte" class="w-32 text-right">Tipo da Fonte:*</label>
+                <input list="fontes-list" id="tipo_fonte" required placeholder="Ex: g1, uol, x, terra, instagram..." class="flex-1 bg-transparent border rounded border-gray-500 p-2 text-white focus:outline-none focus:border-[#F59E0B]">
+                <datalist id="fontes-list">
+                    <option value="g1">G1</option>
+                    <option value="terra">Terra</option>
+                    <option value="uol">UOL</option>
+                    <option value="x">X (Twitter)</option>
+                    <option value="instagram">Instagram</option>
+                    <option value="acordao">Acórdão</option>
+                    <option value="doutrina">Doutrina</option>
+                    <option value="legislacao">Legislação</option>
+                </datalist>
+            </div>
+
+            <div class="flex items-start gap-4">
+                <label for="corpo_texto" class="w-32 text-right mt-2">Corpo do<br>Texto:*</label>
+                <div class="flex-1">
+                    <textarea id="corpo_texto" required rows="6" placeholder="Escreva o texto da matéria..." class="w-full bg-transparent border rounded border-gray-500 p-2 text-white focus:outline-none focus:border-[#F59E0B]"></textarea>
+                    <div class="text-xs text-gray-400 mt-1 flex justify-between">
+                        <span id="contador-com-espacos">0 caracteres (com espaços)</span>
+                        <span id="contador-sem-espacos">0 caracteres (sem espaços)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEÇÃO DE IMAGENS EXATAMENTE IGUAL AO SEU FIGMA -->
+            <div class="border-t border-gray-700 pt-4">
+                <span class="block font-semibold mb-4 text-amber-500">Imagens (Miniatura e Corpo com medidas 600×400):</span>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <!-- 1. MINIATURA (Obrigatória) -->
+                    <div class="space-y-2">
+                        <label class="block text-sm text-gray-300">Miniatura (Principal)*</label>
+                        <div class="relative box-imagem-fundo h-48 rounded flex flex-col items-center justify-center cursor-pointer overflow-hidden p-2">
+                            <input type="file" id="input_miniatura" accept="image/*" required class="absolute inset-0 opacity-0 cursor-pointer z-10" onchange="mostrarPreviewCaixa(this, 'preview_miniatura', 'texto_miniatura')">
+                            
+                            <!-- Imagem que aparece ao selecionar -->
+                            <img id="preview_miniatura" class="absolute inset-0 w-full h-full object-cover hidden" alt="Miniatura">
+                            
+                            <!-- Texto indicador padrão Figma -->
+                            <div id="texto_miniatura" class="text-center">
+                                <span class="block text-lg font-bold text-gray-300">Miniatura</span>
+                                <span class="text-xs text-amber-500 font-mono mt-1 block">600×400</span>
+                                <span class="text-[10px] text-gray-400 block mt-2">Clique para enviar imagem</span>
+                            </div>
+                        </div>
+                        <input type="text" id="fonte_miniatura" placeholder="Fonte da miniatura..." class="w-full bg-transparent border rounded border-gray-500 p-1.5 text-xs text-white focus:outline-none focus:border-[#F59E0B]">
+                    </div>
+
+                    <!-- 2. IMAGEM NO CORPO (Opcional 1) -->
+                    <div class="space-y-2">
+                        <label class="block text-sm text-gray-300">Imagem no Corpo 1</label>
+                        <div class="relative box-imagem-fundo h-48 rounded flex flex-col items-center justify-center cursor-pointer overflow-hidden p-2">
+                            <input type="file" id="input_corpo_1" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-10" onchange="mostrarPreviewCaixa(this, 'preview_corpo_1', 'texto_corpo_1')">
+                            
+                            <img id="preview_corpo_1" class="absolute inset-0 w-full h-full object-cover hidden" alt="Corpo 1">
+                            
+                            <div id="texto_corpo_1" class="text-center">
+                                <span class="block text-lg font-bold text-gray-300">Imagem no corpo</span>
+                                <span class="text-xs text-amber-500 font-mono mt-1 block">600×400</span>
+                                <span class="text-[10px] text-gray-400 block mt-2">Clique para enviar imagem</span>
+                            </div>
+                        </div>
+                        <input type="text" id="fonte_corpo_1" placeholder="Fonte da imagem..." class="w-full bg-transparent border rounded border-gray-500 p-1.5 text-xs text-white focus:outline-none focus:border-[#F59E0B]">
+                    </div>
+
+                    <!-- 3. IMAGEM NO CORPO (Opcional 2) -->
+                    <div class="space-y-2">
+                        <label class="block text-sm text-gray-300">Imagem no Corpo 2</label>
+                        <div class="relative box-imagem-fundo h-36 rounded flex flex-col items-center justify-center cursor-pointer overflow-hidden p-2">
+                            <input type="file" id="input_corpo_2" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-10" onchange="mostrarPreviewCaixa(this, 'preview_corpo_2', 'texto_corpo_2')">
+                            
+                            <img id="preview_corpo_2" class="absolute inset-0 w-full h-full object-cover hidden" alt="Corpo 2">
+                            
+                            <div id="texto_corpo_2" class="text-center">
+                                <span class="text-sm font-bold text-gray-300">Corpo 2</span>
+                                <span class="text-[10px] text-amber-500 font-mono block">600×400</span>
+                            </div>
+                        </div>
+                        <input type="text" id="fonte_corpo_2" placeholder="Fonte..." class="w-full bg-transparent border rounded border-gray-500 p-1 text-xs text-white">
+                    </div>
+
+                    <!-- 4. IMAGEM NO CORPO (Opcional 3) -->
+                    <div class="space-y-2">
+                        <label class="block text-sm text-gray-300">Imagem no Corpo 3</label>
+                        <div class="relative box-imagem-fundo h-36 rounded flex flex-col items-center justify-center cursor-pointer overflow-hidden p-2">
+                            <input type="file" id="input_corpo_3" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-10" onchange="mostrarPreviewCaixa(this, 'preview_corpo_3', 'texto_corpo_3')">
+                            
+                            <img id="preview_corpo_3" class="absolute inset-0 w-full h-full object-cover hidden" alt="Corpo 3">
+                            
+                            <div id="texto_corpo_3" class="text-center">
+                                <span class="text-sm font-bold text-gray-300">Corpo 3</span>
+                                <span class="text-[10px] text-amber-500 font-mono block">600×400</span>
+                            </div>
+                        </div>
+                        <input type="text" id="fonte_corpo_3" placeholder="Fonte..." class="w-full bg-transparent border rounded border-gray-500 p-1 text-xs text-white">
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4 pt-4">
+                <label for="resumo_home" class="w-32 text-right">Resumo da<br>Home:*</label>
+                <input type="text" id="resumo_home" required class="flex-1 bg-transparent border rounded border-gray-500 p-2 text-white focus:outline-none focus:border-[#F59E0B]">
+            </div>
+
+            <div class="flex items-center gap-4">
+                <label for="fonte_original" class="w-32 text-right">Fonte original:</label>
+                <input type="url" id="fonte_original" placeholder="https://..." class="flex-1 bg-transparent border rounded border-gray-500 p-2 text-white focus:outline-none focus:border-[#F59E0B]">
+            </div>
+            <div class="flex items-center gap-4">
+                <label for="tags" class="w-32 text-right">Tags:</label>
+                <input type="text" id="tags" placeholder="Ex: direito, penal, stf (separadas por vírgula)" class="flex-1 bg-transparent border rounded border-gray-500 p-2 text-white focus:outline-none focus:border-[#F59E0B]">
+            </div>
+
+            <div class="flex justify-end gap-4 mt-8">
+                <button type="button" id="btn-preview" class="bg-transparent border border-[#F59E0B] text-[#F59E0B] px-6 py-2 rounded font-bold hover:bg-[#F59E0B] hover:text-black transition">Pré visualizar</button>
+                <button type="submit" id="btn-enviar" class="bg-destaque text-black px-6 py-2 rounded font-bold hover:opacity-80 transition">Enviar</button>
+            </div>
+        </form>
+
+        <div id="mensagem-retorno" class="mt-4 text-center font-bold hidden"></div>
+    </div>
+
+    <!-- MODAL DE PRÉ-VISUALIZAÇÃO -->
+    <dialog id="modal-preview" class="bg-[#121212] text-white p-8 rounded-lg border-2 borda-destaque w-full max-w-4xl shadow-2xl relative">
+        <button id="btn-fechar-modal" class="absolute top-4 right-6 text-gray-400 hover:text-white text-3xl font-bold">&times;</button>
+        
+        <div class="preview-content mt-2 space-y-4">
+            <div class="text-xs text-gray-400">12/08/2026</div>
+
+            <h1 id="prev-titulo" class="text-3xl font-bold"></h1>
+            <p id="prev-subtitulo" class="text-gray-400 text-sm"></p>
+            
+            <div class="flex flex-wrap items-center gap-6 text-xs text-gray-400 border-y border-gray-800 py-2 my-4">
+                <span>Divulgado Por: <strong class="text-amber-500">Administrador</strong></span>
+                <span>12/08/2026 11H00</span>
+                <span>Fonte original: <span id="prev-link-container"></span></span>
+            </div>
+            
+            <div class="my-4">
+                <img id="prev-img" class="w-full max-h-[400px] object-cover rounded hidden shadow-md" alt="Imagem principal">
+                <p id="prev-fonte-img" class="text-xs text-gray-400 mt-2 italic hidden text-left"></p>
+            </div>
+            
+            <div id="prev-corpo" class="preview-body text-base leading-relaxed whitespace-pre-wrap text-gray-200 py-2 space-y-4"></div>
+            
+            <div class="border-t border-gray-800 pt-4 text-xs text-gray-400 mt-6">
+                <span>Tags: <span class="text-amber-500">direito, noticia, juridico</span></span>
+            </div>
+        </div>
+    </dialog>
+
+    <script>
+        const fontesPermitidas = ['g1', 'terra', 'uol', 'x', 'instagram', 'acordao', 'doutrina', 'legislacao'];
+        const aviso = document.getElementById('mensagem-retorno');
+
+        // Função para mostrar a prévia na caixa do Figma instantaneamente
+        function mostrarPreviewCaixa(input, imgId, textoId) {
+            const previewImg = document.getElementById(imgId);
+            const textoBox = document.getElementById(textoId);
+            
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    previewImg.classList.remove('hidden');
+                    textoBox.classList.add('hidden');
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // Conversor seguro de arquivo para Base64 local (evita qualquer erro externo)
+        const converterParaBase64 = (fileInput) => {
+            return new Promise((resolve) => {
+                if (!fileInput || !fileInput.files || !fileInput.files[0]) return resolve(null);
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.readAsDataURL(fileInput.files[0]);
+            });
+        };
+
+        // Contador de Caracteres em Tempo Real
+        const textareaCorpo = document.getElementById('corpo_texto');
+        textareaCorpo.addEventListener('input', () => {
+            const texto = textareaCorpo.value;
+            document.getElementById('contador-com-espacos').textContent = `${texto.length.toLocaleString()} caracteres (com espaços)`;
+            document.getElementById('contador-sem-espacos').textContent = `${texto.replace(/\s/g, '').length.toLocaleString()} caracteres (sem espaços)`;
+        });
+
+        // Botão de Pré-visualização (Abre aba com a matéria completa)
+        document.getElementById('btn-preview').addEventListener('click', async () => {
+            const miniatura = await converterParaBase64(document.getElementById('input_miniatura'));
+            const corpo1 = await converterParaBase64(document.getElementById('input_corpo_1'));
+            const corpo2 = await converterParaBase64(document.getElementById('input_corpo_2'));
+            const corpo3 = await converterParaBase64(document.getElementById('input_corpo_3'));
+
+            const dadosExemplo = {
+                titulo: document.getElementById('titulo').value,
+                sub_titulo: document.getElementById('sub_titulo').value,
+                corpo_texto: document.getElementById('corpo_texto').value,
+                fonte_original: document.getElementById('fonte_original').value,
+                miniatura: miniatura,
+                fonte_miniatura: document.getElementById('fonte_miniatura').value,
+                corpo_1: corpo1,
+                fonte_corpo_1: document.getElementById('fonte_corpo_1').value,
+                corpo_2: corpo2,
+                fonte_corpo_2: document.getElementById('fonte_corpo_2').value,
+                corpo_3: corpo3,
+                fonte_corpo_3: document.getElementById('fonte_corpo_3').value
+            };
+
+            localStorage.setItem('temp_materia_preview', JSON.stringify(dadosExemplo));
+            window.open('/nova-materia-ex', '_blank');
+        });
+
+        // Envio do Formulário para o Banco de Dados
+        document.getElementById('form-nova-materia').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            const btnEnviar = document.getElementById('btn-enviar');
+            const tipoFonte = document.getElementById('tipo_fonte').value.toLowerCase().trim();
+
+            if (!fontesPermitidas.includes(tipoFonte)) {
+                aviso.textContent = `A fonte '${tipoFonte}' não é permitida. Escolha uma fonte válida da lista (ex: g1, uol, terra...).`;
+                aviso.className = "mt-4 text-center font-bold text-red-500 block";
+                return;
+            }
+
+            btnEnviar.disabled = true;
+            btnEnviar.textContent = "Salvando matéria...";
+
+            try {
+                aviso.textContent = "Processando imagens e enviando...";
+                aviso.className = "mt-4 text-center font-bold text-yellow-500 block";
+
+                // Converte todas as imagens para Base64 para salvar direto no banco com segurança
+                const miniaturaUrl = await converterParaBase64(document.getElementById('input_miniatura'));
+                const corpo1Url = await converterParaBase64(document.getElementById('input_corpo_1'));
+                const corpo2Url = await converterParaBase64(document.getElementById('input_corpo_2'));
+                const corpo3Url = await converterParaBase64(document.getElementById('input_corpo_3'));
+
+                const dados = {
+                    titulo: document.getElementById('titulo').value,
+                    sub_titulo: document.getElementById('sub_titulo').value,
+                    resumo_home: document.getElementById('resumo_home').value,
+                    corpo_texto: document.getElementById('corpo_texto').value,
+                    categoria_id: document.getElementById('categoria_id').value,
+                    tipo_fonte: tipoFonte,
+                    imagem_miniatura: miniaturaUrl,
+                    imagem_corpo: corpo1Url,
+                    imagem_extra_2: corpo2Url,
+                    imagem_extra_3: corpo3Url,
+                    fonte_original: document.getElementById('fonte_original').value,
+                    fonte_imagem: document.getElementById('fonte_miniatura').value,
+                    tags: document.getElementById('tags').value
+                };
+
+                const resposta = await fetch('/criar-materia', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+
+                const resultado = await resposta.json();
+
+                if (resposta.ok) {
+                    aviso.textContent = resultado.mensagem;
+                    aviso.className = "mt-4 text-center font-bold text-green-500 block";
+                    document.getElementById('form-nova-materia').reset();
+                } else {
+                    aviso.textContent = "Erro: " + resultado.detail;
+                    aviso.className = "mt-4 text-center font-bold text-red-500 block";
+                }
+            } catch (erro) {
+                aviso.textContent = erro.message || "Ocorreu um erro ao comunicar com o sistema.";
+                aviso.className = "mt-4 text-center font-bold text-red-500 block";
+            } finally {
+                btnEnviar.disabled = false;
+                btnEnviar.textContent = "Enviar";
+            }
+        });
+    </script>
+</body>
+</html>

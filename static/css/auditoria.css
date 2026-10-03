@@ -7,10 +7,6 @@
     --audit-muted: #a8a8b3;
     --audit-accent: #ff6b00;
 }
-
-* { box-sizing: border-box; }
-body { margin: 0; min-height: 100vh; background: var(--audit-bg); color: var(--audit-text); font-family: Inter, "Segoe UI", Arial, sans-serif; }
-
 .audit-navbar {
     position: sticky;
     top: 0;
