@@ -11,7 +11,6 @@
         .bg-destaque { background-color: #F59E0B; }
         dialog::backdrop { background: rgba(0, 0, 0, 0.9); }
         .preview-body a { color: #F59E0B; text-decoration: underline; }
-        /* Estilo das caixas de imagem idênticas ao Figma */
         .box-imagem-fundo {
             background-color: #1a1a1a;
             border: 2px dashed #4b5563;
@@ -70,29 +69,23 @@
                 <label for="corpo_texto" class="w-32 text-right mt-2">Corpo do<br>Texto:*</label>
                 <div class="flex-1">
                     <textarea id="corpo_texto" required rows="6" placeholder="Escreva o texto da matéria..." class="w-full bg-transparent border rounded border-gray-500 p-2 text-white focus:outline-none focus:border-[#F59E0B]"></textarea>
-                    <div class="text-xs text-gray-400 mt-1 flex justify-between">
-                        <span id="contador-com-espacos">0 caracteres (com espaços)</span>
-                        <span id="contador-sem-espacos">0 caracteres (sem espaços)</span>
-                    </div>
                 </div>
             </div>
 
-            <!-- SEÇÃO DE IMAGENS EXATAMENTE IGUAL AO SEU FIGMA -->
+            <!-- SEÇÃO DE IMAGENS -->
             <div class="border-t border-gray-700 pt-4">
                 <span class="block font-semibold mb-4 text-amber-500">Imagens (Miniatura e Corpo com medidas 600×400):</span>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     
-                    <!-- 1. MINIATURA (Obrigatória) -->
+                    <!-- 1. MINIATURA -->
                     <div class="space-y-2">
                         <label class="block text-sm text-gray-300">Miniatura (Principal)*</label>
                         <div class="relative box-imagem-fundo h-48 rounded flex flex-col items-center justify-center cursor-pointer overflow-hidden p-2">
                             <input type="file" id="input_miniatura" accept="image/*" required class="absolute inset-0 opacity-0 cursor-pointer z-10" onchange="mostrarPreviewCaixa(this, 'preview_miniatura', 'texto_miniatura')">
                             
-                            <!-- Imagem que aparece ao selecionar -->
                             <img id="preview_miniatura" class="absolute inset-0 w-full h-full object-cover hidden" alt="Miniatura">
                             
-                            <!-- Texto indicador padrão Figma -->
                             <div id="texto_miniatura" class="text-center">
                                 <span class="block text-lg font-bold text-gray-300">Miniatura</span>
                                 <span class="text-xs text-amber-500 font-mono mt-1 block">600×400</span>
@@ -102,7 +95,7 @@
                         <input type="text" id="fonte_miniatura" placeholder="Fonte da miniatura..." class="w-full bg-transparent border rounded border-gray-500 p-1.5 text-xs text-white focus:outline-none focus:border-[#F59E0B]">
                     </div>
 
-                    <!-- 2. IMAGEM NO CORPO (Opcional 1) -->
+                    <!-- 2. IMAGEM CORPO 1 -->
                     <div class="space-y-2">
                         <label class="block text-sm text-gray-300">Imagem no Corpo 1</label>
                         <div class="relative box-imagem-fundo h-48 rounded flex flex-col items-center justify-center cursor-pointer overflow-hidden p-2">
@@ -119,7 +112,7 @@
                         <input type="text" id="fonte_corpo_1" placeholder="Fonte da imagem..." class="w-full bg-transparent border rounded border-gray-500 p-1.5 text-xs text-white focus:outline-none focus:border-[#F59E0B]">
                     </div>
 
-                    <!-- 3. IMAGEM NO CORPO (Opcional 2) -->
+                    <!-- 3. IMAGEM CORPO 2 -->
                     <div class="space-y-2">
                         <label class="block text-sm text-gray-300">Imagem no Corpo 2</label>
                         <div class="relative box-imagem-fundo h-36 rounded flex flex-col items-center justify-center cursor-pointer overflow-hidden p-2">
@@ -135,7 +128,7 @@
                         <input type="text" id="fonte_corpo_2" placeholder="Fonte..." class="w-full bg-transparent border rounded border-gray-500 p-1 text-xs text-white">
                     </div>
 
-                    <!-- 4. IMAGEM NO CORPO (Opcional 3) -->
+                    <!-- 4. IMAGEM CORPO 3 -->
                     <div class="space-y-2">
                         <label class="block text-sm text-gray-300">Imagem no Corpo 3</label>
                         <div class="relative box-imagem-fundo h-36 rounded flex flex-col items-center justify-center cursor-pointer overflow-hidden p-2">
@@ -160,12 +153,8 @@
             </div>
 
             <div class="flex items-center gap-4">
-                <label for="fonte_original" class="w-32 text-right">Fonte original:</label>
-                <input type="url" id="fonte_original" placeholder="https://..." class="flex-1 bg-transparent border rounded border-gray-500 p-2 text-white focus:outline-none focus:border-[#F59E0B]">
-            </div>
-            <div class="flex items-center gap-4">
-                <label for="tags" class="w-32 text-right">Tags:</label>
-                <input type="text" id="tags" placeholder="Ex: direito, penal, stf (separadas por vírgula)" class="flex-1 bg-transparent border rounded border-gray-500 p-2 text-white focus:outline-none focus:border-[#F59E0B]">
+                <label for="fonte_original" class="w-32 text-right">Fonte original:*</label>
+                <input type="url" id="fonte_original" required placeholder="https://..." class="flex-1 bg-transparent border rounded border-gray-500 p-2 text-white focus:outline-none focus:border-[#F59E0B]">
             </div>
 
             <div class="flex justify-end gap-4 mt-8">
@@ -174,166 +163,196 @@
             </div>
         </form>
 
+        <!-- Div de feedback para mensagens de retorno na tela -->
         <div id="mensagem-retorno" class="mt-4 text-center font-bold hidden"></div>
     </div>
 
-    <!-- MODAL DE PRÉ-VISUALIZAÇÃO -->
-    <dialog id="modal-preview" class="bg-[#121212] text-white p-8 rounded-lg border-2 borda-destaque w-full max-w-4xl shadow-2xl relative">
-        <button id="btn-fechar-modal" class="absolute top-4 right-6 text-gray-400 hover:text-white text-3xl font-bold">&times;</button>
-        
-        <div class="preview-content mt-2 space-y-4">
-            <div class="text-xs text-gray-400">12/08/2026</div>
-
-            <h1 id="prev-titulo" class="text-3xl font-bold"></h1>
-            <p id="prev-subtitulo" class="text-gray-400 text-sm"></p>
-            
-            <div class="flex flex-wrap items-center gap-6 text-xs text-gray-400 border-y border-gray-800 py-2 my-4">
-                <span>Divulgado Por: <strong class="text-amber-500">Administrador</strong></span>
-                <span>12/08/2026 11H00</span>
-                <span>Fonte original: <span id="prev-link-container"></span></span>
-            </div>
-            
-            <div class="my-4">
-                <img id="prev-img" class="w-full max-h-[400px] object-cover rounded hidden shadow-md" alt="Imagem principal">
-                <p id="prev-fonte-img" class="text-xs text-gray-400 mt-2 italic hidden text-left"></p>
-            </div>
-            
-            <div id="prev-corpo" class="preview-body text-base leading-relaxed whitespace-pre-wrap text-gray-200 py-2 space-y-4"></div>
-            
-            <div class="border-t border-gray-800 pt-4 text-xs text-gray-400 mt-6">
-                <span>Tags: <span class="text-amber-500">direito, noticia, juridico</span></span>
-            </div>
-        </div>
-    </dialog>
-
     <script>
-        const fontesPermitidas = ['g1', 'terra', 'uol', 'x', 'instagram', 'acordao', 'doutrina', 'legislacao'];
-        const aviso = document.getElementById('mensagem-retorno');
-
-        // Função para mostrar a prévia na caixa do Figma instantaneamente
-        function mostrarPreviewCaixa(input, imgId, textoId) {
-            const previewImg = document.getElementById(imgId);
-            const textoBox = document.getElementById(textoId);
+        // Função para exibir o preview visual imediato da imagem selecionada
+        function mostrarPreviewCaixa(inputElement, previewId, textoId) {
+            const previewContainer = document.getElementById(previewId);
+            const textoContainer = document.getElementById(textoId);
             
-            if (input.files && input.files[0]) {
+            if (inputElement.files && inputElement.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    previewImg.src = e.target.result;
-                    previewImg.classList.remove('hidden');
-                    textoBox.classList.add('hidden');
+                    if (previewContainer) {
+                        previewContainer.src = e.target.result;
+                        previewContainer.classList.remove('hidden');
+                    }
+                    if (textoContainer) {
+                        textoContainer.classList.add('hidden');
+                    }
                 }
-                reader.readAsDataURL(input.files[0]);
+                reader.readAsDataURL(inputElement.files[0]);
             }
         }
 
-        // Conversor seguro de arquivo para Base64 local (evita qualquer erro externo)
-        const converterParaBase64 = (fileInput) => {
+        // Função de compressão otimizada
+        async function comprimirImagem(inputElement) {
             return new Promise((resolve) => {
-                if (!fileInput || !fileInput.files || !fileInput.files[0]) return resolve(null);
+                if (!inputElement || !inputElement.files || !inputElement.files[0]) {
+                    return resolve('');
+                }
+                const file = inputElement.files[0];
                 const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.readAsDataURL(fileInput.files[0]);
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+
+                        const MAX_WIDTH = 800;
+                        const MAX_HEIGHT = 800;
+                        if (width > height) {
+                            if (width > MAX_WIDTH) {
+                                height *= MAX_WIDTH / width;
+                                width = MAX_WIDTH;
+                            }
+                        } else {
+                            if (height > MAX_HEIGHT) {
+                                width *= MAX_HEIGHT / height;
+                                height = MAX_HEIGHT;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+                    };
+                };
+                reader.readAsDataURL(file);
             });
-        };
+        }
 
-        // Contador de Caracteres em Tempo Real
-        const textareaCorpo = document.getElementById('corpo_texto');
-        textareaCorpo.addEventListener('input', () => {
-            const texto = textareaCorpo.value;
-            document.getElementById('contador-com-espacos').textContent = `${texto.length.toLocaleString()} caracteres (com espaços)`;
-            document.getElementById('contador-sem-espacos').textContent = `${texto.replace(/\s/g, '').length.toLocaleString()} caracteres (sem espaços)`;
-        });
+        // Envio do formulário via fetch com validação das fontes de imagem
+        document.addEventListener('DOMContentLoaded', () => {
+            const formNovaMateria = document.getElementById('form-nova-materia');
+            const msgRetorno = document.getElementById('mensagem-retorno');
 
-        // Botão de Pré-visualização (Abre aba com a matéria completa)
-        document.getElementById('btn-preview').addEventListener('click', async () => {
-            const miniatura = await converterParaBase64(document.getElementById('input_miniatura'));
-            const corpo1 = await converterParaBase64(document.getElementById('input_corpo_1'));
-            const corpo2 = await converterParaBase64(document.getElementById('input_corpo_2'));
-            const corpo3 = await converterParaBase64(document.getElementById('input_corpo_3'));
+            if (formNovaMateria) {
+                formNovaMateria.addEventListener('submit', async (e) => {
+                    e.preventDefault(); // Impede o recarregamento padrão da página
 
-            const dadosExemplo = {
-                titulo: document.getElementById('titulo').value,
-                sub_titulo: document.getElementById('sub_titulo').value,
-                corpo_texto: document.getElementById('corpo_texto').value,
-                fonte_original: document.getElementById('fonte_original').value,
-                miniatura: miniatura,
-                fonte_miniatura: document.getElementById('fonte_miniatura').value,
-                corpo_1: corpo1,
-                fonte_corpo_1: document.getElementById('fonte_corpo_1').value,
-                corpo_2: corpo2,
-                fonte_corpo_2: document.getElementById('fonte_corpo_2').value,
-                corpo_3: corpo3,
-                fonte_corpo_3: document.getElementById('fonte_corpo_3').value
-            };
+                    // Mapeia os pares de inputs de imagem e suas respectivas fontes
+                    const paresImagens = [
+                        { input: document.getElementById('input_miniatura'), fonte: document.getElementById('fonte_miniatura'), nome: 'Miniatura (Principal)' },
+                        { input: document.getElementById('input_corpo_1'), fonte: document.getElementById('fonte_corpo_1'), nome: 'Imagem no Corpo 1' },
+                        { input: document.getElementById('input_corpo_2'), fonte: document.getElementById('fonte_corpo_2'), nome: 'Imagem no Corpo 2' },
+                        { input: document.getElementById('input_corpo_3'), fonte: document.getElementById('fonte_corpo_3'), nome: 'Imagem no Corpo 3' }
+                    ];
 
-            localStorage.setItem('temp_materia_preview', JSON.stringify(dadosExemplo));
-            window.open('/nova-materia-ex', '_blank');
-        });
+                    // Valida se cada imagem anexada possui a sua respectiva fonte preenchida
+                    for (let par of paresImagens) {
+                        if (par.input && par.input.files && par.input.files.length > 0) {
+                            if (!par.fonte || !par.fonte.value.trim()) {
+                                alert(`A fonte da imagem "${par.nome}" é obrigatória porque uma imagem foi anexada.`);
+                                par.fonte.focus();
+                                return;
+                            }
+                        }
+                    }
 
-        // Envio do Formulário para o Banco de Dados
-        document.getElementById('form-nova-materia').addEventListener('submit', async function(event) {
-            event.preventDefault();
-            
-            const btnEnviar = document.getElementById('btn-enviar');
-            const tipoFonte = document.getElementById('tipo_fonte').value.toLowerCase().trim();
+                    msgRetorno.textContent = "Compactando imagens e enviando matéria...";
+                    msgRetorno.className = "mt-4 text-center font-bold text-amber-500 block";
 
-            if (!fontesPermitidas.includes(tipoFonte)) {
-                aviso.textContent = `A fonte '${tipoFonte}' não é permitida. Escolha uma fonte válida da lista (ex: g1, uol, terra...).`;
-                aviso.className = "mt-4 text-center font-bold text-red-500 block";
-                return;
+                    try {
+                        // Comprime todas as imagens antes de enviar
+                        const miniaturaComprimida = await comprimirImagem(document.getElementById('input_miniatura'));
+                        const corpo1Comprimida = await comprimirImagem(document.getElementById('input_corpo_1'));
+                        const corpo2Comprimida = await comprimirImagem(document.getElementById('input_corpo_2'));
+                        const corpo3Comprimida = await comprimirImagem(document.getElementById('input_corpo_3'));
+
+                        const dadosMateria = {
+                            titulo: document.getElementById('titulo').value,
+                            sub_titulo: document.getElementById('sub_titulo').value,
+                            categoria_id: document.getElementById('categoria_id').value,
+                            tipo_fonte: document.getElementById('tipo_fonte').value,
+                            corpo_texto: document.getElementById('corpo_texto').value,
+                            resumo_home: document.getElementById('resumo_home').value,
+                            fonte_original: document.getElementById('fonte_original').value,
+                            
+                            miniatura: miniaturaComprimida,
+                            fonte_miniatura: document.getElementById('fonte_miniatura')?.value || '',
+                            
+                            corpo_1: corpo1Comprimida,
+                            fonte_corpo_1: document.getElementById('fonte_corpo_1')?.value || '',
+                            
+                            corpo_2: corpo2Comprimida,
+                            fonte_corpo_2: document.getElementById('fonte_corpo_2')?.value || '',
+                            
+                            corpo_3: corpo3Comprimida,
+                            fonte_corpo_3: document.getElementById('fonte_corpo_3')?.value || ''
+                        };
+
+                        // Realiza o envio via fetch incluindo credenciais/cookies de admin
+                        const resposta = await fetch('/api/materia', {
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            credentials: 'include',
+                            body: JSON.stringify(dadosMateria)
+                        });
+
+                        if (resposta.ok) {
+                            msgRetorno.textContent = "Matéria cadastrada com sucesso!";
+                            msgRetorno.className = "mt-4 text-center font-bold text-green-500 block";
+                            formNovaMateria.reset();
+                            setTimeout(() => { window.location.href = '/home_admin'; }, 2000);
+                        } else {
+                            const erroData = await resposta.json().catch(() => ({}));
+                            throw new Error(erroData.detail || "Erro ao salvar no banco de dados.");
+                        }
+
+                    } catch (err) {
+                        console.error(err);
+                        msgRetorno.textContent = "Erro ao enviar: " + err.message;
+                        msgRetorno.className = "mt-4 text-center font-bold text-red-500 block";
+                    }
+                });
             }
 
-            btnEnviar.disabled = true;
-            btnEnviar.textContent = "Salvando matéria...";
+            // Evento de clique do botão de pré-visualização
+            const btnPreview = document.getElementById('btn-preview');
+            if (btnPreview) {
+                btnPreview.addEventListener('click', async () => {
+                    const miniaturaComprimida = await comprimirImagem(document.getElementById('input_miniatura'));
+                    const corpo1Comprimida = await comprimirImagem(document.getElementById('input_corpo_1'));
+                    const corpo2Comprimida = await comprimirImagem(document.getElementById('input_corpo_2'));
+                    const corpo3Comprimida = await comprimirImagem(document.getElementById('input_corpo_3'));
 
-            try {
-                aviso.textContent = "Processando imagens e enviando...";
-                aviso.className = "mt-4 text-center font-bold text-yellow-500 block";
+                    const dadosMateria = {
+                        titulo: document.getElementById('titulo').value,
+                        sub_titulo: document.getElementById('sub_titulo').value,
+                        corpo_texto: document.getElementById('corpo_texto').value,
+                        fonte_original: document.getElementById('fonte_original').value,
+                        
+                        miniatura: miniaturaComprimida,
+                        fonte_miniatura: document.getElementById('fonte_miniatura')?.value || '',
+                        
+                        corpo_1: corpo1Comprimida,
+                        fonte_corpo_1: document.getElementById('fonte_corpo_1')?.value || '',
+                        
+                        corpo_2: corpo2Comprimida,
+                        fonte_corpo_2: document.getElementById('fonte_corpo_2')?.value || '',
+                        
+                        corpo_3: corpo3Comprimida,
+                        fonte_corpo_3: document.getElementById('fonte_corpo_3')?.value || ''
+                    };
 
-                // Converte todas as imagens para Base64 para salvar direto no banco com segurança
-                const miniaturaUrl = await converterParaBase64(document.getElementById('input_miniatura'));
-                const corpo1Url = await converterParaBase64(document.getElementById('input_corpo_1'));
-                const corpo2Url = await converterParaBase64(document.getElementById('input_corpo_2'));
-                const corpo3Url = await converterParaBase64(document.getElementById('input_corpo_3'));
-
-                const dados = {
-                    titulo: document.getElementById('titulo').value,
-                    sub_titulo: document.getElementById('sub_titulo').value,
-                    resumo_home: document.getElementById('resumo_home').value,
-                    corpo_texto: document.getElementById('corpo_texto').value,
-                    categoria_id: document.getElementById('categoria_id').value,
-                    tipo_fonte: tipoFonte,
-                    imagem_miniatura: miniaturaUrl,
-                    imagem_corpo: corpo1Url,
-                    imagem_extra_2: corpo2Url,
-                    imagem_extra_3: corpo3Url,
-                    fonte_original: document.getElementById('fonte_original').value,
-                    fonte_imagem: document.getElementById('fonte_miniatura').value,
-                    tags: document.getElementById('tags').value
-                };
-
-                const resposta = await fetch('/criar-materia', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dados)
+                    try {
+                        localStorage.setItem('temp_materia_preview', JSON.stringify(dadosMateria));
+                        window.open('/preview-materia', '_blank');
+                    } catch (e) {
+                        alert("O tamanho dos arquivos excede o limite. Tente usar imagens menores.");
+                        console.error(e);
+                    }
                 });
-
-                const resultado = await resposta.json();
-
-                if (resposta.ok) {
-                    aviso.textContent = resultado.mensagem;
-                    aviso.className = "mt-4 text-center font-bold text-green-500 block";
-                    document.getElementById('form-nova-materia').reset();
-                } else {
-                    aviso.textContent = "Erro: " + resultado.detail;
-                    aviso.className = "mt-4 text-center font-bold text-red-500 block";
-                }
-            } catch (erro) {
-                aviso.textContent = erro.message || "Ocorreu um erro ao comunicar com o sistema.";
-                aviso.className = "mt-4 text-center font-bold text-red-500 block";
-            } finally {
-                btnEnviar.disabled = false;
-                btnEnviar.textContent = "Enviar";
             }
         });
     </script>

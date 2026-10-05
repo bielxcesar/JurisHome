@@ -1,111 +1,323 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Página inicial do usuário JurisHome">
     <title>Início | JurisHome</title>
-    
+    <!-- Tailwind via CDN para padronização -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/homeAdmin.css?v=20260925-2">
-    <link rel="stylesheet" href="/static/css/figma-app.css?v=20260925-5">
-    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
-
-    <script>
-        (function() {
-            const temaSalvo = localStorage.getItem("tema_juris");
-            if (temaSalvo === "claro") {
-                window.addEventListener('DOMContentLoaded', () => document.body.classList.add("modo-claro"));
-            }
-        })();
-    </script>
 </head>
-<body>
-    
-    <header class="navbar">
-        <div class="nav-data" id="data-atual" aria-label="Data atual">--/--/----</div>
+<body class="bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
 
-        <nav class="nav-menu" aria-label="Navegação do usuário">
-            <a href="/home_usuario" class="nav-link active" aria-current="page"><i class="fa-solid fa-house" aria-hidden="true"></i> Início</a>
-            <a href="/exibir-mais" class="nav-link"><i class="fa-solid fa-square-plus" aria-hidden="true"></i> Exibir mais</a>
-            <a href="/configuracoes-usuario#feedback" class="nav-link"><i class="fa-solid fa-headset" aria-hidden="true"></i> Suporte</a>
-            <span class="nav-link nav-link-indisponivel" aria-disabled="true" title="Página ainda não disponível"><i class="fa-solid fa-user-group" aria-hidden="true"></i> Sobre nós</span>
-            <a href="/categorias" class="nav-link"><i class="fa-solid fa-newspaper" aria-hidden="true"></i> Categorias</a>
-            <a href="/pesquisa" class="nav-link"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Pesquisa</a>
-            <a href="/glossario?origem=usuario" class="nav-link"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Glossário</a>
+    <!-- Barra de Navegação -->
+    <header class="bg-[#25262a] border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between sticky top-0 z-50">
+        <div class="text-gray-400 text-sm hidden md:block font-mono" id="data-atual">--/--/----</div>
+        
+        <nav class="flex flex-1 md:justify-center gap-4 md:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide text-sm md:text-base">
+            <a href="/home_usuario" class="text-white border-b-2 border-amber-500 pb-1 font-semibold flex items-center gap-2 transition"><i class="fa-solid fa-house text-amber-500"></i> Início</a>
+            <a href="/exibir-mais" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-square-plus text-amber-500"></i> Exibir mais</a>
+            <a href="/configuracoes-usuario#feedback" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-headset text-amber-500"></i> Suporte</a>
+            <span class="text-gray-600 cursor-not-allowed pb-1 flex items-center gap-2" title="Página indisponível"><i class="fa-solid fa-user-group text-gray-600"></i> Sobre nós</span>
+            <a href="/categorias" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-newspaper text-amber-500"></i> Categorias</a>
+            <a href="/pesquisa" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-magnifying-glass text-amber-500"></i> Pesquisa</a>
+            <a href="/glossario?origem=usuario" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-book-open text-amber-500"></i> Glossário</a>
         </nav>
 
-        <div class="nav-perfil">
-            <button class="avatar-icon" id="btn-perfil" type="button" aria-label="Abrir configurações do usuário" aria-expanded="false" aria-controls="dropdown-perfil">
-                <i class="fa-solid fa-user" aria-hidden="true"></i>
+        <div class="relative ml-4">
+            <button id="btn-perfil" class="w-10 h-10 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500 hover:bg-amber-500 hover:text-black transition cursor-pointer">
+                <i class="fa-solid fa-user"></i>
             </button>
-            
-            <div class="menu-perfil-dropdown" id="dropdown-perfil" aria-label="Configurações do usuário">
-                <a href="/configuracoes-usuario" class="dropdown-item">Configurações <i class="fa-solid fa-gear" aria-hidden="true"></i></a>
-                <a href="/termos-de-aceite" class="dropdown-item">Termo de Aceite <i class="fa-regular fa-file-lines" aria-hidden="true"></i></a>
-                <a href="/politica-de-privacidade" class="dropdown-item">Privacidade <i class="fa-solid fa-shield-halved" aria-hidden="true"></i></a>
-                <a href="/configuracoes-usuario" class="dropdown-item">Perfil <i class="fa-solid fa-user" aria-hidden="true"></i></a>
-                <a href="/" class="dropdown-item btn-desconectar">Sair <i class="fa-solid fa-power-off" aria-hidden="true"></i></a>
+
+            <div id="dropdown-perfil" class="hidden absolute right-0 top-14 w-56 bg-[#25262a] border border-gray-700 rounded-lg shadow-2xl flex-col gap-1 p-2 z-[100]">
+                <a href="/configuracoes-usuario" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Configurações <i class="fa-solid fa-gear text-gray-400"></i></a>
+                <a href="/perfil" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Perfil <i class="fa-solid fa-user text-gray-400"></i></a>
+                <a href="/" class="btn-desconectar mt-2 text-white bg-red-600 hover:bg-red-700 px-3 py-2 rounded flex justify-between items-center transition font-semibold">Sair <i class="fa-solid fa-power-off text-white"></i></a>
             </div>
         </div>
     </header>
 
-    <main class="container" id="conteudo-principal">
-        <h1 class="home-user-sr-only">Página inicial do JurisHome</h1>
+    <main class="w-full max-w-7xl mx-auto px-4 py-8 flex-1" id="conteudo-principal">
+        <h1 class="sr-only">Conteúdos jurídicos do JurisHome</h1>
         
-        <section class="hero-grid" id="destaques-home" aria-label="Matérias em destaque por categoria">
-            <article class="card-hero-principal" id="card-destaque-principal" tabindex="0">
-                <div class="card-header-info">
-                    <span class="categoria-tag" id="hero-cat-1">Carregando...</span>
-                    <div class="indicadores-carrossel" aria-hidden="true">
-                        <span class="dot active"></span>
-                        <span class="dot"></span>
-                        <span class="dot"></span>
-                        <span class="dot"></span>
+        <!-- Destaques Principais -->
+        <section class="grid grid-cols-1 lg:grid-cols-[1.8fr_1fr] gap-6 mb-12" id="destaques-home">
+            
+            <!-- Card Principal -->
+            <article class="relative bg-[#2a2b30] rounded-xl overflow-hidden min-h-[350px] lg:min-h-[420px] flex flex-col justify-between p-6 cursor-pointer hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(0,0,0,0.5)] transition duration-300 group" id="card-destaque-principal" tabindex="0">
+                <img id="hero-img-1" src="" alt="" class="absolute inset-0 w-full h-full object-cover z-0 brightness-50 pointer-events-none transition duration-500 group-hover:scale-105">
+                
+                <div class="relative z-10 flex justify-between items-center">
+                    <span class="text-amber-500 font-bold text-sm uppercase tracking-wider" id="hero-cat-1">Carregando...</span>
+                    <div class="flex gap-1.5">
+                        <span class="w-6 h-1.5 bg-white rounded-full"></span>
+                        <span class="w-6 h-1.5 bg-gray-600 rounded-full"></span>
+                        <span class="w-6 h-1.5 bg-gray-600 rounded-full"></span>
                     </div>
                 </div>
                 
-                <span class="btn-next-hero" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></span>
-                
-                <div class="card-footer-info">
-                    <h2 id="hero-titulo-1">Carregando matéria...</h2>
-                    <div class="progresso-bar" aria-hidden="true"><div class="progresso-fill"></div></div>
+                <span class="absolute right-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full border border-white/30 bg-black/40 text-white flex items-center justify-center backdrop-blur hover:bg-amber-500 hover:border-amber-500 transition z-20"><i class="fa-solid fa-arrow-right"></i></span>
+
+                <div class="relative z-10 mt-auto">
+                    <h2 class="text-3xl font-bold text-white leading-snug mb-4 max-w-[90%]" id="hero-titulo-1">Buscando as melhores matérias...</h2>
+                    <div class="w-full h-1 bg-gray-700 rounded-full overflow-hidden">
+                        <div class="w-2/5 h-full bg-amber-500"></div>
+                    </div>
                 </div>
             </article>
 
-            <div class="coluna-destaques-secundarios" id="coluna-destaques-secundarios">
-                <article class="card-hero-secundario" id="card-destaque-2" tabindex="0">
-                    <span class="categoria-tag" id="hero-cat-2">Carregando...</span>
-                    <h3 id="hero-titulo-2">Carregando matéria...</h3>
+            <!-- Coluna de Destaques Menores -->
+            <div class="flex flex-col gap-6" id="coluna-destaques-secundarios">
+                <article class="relative bg-[#2a2b30] rounded-xl overflow-hidden flex-1 p-5 flex flex-col justify-end cursor-pointer hover:-translate-y-1 hover:shadow-[0_8px_15px_rgba(0,0,0,0.5)] transition duration-300 group" id="card-destaque-2" tabindex="0">
+                    <img id="hero-img-2" src="" alt="" class="absolute inset-0 w-full h-full object-cover z-0 brightness-50 pointer-events-none transition duration-500 group-hover:scale-105">
+                    <div class="relative z-10">
+                        <span class="block text-amber-500 font-bold text-xs uppercase tracking-wider mb-2" id="hero-cat-2">...</span>
+                        <h3 class="text-lg font-bold text-white leading-tight" id="hero-titulo-2">...</h3>
+                    </div>
                 </article>
-                
-                <article class="card-hero-secundario" id="card-destaque-3" tabindex="0">
-                    <span class="categoria-tag" id="hero-cat-3">Carregando...</span>
-                    <h3 id="hero-titulo-3">Carregando matéria...</h3>
+
+                <article class="relative bg-[#2a2b30] rounded-xl overflow-hidden flex-1 p-5 flex flex-col justify-end cursor-pointer hover:-translate-y-1 hover:shadow-[0_8px_15px_rgba(0,0,0,0.5)] transition duration-300 group" id="card-destaque-3" tabindex="0">
+                    <img id="hero-img-3" src="" alt="" class="absolute inset-0 w-full h-full object-cover z-0 brightness-50 pointer-events-none transition duration-500 group-hover:scale-105">
+                    <div class="relative z-10">
+                        <span class="block text-amber-500 font-bold text-xs uppercase tracking-wider mb-2" id="hero-cat-3">...</span>
+                        <h3 class="text-lg font-bold text-white leading-tight" id="hero-titulo-3">...</h3>
+                    </div>
                 </article>
             </div>
         </section>
 
-        <section class="secao-recomendados" id="mais-conteudos" aria-labelledby="titulo-recomendados">
-            <h2 id="titulo-recomendados">Mais matérias</h2>
-            <div class="grid-cards" id="grid-voce-pode-gostar"></div>
+        <!-- Seção Recomendados / Mais Conteúdos -->
+        <section id="mais-conteudos">
+            <h2 class="text-2xl font-semibold mb-6 text-white border-b border-gray-700 pb-2">Mais matérias</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="grid-voce-pode-gostar">
+                <!-- Cards dinâmicos inseridos pelo JS -->
+            </div>
         </section>
     </main>
 
-    <div class="juris-fab" id="juris-fab">
-        <nav class="juris-fab-menu" id="juris-fab-menu" aria-label="Acesso rápido ao feedback" hidden>
-            <a class="juris-fab-action juris-fab-feedback" href="/configuracoes-usuario#feedback">
-                <i class="fa-solid fa-headset" aria-hidden="true"></i>
+    <!-- Botão Flutuante Feedback (J) -->
+    <div class="fixed bottom-8 right-8 z-[100] flex flex-col items-end gap-3">
+        <nav id="juris-fab-menu" class="hidden flex-col items-end gap-2 mb-2">
+            <a href="/configuracoes-usuario#feedback" class="bg-[#25262a] border-2 border-amber-500 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-amber-500 hover:text-black transition shadow-lg font-semibold">
                 <span>Feedback e suporte</span>
+                <i class="fa-solid fa-headset"></i>
             </a>
         </nav>
-
-        <button class="fab-btn" id="juris-fab-toggle" type="button" aria-label="Abrir acesso ao feedback" aria-expanded="false" aria-controls="juris-fab-menu">
-            <span class="juris-fab-letter" aria-hidden="true">J</span>
+        <button id="juris-fab-toggle" class="w-14 h-14 bg-[#1e1e1e] border-2 border-amber-500 rounded-full flex items-center justify-center text-amber-500 text-3xl font-serif font-bold hover:bg-amber-500 hover:text-black transition shadow-lg">
+            J
         </button>
     </div>
 
     {% include "_legal_links.html" %}
-    <script src="/static/js/homeUsuario.js?v=20260925-5"></script>
+
+    <script>
+        (function () {
+            "use strict";
+
+            let materias = [];
+            
+            document.addEventListener("DOMContentLoaded", iniciar);
+
+            function iniciar() {
+                mostrarData();
+                configurarPerfil();
+                configurarNavegacaoDasMaterias();
+                carregarMaterias();
+                configurarSaida();
+                configurarBotaoFlutuante();
+            }
+
+            function configurarBotaoFlutuante() {
+                const fabBtn = document.getElementById("juris-fab-toggle");
+                const fabMenu = document.getElementById("juris-fab-menu");
+                if (fabBtn && fabMenu) {
+                    fabBtn.addEventListener("click", () => {
+                        fabMenu.classList.toggle("hidden");
+                        fabMenu.classList.toggle("flex");
+                    });
+                }
+            }
+
+            function configurarSaida() {
+                document.querySelectorAll(".btn-desconectar").forEach((link) => {
+                    link.addEventListener("click", (evento) => {
+                        evento.preventDefault();
+                        window.localStorage.removeItem("jurishome_access_token");
+                        window.sessionStorage.removeItem("jurishome_desafio_2fa");
+                        window.fetch("/api/auth/logout", { method: "POST" })
+                            .finally(() => { window.location.href = "/"; });
+                    });
+                });
+            }
+
+            function mostrarData() {
+                const elemento = document.getElementById("data-atual");
+                if (elemento) {
+                    elemento.textContent = new Intl.DateTimeFormat("pt-BR").format(new Date());
+                }
+            }
+
+            function configurarPerfil() {
+                const botao = document.getElementById("btn-perfil");
+                const menu = document.getElementById("dropdown-perfil");
+                if (!botao || !menu) return;
+
+                botao.addEventListener("click", (evento) => {
+                    evento.stopPropagation();
+                    menu.classList.toggle("hidden");
+                    menu.classList.toggle("flex");
+                });
+
+                document.addEventListener("click", (evento) => {
+                    if (!menu.contains(evento.target) && !botao.contains(evento.target)) {
+                        fecharMenu();
+                    }
+                });
+
+                document.addEventListener("keydown", (evento) => {
+                    if (evento.key === "Escape") fecharMenu();
+                });
+
+                function fecharMenu() {
+                    menu.classList.add("hidden");
+                    menu.classList.remove("flex");
+                }
+            }
+
+            function configurarNavegacaoDasMaterias() {
+                const conteudo = document.getElementById("conteudo-principal");
+                if (!conteudo) return;
+
+                conteudo.addEventListener("click", (evento) => {
+                    const card = evento.target.closest("[data-conteudo-id]");
+                    if (card) abrirMateria(card.dataset.conteudoId);
+                });
+            }
+
+            async function carregarMaterias() {
+                try {
+                    const resposta = await window.fetch("/api/conteudos");
+                    if (!resposta.ok) throw new Error("Não foi possível carregar as matérias.");
+
+                    const dados = await resposta.json();
+                    materias = Array.isArray(dados) ? dados : [];
+                    aplicarFiltros();
+                } catch (erro) {
+                    materias = [];
+                    renderizarMaterias([]);
+                    console.error(erro);
+                }
+            }
+
+            function aplicarFiltros() {
+                const resultados = materias.filter((materia) => true);
+                renderizarMaterias(resultados);
+            }
+
+            function renderizarMaterias(resultados) {
+                const coluna = document.getElementById("coluna-destaques-secundarios");
+                const principal = document.getElementById("card-destaque-principal");
+                const segundo = document.getElementById("card-destaque-2");
+                const terceiro = document.getElementById("card-destaque-3");
+
+                if (resultados.length === 0) {
+                    preencherEstadoVazio(principal);
+                    segundo.classList.add("hidden");
+                    terceiro.classList.add("hidden");
+                    coluna.classList.add("hidden");
+                    preencherRecomendados([]);
+                    return;
+                }
+
+                preencherCard(principal, "hero-cat-1", "hero-titulo-1", resultados[0], "hero-img-1");
+                preencherCardOpcional(segundo, "hero-cat-2", "hero-titulo-2", resultados[1], "hero-img-2");
+                preencherCardOpcional(terceiro, "hero-cat-3", "hero-titulo-3", resultados[2], "hero-img-3");
+
+                if(resultados.length < 2) {
+                    coluna.classList.add("hidden");
+                } else {
+                    coluna.classList.remove("hidden");
+                }
+                
+                preencherRecomendados(resultados.slice(3));
+            }
+
+            function preencherCardOpcional(card, categoriaId, tituloId, materia, imgId) {
+                if (materia) {
+                    card.classList.remove("hidden");
+                    card.classList.add("flex");
+                    preencherCard(card, categoriaId, tituloId, materia, imgId);
+                } else {
+                    card.classList.add("hidden");
+                    card.classList.remove("flex");
+                }
+            }
+
+            function preencherCard(card, categoriaId, tituloId, materia, imgId) {
+                card.dataset.conteudoId = materia.uuid;
+                document.getElementById(categoriaId).textContent = materia.categoria || "Geral";
+                document.getElementById(tituloId).textContent = materia.titulo;
+
+                const imagemFundo = document.getElementById(imgId);
+                if (imagemFundo) {
+                    if (materia.imagem_miniatura) {
+                        imagemFundo.src = materia.imagem_miniatura;
+                        imagemFundo.classList.remove("hidden");
+                    } else {
+                        imagemFundo.src = "";
+                        imagemFundo.classList.add("hidden");
+                    }
+                }
+            }
+
+            function preencherEstadoVazio(card) {
+                delete card.dataset.conteudoId;
+                document.getElementById("hero-cat-1").textContent = "Acervo JurisHome";
+                document.getElementById("hero-titulo-1").textContent = materias.length
+                    ? "Nenhuma matéria corresponde aos filtros."
+                    : "Nenhuma matéria cadastrada.";
+
+                const imagemFundo = document.getElementById("hero-img-1");
+                if (imagemFundo) {
+                    imagemFundo.src = "";
+                    imagemFundo.classList.add("hidden");
+                }
+            }
+
+            function preencherRecomendados(recomendadas) {
+                const grade = document.getElementById("grid-voce-pode-gostar");
+                if (!grade) return;
+                grade.innerHTML = "";
+
+                if (recomendadas.length === 0) {
+                    grade.innerHTML = `<p class="text-gray-500 italic col-span-full">Não há mais matérias para exibir no momento.</p>`;
+                    return;
+                }
+
+                recomendadas.forEach((materia) => {
+                    const card = document.createElement("article");
+                    card.className = "bg-[#2a2b30] border border-gray-800 rounded-xl p-5 min-h-[140px] flex flex-col justify-between cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:border-amber-500 transition duration-300 group";
+                    card.dataset.conteudoId = materia.uuid;
+
+                    const categoria = document.createElement("span");
+                    categoria.className = "text-amber-500 font-bold text-xs uppercase tracking-wider mb-2 block";
+                    categoria.textContent = materia.categoria || "Geral";
+
+                    const titulo = document.createElement("h3");
+                    titulo.className = "text-gray-100 font-bold text-lg leading-snug group-hover:text-amber-400 transition";
+                    titulo.textContent = materia.titulo;
+
+                    card.appendChild(categoria);
+                    card.appendChild(titulo);
+                    grade.appendChild(card);
+                });
+            }
+
+            function abrirMateria(uuid) {
+                if (uuid) window.location.href = `/materia/${encodeURIComponent(uuid)}`;
+            }
+        })();
+    </script>
 </body>
 </html>

@@ -13,10 +13,8 @@
 </head>
 <body class="bg-[#1e1e1e] text-white font-sans antialiased min-h-screen flex items-center justify-center p-6">
 
-    <!-- Caixa Principal com Borda Laranja -->
     <div class="w-full max-w-5xl border-4 borda-destaque rounded-lg p-6 relative bg-[#121212] shadow-2xl">
         
-        <!-- Topo: Botão de voltar e Título -->
         <div class="flex items-center justify-between border-b border-gray-700 pb-4 mb-6">
             <a href="/home_admin" class="text-gray-400 hover:text-white flex items-center gap-2">
                 <i class="fa-solid fa-arrow-left text-xl"></i>
@@ -25,20 +23,16 @@
             <i class="fa-solid fa-moon text-xl text-gray-300"></i>
         </div>
 
-        <!-- Layout de Duas Colunas (Menu Lateral + Tabela) -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
             
-            <!-- Menu Lateral Esquerdo -->
             <div class="border-r border-gray-700 pr-4 space-y-6 text-sm text-gray-300">
                 <a href="#" class="block hover:text-amber-500 transition">Tabela usuario</a>
                 <a href="#" class="block text-amber-500 font-bold">Arquivos noticias</a>
                 <a href="#" class="block hover:text-amber-500 transition">Graficos</a>
             </div>
 
-            <!-- Tabela Principal de Notícias -->
             <div class="md:col-span-3 bg-[#1a1a1a] border border-gray-700 rounded-lg p-4 overflow-x-auto">
                 
-                <!-- Cabeçalho da Tabela -->
                 <div class="bg-amber-500 text-black font-bold p-3 rounded flex justify-between items-center mb-4 text-sm">
                     <span class="w-1/3">Nome da Matéria</span>
                     <span class="w-1/4 text-center">Horário / Dia</span>
@@ -46,20 +40,16 @@
                     <span class="w-1/4 text-right">Ações</span>
                 </div>
 
-                <!-- Lista de Matérias vindas do Banco -->
                 <div class="space-y-3">
                     {% for mat in materias %}
                     <div class="bg-[#121212] border border-gray-800 p-3 rounded flex justify-between items-center text-sm">
                         
-                        <!-- Nome / Título -->
                         <span class="w-1/3 truncate font-medium" title="{{ mat.titulo }}">{{ mat.titulo }}</span>
                         
-                        <!-- Horário e Dia -->
                         <span class="w-1/4 text-center text-gray-400 text-xs">
                             {{ mat.criado_em.strftime('%d/%m/%Y %H:%M') if mat.criado_em else 'N/D' }}
                         </span>
                         
-                        <!-- Status -->
                         <span class="w-1/6 text-center">
                             {% if mat.status.value == 'aprovado' %}
                                 <span class="bg-green-900 text-green-300 px-2 py-0.5 rounded text-xs font-bold">Aprovado</span>
@@ -68,13 +58,11 @@
                             {% endif %}
                         </span>
                         
-                        <!-- Botões de Ação (Aprovar, Editar e Descartar) -->
                         <div class="w-1/4 flex justify-end gap-1">
                             {% if mat.status.value != 'aprovado' %}
                                 <button onclick="aprovarMateria('{{ mat.uuid }}')" class="bg-green-600 hover:bg-green-500 text-white px-2.5 py-1 rounded text-xs font-bold transition">Aprovar</button>
                             {% endif %}
                             
-                            <!-- Novo Botão de Edição para corrigir erros de digitação -->
                             <button onclick="abrirEdicao('{{ mat.uuid }}', '{{ mat.titulo | e }}')" class="bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1 rounded text-xs font-bold transition">Editar</button>
                             
                             <button onclick="descartarMateria('{{ mat.uuid }}')" class="bg-red-600 hover:bg-red-500 text-white px-2.5 py-1 rounded text-xs font-bold transition">Descartar</button>
@@ -91,7 +79,6 @@
         </div>
     </div>
 
-    <!-- Modal Simples de Edição (Para corrigir erros ortográficos rapidamente) -->
     <div id="modalEdicao" class="fixed inset-0 bg-black/70 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-[#1a1a1a] border border-gray-700 rounded-lg p-6 w-full max-w-lg shadow-2xl">
             <h2 class="text-xl font-bold mb-4 text-amber-500">Editar Matéria / Corrigir Texto</h2>

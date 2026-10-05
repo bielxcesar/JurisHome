@@ -1,68 +1,255 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Matérias jurídicas recentes e organizadas por categoria no JurisHome">
     <title>{% if visao == 'recentes' %}Exibir mais{% else %}Categorias{% endif %} | JurisHome</title>
+    
+    <!-- Tailwind via CDN substituindo os CSS bloqueados -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/homeAdmin.css?v=20260925-2">
-    <link rel="stylesheet" href="/static/css/figma-app.css?v=20260925-5">
-    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+
+    <script>
+        (function() {
+            const temaSalvo = localStorage.getItem("tema_juris");
+            if (temaSalvo === "claro") {
+                document.documentElement.classList.remove("dark");
+                document.documentElement.setAttribute("data-theme", "light");
+            } else {
+                document.documentElement.classList.add("dark");
+                document.documentElement.setAttribute("data-theme", "dark");
+            }
+        })();
+    </script>
 </head>
-<body class="listagem-shell" data-visao="{{ visao }}" data-tipo-usuario="{{ tipo_usuario }}">
-    <header class="navbar">
-        <div class="nav-data" id="data-atual" aria-label="Data atual">--/--/----</div>
-        <nav class="nav-menu" aria-label="Navegação principal">
-            <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="nav-link"><i class="fa-solid fa-house" aria-hidden="true"></i> Home</a>
-            <a href="/exibir-mais" class="nav-link{% if visao == 'recentes' %} active{% endif %}"{% if visao == 'recentes' %} aria-current="page"{% endif %}><i class="fa-solid fa-square-plus" aria-hidden="true"></i> Exibir mais</a>
+<body class="bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col" data-visao="{{ visao }}" data-tipo-usuario="{{ tipo_usuario }}">
+    
+    <!-- Barra de Navegação Padronizada -->
+    <header class="bg-[#25262a] border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between sticky top-0 z-50">
+        <div class="text-gray-400 text-sm hidden md:block font-mono" id="data-atual">--/--/----</div>
+        
+        <nav class="flex flex-1 md:justify-center gap-4 md:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide text-sm md:text-base">
+            <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-house text-amber-500"></i> Home</a>
+            
+            <a href="/exibir-mais" class="{% if visao == 'recentes' %}text-white border-b-2 border-amber-500 pb-1 font-semibold{% else %}text-gray-300 hover:text-amber-500 pb-1{% endif %} flex items-center gap-2 transition" {% if visao == 'recentes' %}aria-current="page"{% endif %}><i class="fa-solid fa-square-plus text-amber-500"></i> Exibir mais</a>
+            
             {% if tipo_usuario == 'administrador' %}
-            <a href="/admin-feedbacks" class="nav-link"><i class="fa-solid fa-inbox" aria-hidden="true"></i> Feedbacks</a>
-            <a href="/admin/auditoria" class="nav-link"><i class="fa-solid fa-list-check" aria-hidden="true"></i> Auditoria</a>
+                <a href="/admin-feedbacks" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-inbox text-amber-500"></i> Feedbacks</a>
+                <a href="/admin/auditoria" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-list-check text-amber-500"></i> Auditoria</a>
             {% else %}
-            <a href="/configuracoes-usuario#feedback" class="nav-link"><i class="fa-solid fa-headset" aria-hidden="true"></i> Suporte</a>
+                <a href="/configuracoes-usuario#feedback" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-headset text-amber-500"></i> Suporte</a>
             {% endif %}
-            <span class="nav-link nav-link-indisponivel" aria-disabled="true" title="Página ainda não disponível"><i class="fa-solid fa-user-group" aria-hidden="true"></i> Sobre nós</span>
-            <a href="/categorias" class="nav-link{% if visao == 'categorias' %} active{% endif %}"{% if visao == 'categorias' %} aria-current="page"{% endif %}><i class="fa-solid fa-newspaper" aria-hidden="true"></i> Categorias</a>
-            <a href="/pesquisa" class="nav-link"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Pesquisa</a>
-            <a href="/glossario{% if tipo_usuario != 'administrador' %}?origem=usuario{% endif %}" class="nav-link"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Glossário</a>
+            
+            <span class="text-gray-600 cursor-not-allowed pb-1 flex items-center gap-2" title="Página indisponível"><i class="fa-solid fa-user-group text-gray-600"></i> Sobre nós</span>
+            
+            <a href="/categorias" class="{% if visao == 'categorias' %}text-white border-b-2 border-amber-500 pb-1 font-semibold{% else %}text-gray-300 hover:text-amber-500 pb-1{% endif %} flex items-center gap-2 transition" {% if visao == 'categorias' %}aria-current="page"{% endif %}><i class="fa-solid fa-newspaper text-amber-500"></i> Categorias</a>
+            
+            <a href="/pesquisa" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-magnifying-glass text-amber-500"></i> Pesquisa</a>
+            <a href="/glossario{% if tipo_usuario != 'administrador' %}?origem=usuario{% endif %}" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-book-open text-amber-500"></i> Glossário</a>
         </nav>
-        <div class="nav-perfil">
-            <button class="avatar-icon" id="btn-perfil" type="button" aria-label="Abrir configurações" aria-expanded="false" aria-controls="dropdown-perfil">
-                <i class="fa-solid fa-user" aria-hidden="true"></i>
+
+        <div class="relative ml-4">
+            <button id="btn-perfil" class="w-10 h-10 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500 hover:bg-amber-500 hover:text-black transition cursor-pointer">
+                <i class="fa-solid fa-user-group"></i>
             </button>
-            <div class="menu-perfil-dropdown" id="dropdown-perfil">
-                <a href="{% if tipo_usuario == 'administrador' %}/configuracao{% else %}/configuracoes-usuario{% endif %}" class="dropdown-item">Configurações <i class="fa-solid fa-gear" aria-hidden="true"></i></a>
-                <a href="/termos-de-aceite" class="dropdown-item">Termo de Aceite <i class="fa-regular fa-file-lines" aria-hidden="true"></i></a>
-                <a href="/politica-de-privacidade" class="dropdown-item">Privacidade <i class="fa-solid fa-shield-halved" aria-hidden="true"></i></a>
-                <a href="/" class="dropdown-item btn-desconectar">Sair <i class="fa-solid fa-power-off" aria-hidden="true"></i></a>
+
+            <div id="dropdown-perfil" class="hidden absolute right-0 top-14 w-56 bg-[#25262a] border border-gray-700 rounded-lg shadow-2xl flex-col gap-1 p-2 z-[100]">
+                <a href="{% if tipo_usuario == 'administrador' %}/configuracao{% else %}/configuracoes-usuario{% endif %}" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Configurações <i class="fa-solid fa-gear text-gray-400"></i></a>
+                <a href="/termos-de-aceite" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Termo de Aceite <i class="fa-regular fa-file-lines text-gray-400"></i></a>
+                <a href="/politica-de-privacidade" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Privacidade <i class="fa-solid fa-shield-halved text-gray-400"></i></a>
+                <a href="/" class="btn-desconectar mt-2 text-white bg-red-600 hover:bg-red-700 px-3 py-2 rounded flex justify-between items-center transition font-semibold">Sair <i class="fa-solid fa-power-off text-white"></i></a>
             </div>
         </div>
     </header>
 
-    <main class="materias-lista-page" id="conteudo-principal">
-        {% if visao == 'recentes' %}
-        <div class="filtro-lista filtro-data">
-            <label for="ordem-materias">Data:</label>
-            <select id="ordem-materias" aria-label="Ordenar matérias por data">
-                <option value="recente">recente</option>
-                <option value="antiga">antiga</option>
-            </select>
+    <!-- Área Principal -->
+    <main class="w-full max-w-4xl mx-auto px-4 py-12 flex-1" id="conteudo-principal">
+        
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-gray-800 pb-6 mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-white mb-2">{% if visao == 'recentes' %}Todas as Matérias{% else %}Categorias{% endif %}</h1>
+                <p class="text-gray-400 text-sm">{% if visao == 'recentes' %}Acompanhe o acervo completo do JurisHome.{% else %}Filtre o acervo por áreas do Direito.{% endif %}</p>
+            </div>
+
+            <!-- Filtros Condicionais (Recentes vs Categorias) -->
+            <div class="w-full md:w-auto">
+                {% if visao == 'recentes' %}
+                <div class="relative group">
+                    <i class="fa-solid fa-arrow-down-short-wide absolute left-4 top-1/2 -translate-y-1/2 text-amber-500"></i>
+                    <select id="ordem-materias" class="w-full md:w-64 bg-[#25262a] border border-gray-700 rounded-xl py-3 pl-12 pr-10 text-white appearance-none focus:outline-none focus:border-amber-500 transition cursor-pointer">
+                        <option value="recente">Mais recentes primeiro</option>
+                        <option value="antiga">Mais antigas primeiro</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                </div>
+                {% else %}
+                <div class="relative group">
+                    <i class="fa-solid fa-filter absolute left-4 top-1/2 -translate-y-1/2 text-amber-500"></i>
+                    <select id="categoria-materias" class="w-full md:w-64 bg-[#25262a] border border-gray-700 rounded-xl py-3 pl-12 pr-10 text-white appearance-none focus:outline-none focus:border-amber-500 transition cursor-pointer">
+                        <option value="">Todas as categorias</option>
+                        <!-- Preenchido via JS -->
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                </div>
+                {% endif %}
+            </div>
         </div>
-        {% else %}
-        <div class="filtro-lista filtro-categoria">
-            <label for="categoria-materias">Categoria:</label>
-            <select id="categoria-materias" aria-label="Selecionar categoria">
-                <option value="">Carregando...</option>
-            </select>
-            <i class="fa-solid fa-angle-up" aria-hidden="true"></i>
+
+        <p id="status-listagem" class="text-amber-500 font-semibold flex items-center gap-2 mb-6" role="status" aria-live="polite">
+            <i class="fa-solid fa-circle-notch fa-spin"></i> Carregando matérias...
+        </p>
+
+        <!-- Container da Lista -->
+        <div id="lista-materias" class="flex flex-col gap-4" aria-live="polite">
+            <!-- Cards injetados via JS -->
         </div>
-        {% endif %}
-        <p class="status-listagem" id="status-listagem" role="status" aria-live="polite">Carregando matérias...</p>
-        <div class="materias-lista" id="lista-materias" aria-live="polite"></div>
     </main>
 
     {% include "_legal_links.html" %}
-    <script src="/static/js/listagemConteudos.js?v=20260925-3"></script>
+
+    <!-- Script Embutido (Substitui o listagemConteudos.js para aplicar as classes Tailwind) -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Lógica do Header
+            const botaoPerfil = document.getElementById("btn-perfil");
+            const menuPerfil = document.getElementById("dropdown-perfil");
+            
+            if (botaoPerfil && menuPerfil) {
+                botaoPerfil.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    menuPerfil.classList.toggle("hidden");
+                    menuPerfil.classList.toggle("flex");
+                });
+                document.addEventListener("click", (e) => {
+                    if (!menuPerfil.contains(e.target) && !botaoPerfil.contains(e.target)) {
+                        menuPerfil.classList.add("hidden");
+                        menuPerfil.classList.remove("flex");
+                    }
+                });
+            }
+
+            const elData = document.getElementById("data-atual");
+            if(elData) elData.textContent = new Intl.DateTimeFormat("pt-BR").format(new Date());
+
+            document.querySelectorAll(".btn-desconectar").forEach((link) => {
+                link.addEventListener("click", (evento) => {
+                    evento.preventDefault();
+                    window.localStorage.removeItem("jurishome_access_token");
+                    window.sessionStorage.removeItem("jurishome_desafio_2fa");
+                    window.fetch("/api/auth/logout", { method: "POST" })
+                        .finally(() => { window.location.href = "/"; });
+                });
+            });
+
+            // LÓGICA DE LISTAGEM (O que antes ficava no listagemConteudos.js)
+            const visao = document.body.dataset.visao;
+            const containerLista = document.getElementById("lista-materias");
+            const statusTexto = document.getElementById("status-listagem");
+            
+            const seletorOrdem = document.getElementById("ordem-materias");
+            const seletorCategoria = document.getElementById("categoria-materias");
+
+            let acervoCompleto = [];
+
+            async function carregarDados() {
+                try {
+                    const resposta = await fetch("/api/conteudos");
+                    if (!resposta.ok) throw new Error("Falha ao carregar.");
+                    acervoCompleto = await resposta.json();
+                    
+                    if (visao === 'categorias' && seletorCategoria) {
+                        preencherFiltroCategorias();
+                    }
+                    
+                    processarERenderizar();
+                } catch (erro) {
+                    console.error("Erro na listagem:", erro);
+                    statusTexto.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro ao carregar as matérias.';
+                    statusTexto.className = "text-red-500 font-semibold mb-6 flex items-center gap-2";
+                }
+            }
+
+            function preencherFiltroCategorias() {
+                // Pega categorias únicas que não sejam vazias
+                const categoriasUnicas = [...new Set(acervoCompleto.map(m => m.categoria).filter(c => c))].sort();
+                
+                categoriasUnicas.forEach(cat => {
+                    const option = document.createElement("option");
+                    option.value = cat;
+                    option.textContent = cat;
+                    seletorCategoria.appendChild(option);
+                });
+            }
+
+            function processarERenderizar() {
+                let resultados = [...acervoCompleto];
+
+                // Filtra por Categoria (se estiver na página categorias)
+                if (visao === 'categorias' && seletorCategoria && seletorCategoria.value) {
+                    resultados = resultados.filter(m => m.categoria === seletorCategoria.value);
+                }
+
+                // Ordena por data (se estiver na página recentes)
+                // Como não temos a data exata no objeto simples, usamos a ordem do array (simulando recente/antigo)
+                if (visao === 'recentes' && seletorOrdem) {
+                    if (seletorOrdem.value === 'antiga') {
+                        resultados.reverse(); // Inverte para simular as mais antigas primeiro
+                    }
+                }
+
+                renderizarCards(resultados);
+            }
+
+            function renderizarCards(materias) {
+                containerLista.innerHTML = "";
+                statusTexto.classList.add("hidden");
+
+                if (materias.length === 0) {
+                    containerLista.innerHTML = `
+                        <div class="bg-[#25262a] border border-gray-800 rounded-xl py-12 flex flex-col items-center justify-center text-center">
+                            <i class="fa-solid fa-folder-open text-4xl text-gray-600 mb-4"></i>
+                            <p class="text-gray-400 text-lg">Nenhuma matéria encontrada.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                materias.forEach(materia => {
+                    const card = document.createElement("a");
+                    card.href = `/materia/${encodeURIComponent(materia.uuid)}`;
+                    card.className = "flex flex-col sm:flex-row items-center gap-4 sm:gap-6 p-4 bg-[#2a2b30] border border-gray-800 rounded-xl hover:border-amber-500 hover:shadow-lg transition duration-300 group cursor-pointer";
+                    
+                    const miniaturaHTML = materia.imagem_miniatura 
+                        ? `<img src="${materia.imagem_miniatura}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" alt="Capa">`
+                        : `<div class="w-full h-full flex items-center justify-center bg-gray-800 text-gray-600"><i class="fa-solid fa-image text-3xl"></i></div>`;
+
+                    card.innerHTML = `
+                        <div class="w-full sm:w-48 h-32 flex-shrink-0 bg-[#1e1e1e] rounded-lg overflow-hidden relative border border-gray-800">
+                            ${miniaturaHTML}
+                        </div>
+                        <div class="flex-1 flex flex-col w-full py-2">
+                            <span class="text-xs font-bold text-amber-500 uppercase tracking-wider mb-2 block">${materia.categoria || 'Geral'}</span>
+                            <h3 class="text-lg sm:text-xl font-bold text-gray-200 group-hover:text-amber-400 transition leading-snug line-clamp-2">
+                                ${materia.titulo}
+                            </h3>
+                            <span class="text-gray-500 text-sm mt-3 flex items-center gap-2 font-medium group-hover:text-amber-500/70 transition">
+                                Leia a matéria completa <i class="fa-solid fa-arrow-right"></i>
+                            </span>
+                        </div>
+                    `;
+                    
+                    containerLista.appendChild(card);
+                });
+            }
+
+            // Listeners para os filtros
+            if (seletorOrdem) seletorOrdem.addEventListener("change", processarERenderizar);
+            if (seletorCategoria) seletorCategoria.addEventListener("change", processarERenderizar);
+
+            // Inicia o processo
+            carregarDados();
+        });
+    </script>
 </body>
 </html>

@@ -1,111 +1,211 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Termos jurídicos explicados para estudantes iniciantes, com exemplos e referências legais.">
     <title>Glossário jurídico | JurisHome</title>
-    <link rel="stylesheet" href="/static/css/glossario.css">
-    <link rel="stylesheet" href="/static/css/figma-app.css?v=20260925-2">
-    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
-    <script src="/static/js/glossario.js"></script>
+    
+    <!-- Tailwind via CDN para padronização e remoção de CSS com bloqueio MIME -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        (function() {
+            const temaSalvo = localStorage.getItem("tema_juris");
+            if (temaSalvo === "claro") {
+                document.documentElement.classList.remove("dark");
+                document.documentElement.setAttribute("data-theme", "light");
+            } else {
+                document.documentElement.classList.add("dark");
+                document.documentElement.setAttribute("data-theme", "dark");
+            }
+        })();
+    </script>
 </head>
-<body>
-    <a class="pular-conteudo" href="#conteudo">Pular para o conteúdo</a>
-    <header class="cabecalho">
-        <a class="marca" href="{{ url_inicio }}" aria-label="JurisHome — página inicial">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 5v15M3 4.5c3-1 6-.5 9 1.5 3-2 6-2.5 9-1.5V19c-3-1-6-.5-9 1.5-3-2-6-2.5-9-1.5z"/></svg>
-            Juris<span>Home</span>
-        </a>
-        <nav class="navegacao" aria-label="Navegação principal">
-            <a href="{{ url_inicio }}">Início</a>
-            <a href="{{ url_glossario }}" aria-current="page">Glossário</a>
+<body class="bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
+    
+    <!-- Barra de Navegação Padronizada (Mesma da Home e Pesquisa) -->
+    <header class="bg-[#25262a] border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between sticky top-0 z-50">
+        <div class="text-gray-400 text-sm hidden md:block font-mono" id="data-atual">--/--/----</div>
+        
+        <nav class="flex flex-1 md:justify-center gap-4 md:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide text-sm md:text-base">
+            <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-house text-amber-500"></i> Início</a>
+            <a href="/exibir-mais" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-square-plus text-amber-500"></i> Exibir mais</a>
+            
+            {% if tipo_usuario == 'administrador' %}
+                <a href="/admin-feedbacks" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-inbox text-amber-500"></i> Feedbacks</a>
+                <a href="/admin/auditoria" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-list-check text-amber-500"></i> Auditoria</a>
+            {% else %}
+                <a href="/configuracoes-usuario#feedback" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-headset text-amber-500"></i> Suporte</a>
+            {% endif %}
+            
+            <span class="text-gray-600 cursor-not-allowed pb-1 flex items-center gap-2" title="Página indisponível"><i class="fa-solid fa-user-group text-gray-600"></i> Sobre nós</span>
+            <a href="/categorias" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-newspaper text-amber-500"></i> Categorias</a>
+            <a href="/pesquisa" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-magnifying-glass text-amber-500"></i> Pesquisa</a>
+            <a href="/glossario" class="text-white border-b-2 border-amber-500 pb-1 font-semibold flex items-center gap-2 transition"><i class="fa-solid fa-book-open text-amber-500"></i> Glossário</a>
         </nav>
-        <button class="botao-tema" type="button" id="alternar-tema" hidden>Modo claro</button>
+
+        <div class="relative ml-4">
+            <button id="btn-perfil" class="w-10 h-10 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500 hover:bg-amber-500 hover:text-black transition cursor-pointer">
+                <i class="fa-solid fa-user-group"></i>
+            </button>
+
+            <div id="dropdown-perfil" class="hidden absolute right-0 top-14 w-56 bg-[#25262a] border border-gray-700 rounded-lg shadow-2xl flex-col gap-1 p-2 z-[100]">
+                <a href="{% if tipo_usuario == 'administrador' %}/configuracao{% else %}/configuracoes-usuario{% endif %}" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Configurações <i class="fa-solid fa-gear text-gray-400"></i></a>
+                <a href="/termos-de-aceite" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Termo de Aceite <i class="fa-regular fa-file-lines text-gray-400"></i></a>
+                <a href="/politica-de-privacidade" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Privacidade <i class="fa-solid fa-shield-halved text-gray-400"></i></a>
+                <a href="/" class="btn-desconectar mt-2 text-white bg-red-600 hover:bg-red-700 px-3 py-2 rounded flex justify-between items-center transition font-semibold">Sair <i class="fa-solid fa-power-off text-white"></i></a>
+            </div>
+        </div>
     </header>
 
-    <main id="conteudo" class="conteudo">
-        <section class="introducao" aria-labelledby="titulo-glossario">
+    <main id="conteudo" class="w-full max-w-6xl mx-auto px-4 py-12 flex-1">
+        
+        <!-- Seção de Introdução -->
+        <section class="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12" aria-labelledby="titulo-glossario">
             <div>
-                <p class="sobretitulo"><span class="ponto"></span> SEUS PRIMEIROS PASSOS NO DIREITO</p>
-                <h1 id="titulo-glossario">Glossário <span>jurídico.</span></h1>
-                <p class="descricao">Uma palavra nova não precisa interromper seu estudo.<br class="quebra-desktop"> Explore os significados, veja exemplos e siga aprendendo.</p>
+                <p class="text-amber-500 font-bold text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <span class="w-2 h-2 bg-amber-500 rounded-full"></span> SEUS PRIMEIROS PASSOS NO DIREITO
+                </p>
+                <h1 id="titulo-glossario" class="text-4xl md:text-5xl font-bold text-white mb-4">Glossário <span class="text-amber-500">jurídico.</span></h1>
+                <p class="text-gray-400 text-lg max-w-2xl">Uma palavra nova não precisa interromper seu estudo. Explore os significados, veja exemplos e siga aprendendo.</p>
             </div>
-            <div class="resumo-acervo" aria-label="{{ total_catalogo }} termos disponíveis">
-                <strong>{{ total_catalogo }}</strong>
-                <span>termos para<br>começar</span>
+            
+            <div class="bg-[#25262a] border border-gray-800 rounded-2xl p-6 flex flex-col items-center justify-center text-center shadow-lg min-w-[160px]" aria-label="{{ total_catalogo }} termos disponíveis">
+                <strong class="text-4xl font-bold text-white mb-1">{{ total_catalogo }}</strong>
+                <span class="text-gray-400 text-sm leading-tight">termos para<br>começar</span>
             </div>
         </section>
 
-        <section class="ferramentas" aria-label="Consultar o glossário">
-            <form action="/glossario" method="get" role="search">
+        <!-- Seção de Busca e Filtros -->
+        <section class="bg-[#25262a] border border-gray-800 rounded-2xl p-6 md:p-8 shadow-lg mb-12" aria-label="Consultar o glossário">
+            <form action="/glossario" method="get" role="search" class="mb-8">
                 {% if origem %}<input type="hidden" name="origem" value="{{ origem }}">{% endif %}
-                <label for="busca-termo">Qual termo você quer entender?</label>
-                <div class="linha-busca">
-                    <div class="campo-busca">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
-                        <input type="search" id="busca-termo" name="q" value="{{ q }}" maxlength="120" placeholder="Ex.: acórdão, citação, réu..." aria-describedby="dica-busca">
+                <label for="busca-termo" class="block text-white font-bold mb-4">Qual termo você quer entender?</label>
+                
+                <div class="flex flex-col sm:flex-row gap-4 relative">
+                    <div class="relative flex-1">
+                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-amber-500"></i>
+                        <input type="search" id="busca-termo" name="q" value="{{ q }}" maxlength="120" placeholder="Ex.: acórdão, citação, réu..." aria-describedby="dica-busca" class="w-full bg-[#1e1e1e] border border-gray-700 rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-amber-500 transition">
                     </div>
                     {% if letra %}<input type="hidden" name="letra" value="{{ letra }}">{% endif %}
-                    <button class="botao-buscar" type="submit">Buscar <span aria-hidden="true">→</span></button>
+                    <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-black font-bold py-3 px-8 rounded-xl transition flex items-center justify-center gap-2 whitespace-nowrap">
+                        Buscar <i class="fa-solid fa-arrow-right"></i>
+                    </button>
                 </div>
-                <p class="dica" id="dica-busca">Pesquise pelo termo ou por uma palavra da explicação. Pode escrever sem acentos.</p>
+                <p class="text-gray-500 text-sm mt-3" id="dica-busca">Pesquise pelo termo ou por uma palavra da explicação. Pode escrever sem acentos.</p>
             </form>
 
-            <nav class="alfabeto" aria-label="Filtrar pela primeira letra">
-                <a class="letra todas" href="{{ url_todas }}" {% if not letra %}aria-current="true"{% endif %}>Todas</a>
+            <nav class="flex flex-wrap gap-2" aria-label="Filtrar pela primeira letra">
+                <a href="{{ url_todas }}" class="px-4 py-2 rounded-lg text-sm font-semibold transition {% if not letra %}bg-amber-500 text-black{% else %}bg-[#1e1e1e] border border-gray-700 text-gray-400 hover:text-amber-500 hover:border-amber-500{% endif %}" {% if not letra %}aria-current="true"{% endif %}>Todas</a>
+                
                 {% for item in links_letras %}
                     {% if item.disponivel %}
-                    <a class="letra" href="{{ item.url }}" aria-label="Termos com a letra {{ item.letra }}" {% if letra == item.letra %}aria-current="true"{% endif %}>{{ item.letra }}</a>
+                        <a href="{{ item.url }}" class="w-10 h-10 flex items-center justify-center rounded-lg text-sm font-semibold transition {% if letra == item.letra %}bg-amber-500 text-black{% else %}bg-[#1e1e1e] border border-gray-700 text-gray-400 hover:text-amber-500 hover:border-amber-500{% endif %}" aria-label="Termos com a letra {{ item.letra }}" {% if letra == item.letra %}aria-current="true"{% endif %}>{{ item.letra }}</a>
                     {% else %}
-                    <span class="letra indisponivel" aria-label="Nenhum termo com a letra {{ item.letra }}">{{ item.letra }}</span>
+                        <span class="w-10 h-10 flex items-center justify-center rounded-lg text-sm font-semibold bg-[#1e1e1e] border border-gray-800 text-gray-700 cursor-not-allowed" aria-label="Nenhum termo com a letra {{ item.letra }}">{{ item.letra }}</span>
                     {% endif %}
                 {% endfor %}
             </nav>
         </section>
 
-        <section class="resultados" aria-labelledby="titulo-resultados">
-            <div class="cabecalho-resultados">
+        <!-- Resultados -->
+        <section aria-labelledby="titulo-resultados">
+            <div class="flex flex-wrap justify-between items-end border-b border-gray-800 pb-4 mb-8 gap-4">
                 <div>
-                    <h2 id="titulo-resultados">{% if q or letra %}Resultado da consulta{% else %}Explore os termos{% endif %}</h2>
-                    <p class="contador">{{ total }} {% if total == 1 %}termo encontrado{% else %}termos encontrados{% endif %}{% if q %} para “{{ q }}”{% endif %}{% if letra %} · Letra {{ letra }}{% endif %}</p>
+                    <h2 id="titulo-resultados" class="text-2xl font-bold text-white mb-1">{% if q or letra %}Resultado da consulta{% else %}Explore os termos{% endif %}</h2>
+                    <p class="text-gray-400 text-sm">{{ total }} {% if total == 1 %}termo encontrado{% else %}termos encontrados{% endif %}{% if q %} para “<span class="text-white">{{ q }}</span>”{% endif %}{% if letra %} · Letra <span class="text-white">{{ letra }}</span>{% endif %}</p>
                 </div>
-                {% if q or letra %}<a class="limpar" href="{{ url_limpar }}">Limpar filtros <span aria-hidden="true">×</span></a>{% else %}<span class="ordem">A → Z</span>{% endif %}
+                
+                {% if q or letra %}
+                    <a href="{{ url_limpar }}" class="text-red-400 hover:text-red-300 text-sm font-semibold flex items-center gap-1 transition">Limpar filtros <i class="fa-solid fa-xmark"></i></a>
+                {% else %}
+                    <span class="text-gray-500 text-sm font-semibold bg-[#25262a] px-3 py-1 rounded-md border border-gray-800">A <i class="fa-solid fa-arrow-right mx-1 text-xs"></i> Z</span>
+                {% endif %}
             </div>
 
             {% if itens %}
-            <div class="lista-termos">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {% for item in itens %}
-                <article class="termo" id="{{ item.id }}" aria-labelledby="titulo-{{ item.id }}">
-                    <p class="area">{{ item.area }}</p>
-                    <h3 id="titulo-{{ item.id }}">{{ item.termo }}</h3>
-                    <p class="definicao">{{ item.definicao }}</p>
-                    <details class="exemplo">
-                        <summary>Entender com um exemplo</summary>
-                        <p>{{ item.exemplo }}</p>
+                <article id="{{ item.id }}" class="bg-[#2a2b30] border border-gray-800 rounded-xl p-6 hover:border-amber-500 transition shadow-lg flex flex-col h-full" aria-labelledby="titulo-{{ item.id }}">
+                    <p class="text-amber-500 font-bold text-xs uppercase tracking-wider mb-2">{{ item.area }}</p>
+                    <h3 id="titulo-{{ item.id }}" class="text-xl font-bold text-white mb-3">{{ item.termo }}</h3>
+                    <p class="text-gray-300 text-sm leading-relaxed mb-4 flex-1">{{ item.definicao }}</p>
+                    
+                    <details class="mb-4 group bg-[#1e1e1e] rounded-lg border border-gray-700 open:border-amber-500/50 transition-all duration-300">
+                        <summary class="cursor-pointer text-sm font-semibold text-gray-300 px-4 py-3 group-hover:text-amber-500 transition list-none flex justify-between items-center">
+                            Entender com um exemplo
+                            <i class="fa-solid fa-chevron-down group-open:rotate-180 transition duration-300"></i>
+                        </summary>
+                        <p class="px-4 pb-4 pt-1 text-sm text-gray-400 italic border-t border-gray-800 mt-1">{{ item.exemplo }}</p>
                     </details>
-                    <div class="referencia">
-                        <span>{{ item.referencia }}</span>
-                        <a href="{{ item.fonte.url }}" target="_blank" rel="noopener noreferrer" aria-label="Fonte de {{ item.termo }}: {{ item.fonte.nome }} (abre em nova aba)">Fonte oficial <span aria-hidden="true">↗</span></a>
+                    
+                    <div class="mt-auto flex justify-between items-center pt-4 border-t border-gray-800 text-xs font-semibold">
+                        <span class="text-gray-500">{{ item.referencia }}</span>
+                        <a href="{{ item.fonte.url }}" target="_blank" rel="noopener noreferrer" class="text-amber-500 hover:text-amber-400 transition flex items-center gap-1" aria-label="Fonte de {{ item.termo }}: {{ item.fonte.nome }} (abre em nova aba)">
+                            Fonte oficial <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        </a>
                     </div>
                 </article>
                 {% endfor %}
             </div>
             {% else %}
-            <div class="sem-resultados">
-                <span class="simbolo-vazio" aria-hidden="true">Aa</span>
-                <h3>Nenhum termo por aqui.</h3>
-                <p>Tente uma palavra mais curta ou remova o filtro de letra para ampliar a busca.</p>
-                <a class="botao-buscar" href="{{ url_limpar }}">Ver todos os termos <span aria-hidden="true">→</span></a>
+            <div class="bg-[#25262a] border border-gray-800 rounded-xl py-16 flex flex-col items-center justify-center text-center px-4">
+                <i class="fa-solid fa-font text-5xl text-gray-700 mb-4"></i>
+                <h3 class="text-xl font-bold text-white mb-2">Nenhum termo por aqui.</h3>
+                <p class="text-gray-400 mb-6 max-w-md">Tente uma palavra mais curta ou remova o filtro de letra para ampliar a busca.</p>
+                <a href="{{ url_limpar }}" class="bg-[#1e1e1e] border border-gray-700 hover:border-amber-500 text-gray-300 hover:text-amber-500 font-bold py-2 px-6 rounded-lg transition flex items-center gap-2">
+                    Ver todos os termos <i class="fa-solid fa-arrow-right"></i>
+                </a>
             </div>
             {% endif %}
         </section>
 
-        <footer class="rodape">
-            <p>Um apoio para as primeiras leituras.<br><span>Definições introdutórias e exemplos ilustrativos, com referência à legislação brasileira.</span></p>
-            <a href="#conteudo">Voltar ao início <span aria-hidden="true">↑</span></a>
+        <footer class="mt-16 text-center border-t border-gray-800 pt-8">
+            <p class="text-gray-400 text-sm mb-4">Um apoio para as primeiras leituras.<br><span class="text-gray-500">Definições introdutórias e exemplos ilustrativos, com referência à legislação brasileira.</span></p>
+            <a href="#conteudo" class="inline-flex items-center gap-2 text-amber-500 hover:text-amber-400 font-semibold text-sm transition">
+                Voltar ao início <i class="fa-solid fa-arrow-up"></i>
+            </a>
         </footer>
     </main>
+
     {% include "_legal_links.html" %}
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Lógica do Menu de Perfil e Data
+            const botaoPerfil = document.getElementById("btn-perfil");
+            const menuPerfil = document.getElementById("dropdown-perfil");
+            
+            if (botaoPerfil && menuPerfil) {
+                botaoPerfil.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    menuPerfil.classList.toggle("hidden");
+                    menuPerfil.classList.toggle("flex");
+                });
+                document.addEventListener("click", (e) => {
+                    if (!menuPerfil.contains(e.target) && !botaoPerfil.contains(e.target)) {
+                        menuPerfil.classList.add("hidden");
+                        menuPerfil.classList.remove("flex");
+                    }
+                });
+            }
+
+            const elData = document.getElementById("data-atual");
+            if(elData) elData.textContent = new Intl.DateTimeFormat("pt-BR").format(new Date());
+
+            // Lógica de Saída (Logout)
+            document.querySelectorAll(".btn-desconectar").forEach((link) => {
+                link.addEventListener("click", (evento) => {
+                    evento.preventDefault();
+                    window.localStorage.removeItem("jurishome_access_token");
+                    window.sessionStorage.removeItem("jurishome_desafio_2fa");
+                    window.fetch("/api/auth/logout", { method: "POST" })
+                        .finally(() => { window.location.href = "/"; });
+                });
+            });
+        });
+    </script>
 </body>
 </html>

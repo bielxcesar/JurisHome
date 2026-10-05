@@ -1,204 +1,213 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ materia.titulo }} - JurisHome</title>
-  <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
-  
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="{{ url_for('static', path='/css/materia.css') }}?v=20260925-1" />
-  <link rel="stylesheet" href="/static/css/figma-app.css?v=20260925-2">
-
-  <script>
-    (function() {
-      const temaSalvo = localStorage.getItem("tema_juris");
-      if (temaSalvo === "claro") {
-        document.documentElement.classList.remove("dark");
-        document.documentElement.setAttribute("data-theme", "light");
-      } else {
-        document.documentElement.classList.add("dark");
-        document.documentElement.setAttribute("data-theme", "dark");
-      }
-    })();
-  </script>
-</head>
-<body>
-
-  <header class="navbar">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ materia.titulo }} - JurisHome</title>
     
-    <div style="display: flex; align-items: center; gap: 1rem;">
-      <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="btn-voltar">
-        <i class="fa-solid fa-arrow-left"></i>
-        <span>Voltar ao início</span>
-      </a>
-
-      <span id="data-atual" class="nav-data">--/--/----</span>
-    </div>
-
-    <nav class="nav-menu">
-      <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="nav-link"><i class="fa-solid fa-house"></i> Início</a>
-      <a href="/exibir-mais" class="nav-link"><i class="fa-solid fa-square-plus"></i> Exibir mais</a>
-      <a href="{% if tipo_usuario == 'administrador' %}/admin-feedbacks{% else %}/configuracoes-usuario#feedback{% endif %}" class="nav-link"><i class="fa-solid fa-headset"></i> Feedback e Suporte</a>
-      <span class="nav-link nav-link-indisponivel" aria-disabled="true" title="Página ainda não disponível"><i class="fa-solid fa-user-group"></i> Sobre nós</span>
-      <a href="/categorias" class="nav-link active"><i class="fa-solid fa-newspaper"></i> Categorias</a>
-      <a href="/pesquisa" class="nav-link"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Pesquisa</a>
-    </nav>
-
-    <div class="nav-perfil">
-      <div id="btn-perfil" class="avatar-icon">
-        <i class="fa-solid fa-user-group"></i>
-      </div>
-
-      <div id="dropdown-perfil" class="menu-perfil-dropdown hidden">
-        <a href="{% if tipo_usuario == 'administrador' %}/configuracao{% else %}/configuracoes-usuario{% endif %}" class="dropdown-item">Perfil <i class="fa-solid fa-user"></i></a>
-        <a href="{% if tipo_usuario == 'administrador' %}/admin-feedbacks{% else %}/configuracoes-usuario#feedback{% endif %}" class="dropdown-item">Feedback e suporte <i class="fa-solid fa-headset"></i></a>
-        <a href="/" class="dropdown-item btn-desconectar">Desconectar <i class="fa-solid fa-power-off"></i></a>
-      </div>
-    </div>
-
-  </header>
-
-  <main class="main-content">
-    
-    <h1 class="titulo-materia">
-      {{ materia.titulo }}
-    </h1>
-
-    {% if materia.sub_titulo %}
-      <h2 class="subtitulo-materia">
-        {{ materia.sub_titulo }}
-      </h2>
-    {% endif %}
-
-    <div class="meta-info">
-      <div>
-        <span>Divulgado por: <strong class="autor-destaque">{{ materia.autor.nome if materia.autor else 'Redação' }}</strong></span>
-        <span style="margin: 0 0.5rem;">•</span>
-        <span>{{ materia.criado_em.strftime('%d/%m/%Y %H:%M') if materia.criado_em else '' }}</span>
-      </div>
-
-      {% if materia.fonte_original %}
-        <div>
-          <span>Fonte original: </span>
-          <a href="{{ materia.fonte_original }}" target="_blank" rel="noopener noreferrer">
-            {{ materia.fonte_original }}
-          </a>
-        </div>
-      {% endif %}
-    </div>
-
-    <!-- IMAGEM DE CAPA PRINCIPAL (Miniatura) -->
-    {% if materia.imagem_miniatura %}
-      <figure class="figura-materia">
-        <img 
-          src="{{ materia.imagem_miniatura }}" 
-          alt="{{ materia.titulo }}" 
-        />
-        {% if materia.fonte_imagem %}
-          <figcaption class="legenda-imagem">
-            Imagem proporcionada por: {{ materia.fonte_imagem }}
-          </figcaption>
-        {% endif %}
-      </figure>
-    {% endif %}
-
-    <!-- CAIXA ONDE O TEXTO E AS IMAGENS DO CORPO VÃO SE MISTURAR -->
-    <article class="corpo-artigo" id="corpo-materia" style="white-space: normal;">
-      <!-- O Javascript abaixo vai organizar e colocar os parágrafos e fotos aqui dentro -->
-    </article>
+    <!-- Tailwind via CDN substituindo todos os CSS antigos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
     <script>
-      const textoCompleto = {{ (materia.corpo_texto or '') | tojson | safe }};
-      const imgCorpo1 = {{ (materia.imagem_corpo or '') | tojson | safe }};
-      const imgCorpo2 = {{ (materia.imagem_extra_2 or '') | tojson | safe }};
-      const imgCorpo3 = {{ (materia.imagem_extra_3 or '') | tojson | safe }};
-
-      // Divide o texto a cada vez que tiver uma linha em branco (pulo de parágrafo)
-      const paragrafos = textoCompleto.split(/\n+/).filter(p => p.trim() !== '');
-      let htmlConteudo = '';
-
-      // Monta o "sanduíche" de texto e foto
-      if (paragrafos.length > 0) htmlConteudo += `<p style="margin-bottom: 1.5rem; line-height: 1.8;">${paragrafos[0]}</p>`;
-      
-      if (imgCorpo1 && imgCorpo1.length > 10) {
-          htmlConteudo += `<div style="margin: 2rem 0;"><img src="${imgCorpo1}" style="width: 100%; max-height: 500px; object-fit: cover; border-radius: 8px;" alt="Imagem do corpo 1"></div>`;
-      }
-
-      if (paragrafos.length > 1) htmlConteudo += `<p style="margin-bottom: 1.5rem; line-height: 1.8;">${paragrafos[1]}</p>`;
-      
-      if (imgCorpo2 && imgCorpo2.length > 10) {
-          htmlConteudo += `<div style="margin: 2rem 0;"><img src="${imgCorpo2}" style="width: 100%; max-height: 500px; object-fit: cover; border-radius: 8px;" alt="Imagem do corpo 2"></div>`;
-      }
-
-      if (paragrafos.length > 2) htmlConteudo += `<p style="margin-bottom: 1.5rem; line-height: 1.8;">${paragrafos[2]}</p>`;
-      
-      if (imgCorpo3 && imgCorpo3.length > 10) {
-          htmlConteudo += `<div style="margin: 2rem 0;"><img src="${imgCorpo3}" style="width: 100%; max-height: 500px; object-fit: cover; border-radius: 8px;" alt="Imagem do corpo 3"></div>`;
-      }
-
-      // Adiciona o restante dos parágrafos, se o texto for bem longo
-      for (let i = 3; i < paragrafos.length; i++) {
-          htmlConteudo += `<p style="margin-bottom: 1.5rem; line-height: 1.8;">${paragrafos[i]}</p>`;
-      }
-
-      // Despeja tudo formatadinho na tela
-      document.getElementById('corpo-materia').innerHTML = htmlConteudo;
+        (function() {
+            const temaSalvo = localStorage.getItem("tema_juris");
+            if (temaSalvo === "claro") {
+                document.documentElement.classList.remove("dark");
+                document.documentElement.setAttribute("data-theme", "light");
+            } else {
+                document.documentElement.classList.add("dark");
+                document.documentElement.setAttribute("data-theme", "dark");
+            }
+        })();
     </script>
+</head>
+<body class="bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
 
-    <div class="share-container">
-      <span class="share-title">Compartilhar:</span>
-      
-      <div class="share-buttons">
-        <a href="https://api.whatsapp.com/send?text={{ materia.titulo|urlencode }}%20{{ request.url }}" 
-           target="_blank" 
-           rel="noopener noreferrer" 
-           class="btn-share btn-whatsapp" 
-           title="Compartilhar no WhatsApp">
-          <i class="fa-brands fa-whatsapp"></i>
-        </a>
-
-        <a href="mailto:?subject={{ materia.titulo|urlencode }}&body=Confira%20esta%20mat%C3%A9ria:%20{{ request.url }}" 
-           class="btn-share btn-email" 
-           title="Compartilhar por E-mail">
-          <i class="fa-solid fa-envelope"></i>
-        </a>
-
-        <button type="button" id="btn-copiar-link" class="btn-share btn-copiar" title="Copiar Link">
-          <i class="fa-solid fa-share-nodes"></i>
-        </button>
-      </div>
-
-      <span id="msg-copiado" class="msg-copiado hidden">
-        <i class="fa-solid fa-check"></i> Link copiado com sucesso!
-      </span>
-    </div>
-
-    <footer>
-      {% if tags %}
-        <div class="tags-container">
-          <span style="font-weight: 700; font-size: 0.9rem;">Tags:</span>
-          {% for tag in tags %}
-            <span class="tag-item">
-              {{ tag }}
-            </span>
-          {% endfor %}
+    <!-- Barra de Navegação -->
+    <header class="bg-[#25262a] border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between sticky top-0 z-50">
+        
+        <div class="flex items-center gap-4">
+            <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="bg-[#1e1e1e] border border-gray-700 hover:border-amber-500 hover:text-amber-500 text-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 transition text-sm font-semibold">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span class="hidden sm:inline">Voltar ao início</span>
+            </a>
+            <span id="data-atual" class="text-gray-400 text-sm hidden lg:block font-mono">--/--/----</span>
         </div>
-      {% endif %}
 
-      {% if materia.fonte_original %}
-        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 1rem;">
-          Consulte a matéria fonte original: 
-          <a href="{{ materia.fonte_original }}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color);">
-            {{ materia.fonte_original }}
-          </a>
-        </p>
-      {% endif %}
-    </footer>
+        <nav class="flex gap-4 md:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide text-sm md:text-base">
+            <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-house text-amber-500"></i> Início</a>
+            <a href="/exibir-mais" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-square-plus text-amber-500"></i> Exibir mais</a>
+            <a href="/categorias" class="text-white border-b-2 border-amber-500 pb-1 font-semibold flex items-center gap-2 transition"><i class="fa-solid fa-newspaper text-amber-500"></i> Categorias</a>
+            <a href="/pesquisa" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-magnifying-glass text-amber-500"></i> Pesquisa</a>
+        </nav>
 
-  </main>
+        <div class="relative ml-4">
+            <button id="btn-perfil" class="w-10 h-10 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500 hover:bg-amber-500 hover:text-black transition cursor-pointer">
+                <i class="fa-solid fa-user-group"></i>
+            </button>
 
-  {% include "_legal_links.html" %}
-  <script src="{{ url_for('static', path='/js/materia.js') }}"></script>
+            <div id="dropdown-perfil" class="hidden absolute right-0 top-14 w-56 bg-[#25262a] border border-gray-700 rounded-lg shadow-2xl flex-col gap-1 p-2 z-[100]">
+                <a href="{% if tipo_usuario == 'administrador' %}/configuracao{% else %}/configuracoes-usuario{% endif %}" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Perfil <i class="fa-solid fa-user text-gray-400"></i></a>
+                <a href="{% if tipo_usuario == 'administrador' %}/admin-feedbacks{% else %}/configuracoes-usuario#feedback{% endif %}" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Suporte <i class="fa-solid fa-headset text-gray-400"></i></a>
+                <a href="/" class="btn-desconectar mt-2 text-white bg-red-600 hover:bg-red-700 px-3 py-2 rounded flex justify-between items-center transition font-semibold">Sair <i class="fa-solid fa-power-off text-white"></i></a>
+            </div>
+        </div>
+    </header>
+
+    <main class="w-full max-w-4xl mx-auto px-4 py-10 flex-1">
+        
+        <!-- Cabeçalho da Matéria -->
+        <header class="mb-8 border-b border-gray-800 pb-6">
+            <h1 class="text-3xl md:text-5xl font-bold text-white leading-tight mb-4">{{ materia.titulo }}</h1>
+            
+            {% if materia.sub_titulo %}
+                <h2 class="text-xl text-gray-400 font-light mb-6">{{ materia.sub_titulo }}</h2>
+            {% endif %}
+
+            <div class="flex flex-wrap items-center gap-4 text-sm text-gray-500 font-medium">
+                <div class="bg-[#2a2b30] px-4 py-2 rounded-lg flex items-center gap-2 border border-gray-800">
+                    <i class="fa-solid fa-pen-nib text-amber-500"></i>
+                    <span>Por <strong class="text-gray-300">{{ materia.autor.nome if materia.autor else 'Redação' }}</strong></span>
+                </div>
+                <span class="flex items-center gap-2"><i class="fa-regular fa-clock"></i> {{ materia.criado_em.strftime('%d/%m/%Y %H:%M') if materia.criado_em else '' }}</span>
+                
+                {% if materia.fonte_original %}
+                    <span class="flex items-center gap-2 ml-auto">
+                        <i class="fa-solid fa-link text-amber-500"></i>
+                        <a href="{{ materia.fonte_original }}" target="_blank" rel="noopener noreferrer" class="text-amber-500 hover:underline">Fonte original</a>
+                    </span>
+                {% endif %}
+            </div>
+        </header>
+
+        <!-- Imagem de Capa -->
+        {% if materia.imagem_miniatura %}
+            <figure class="mb-10 w-full rounded-2xl overflow-hidden shadow-2xl border border-gray-800 relative group">
+                <img src="{{ materia.imagem_miniatura }}" alt="{{ materia.titulo }}" class="w-full h-auto max-h-[500px] object-cover group-hover:scale-105 transition duration-700" />
+                {% if materia.fonte_imagem %}
+                    <figcaption class="absolute bottom-0 w-full bg-black/70 backdrop-blur text-gray-300 text-xs px-4 py-2 text-right">
+                        Foto: {{ materia.fonte_imagem }}
+                    </figcaption>
+                {% endif %}
+            </figure>
+        {% endif %}
+
+        <!-- Conteúdo Injetado via JS -->
+        <article id="corpo-materia" class="text-gray-300 text-lg leading-relaxed space-y-6">
+            <!-- Renderizado pelo script abaixo -->
+        </article>
+
+        <!-- Redes Sociais e Compartilhamento -->
+        <div class="mt-16 bg-[#25262a] border border-gray-800 rounded-xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span class="text-white font-semibold flex items-center gap-2"><i class="fa-solid fa-share-nodes text-amber-500"></i> Compartilhar matéria:</span>
+            
+            <div class="flex gap-3">
+                <a href="https://api.whatsapp.com/send?text={{ materia.titulo|urlencode }}%20{{ request.url }}" target="_blank" rel="noopener noreferrer" class="w-12 h-12 bg-green-600 hover:bg-green-500 text-white rounded-full flex items-center justify-center text-xl transition shadow-lg" title="WhatsApp">
+                    <i class="fa-brands fa-whatsapp"></i>
+                </a>
+                <a href="mailto:?subject={{ materia.titulo|urlencode }}&body=Confira%20esta%20mat%C3%A9ria:%20{{ request.url }}" class="w-12 h-12 bg-gray-600 hover:bg-gray-500 text-white rounded-full flex items-center justify-center text-xl transition shadow-lg" title="E-mail">
+                    <i class="fa-solid fa-envelope"></i>
+                </a>
+                <button type="button" id="btn-copiar-link" class="w-12 h-12 bg-blue-600 hover:bg-blue-500 text-white rounded-full flex items-center justify-center text-xl transition shadow-lg relative" title="Copiar Link">
+                    <i class="fa-solid fa-link"></i>
+                </button>
+            </div>
+            <span id="msg-copiado" class="hidden text-green-400 text-sm font-semibold mt-2 sm:mt-0"><i class="fa-solid fa-check"></i> Copiado!</span>
+        </div>
+
+        <footer class="mt-12 mb-8">
+            {% if tags %}
+                <div class="flex flex-wrap items-center gap-3">
+                    <span class="text-gray-400 font-semibold text-sm uppercase tracking-wider"><i class="fa-solid fa-tags text-amber-500"></i> Tags:</span>
+                    {% for tag in tags %}
+                        <span class="bg-[#2a2b30] border border-gray-700 text-gray-300 px-3 py-1 rounded-full text-sm hover:border-amber-500 cursor-default transition">
+                            {{ tag }}
+                        </span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </footer>
+
+    </main>
+
+    {% include "_legal_links.html" %}
+
+    <script src="{{ url_for('static', path='/js/materia.js') }}"></script>
+
+    <!-- Script de Injeção de Texto e Perfil Atualizado para Tailwind -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Dropdown do perfil
+            const botaoPerfil = document.getElementById("btn-perfil");
+            const menuPerfil = document.getElementById("dropdown-perfil");
+            
+            if (botaoPerfil && menuPerfil) {
+                botaoPerfil.addEventListener("click", (evento) => {
+                    evento.stopPropagation();
+                    menuPerfil.classList.toggle("hidden");
+                    menuPerfil.classList.toggle("flex");
+                });
+
+                document.addEventListener("click", (evento) => {
+                    if (!menuPerfil.contains(evento.target) && !botaoPerfil.contains(evento.target)) {
+                        menuPerfil.classList.add("hidden");
+                        menuPerfil.classList.remove("flex");
+                    }
+                });
+            }
+
+            // Data atual
+            const elData = document.getElementById("data-atual");
+            if(elData) elData.textContent = new Intl.DateTimeFormat("pt-BR").format(new Date());
+
+            // Botão de Copiar Link
+            const btnCopiar = document.getElementById("btn-copiar-link");
+            const msgCopiado = document.getElementById("msg-copiado");
+            
+            if(btnCopiar) {
+                btnCopiar.addEventListener("click", () => {
+                    navigator.clipboard.writeText(window.location.href).then(() => {
+                        msgCopiado.classList.remove("hidden");
+                        setTimeout(() => msgCopiado.classList.add("hidden"), 3000);
+                    });
+                });
+            }
+        });
+
+        // Montagem do texto e imagens
+        const textoCompleto = {{ (materia.corpo_texto or '') | tojson | safe }};
+        const imgCorpo1 = {{ (materia.imagem_corpo or '') | tojson | safe }};
+        const imgCorpo2 = {{ (materia.imagem_extra_2 or '') | tojson | safe }};
+        const imgCorpo3 = {{ (materia.imagem_extra_3 or '') | tojson | safe }};
+
+        const paragrafos = textoCompleto.split(/\n+/).filter(p => p.trim() !== '');
+        let htmlConteudo = '';
+
+        // Injetando as classes do Tailwind diretamente nas tags HTML geradas
+        if (paragrafos.length > 0) htmlConteudo += `<p class="mb-6">${paragrafos[0]}</p>`;
+        
+        if (imgCorpo1 && imgCorpo1.length > 10) {
+            htmlConteudo += `<figure class="my-10 w-full overflow-hidden rounded-xl border border-gray-800 shadow-xl"><img src="${imgCorpo1}" class="w-full h-auto max-h-[500px] object-cover" alt="Imagem do corpo 1"></figure>`;
+        }
+
+        if (paragrafos.length > 1) htmlConteudo += `<p class="mb-6">${paragrafos[1]}</p>`;
+        
+        if (imgCorpo2 && imgCorpo2.length > 10) {
+            htmlConteudo += `<figure class="my-10 w-full overflow-hidden rounded-xl border border-gray-800 shadow-xl"><img src="${imgCorpo2}" class="w-full h-auto max-h-[500px] object-cover" alt="Imagem do corpo 2"></figure>`;
+        }
+
+        if (paragrafos.length > 2) htmlConteudo += `<p class="mb-6">${paragrafos[2]}</p>`;
+        
+        if (imgCorpo3 && imgCorpo3.length > 10) {
+            htmlConteudo += `<figure class="my-10 w-full overflow-hidden rounded-xl border border-gray-800 shadow-xl"><img src="${imgCorpo3}" class="w-full h-auto max-h-[500px] object-cover" alt="Imagem do corpo 3"></figure>`;
+        }
+
+        for (let i = 3; i < paragrafos.length; i++) {
+            htmlConteudo += `<p class="mb-6">${paragrafos[i]}</p>`;
+        }
+
+        document.getElementById('corpo-materia').innerHTML = htmlConteudo;
+    </script>
 </body>
 </html>

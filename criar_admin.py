@@ -1,7 +1,7 @@
 """Cria o primeiro administrador do JurisHome de forma explícita e segura.
 
-Defina JURISHOME_ADMIN_EMAIL e JURISHOME_ADMIN_SENHA antes de executar.
-Nenhuma credencial padrão é gravada no código.
+Defina JURISHOME_ADMIN_EMAIL, JURISHOME_ADMIN_SENHA e JURISHOME_ADMIN_NOME 
+antes de executar, ou informe os dados interativamente no terminal.
 """
 
 import os
@@ -27,13 +27,18 @@ def main() -> int:
     try:
         email = obrigatorio("JURISHOME_ADMIN_EMAIL", "E-mail do administrador: ").lower()
         senha = obrigatorio("JURISHOME_ADMIN_SENHA", "Senha do administrador: ", oculto=True)
+        
         if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
             raise ValueError("Informe um e-mail válido para o administrador.")
-        nome = os.getenv("JURISHOME_ADMIN_NOME", "Administrador JurisHome").strip()
+        
+        # Agora exige o nome interativamente se a variável de ambiente não estiver preenchida
+        nome = obrigatorio("JURISHOME_ADMIN_NOME", "Nome do administrador (publicador): ")
+        
         if len(nome) < 3:
-            raise ValueError("JURISHOME_ADMIN_NOME deve ter ao menos 3 caracteres.")
+            raise ValueError("O nome deve ter ao menos 3 caracteres.")
         if len(senha) < 8:
-            raise ValueError("JURISHOME_ADMIN_SENHA deve ter ao menos 8 caracteres.")
+            raise ValueError("A senha deve ter ao menos 8 caracteres.")
+            
     except (EOFError, ValueError) as erro:
         print(f"Erro: {erro}", file=sys.stderr)
         return 2
@@ -65,7 +70,7 @@ def main() -> int:
                 )
             )
         db.commit()
-        print("Administrador configurado com sucesso.")
+        print(f"Administrador '{nome}' configurado com sucesso e pronto para publicar matérias!")
         return 0
     finally:
         db.close()

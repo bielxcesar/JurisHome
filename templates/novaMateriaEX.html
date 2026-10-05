@@ -1,81 +1,94 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pré-visualização da Matéria - JurisHome</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
-    <link rel="stylesheet" href="/static/css/figma-app.css?v=20260925-2">
-    <link rel="stylesheet" href="/static/css/materia.css?v=20260925-1">
+    <!-- Tailwind via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { background-color: #1e1e1e; color: #fff; font-family: sans-serif; }
-    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        (function() {
+            const temaSalvo = localStorage.getItem("tema_juris");
+            if (temaSalvo === "claro") {
+                document.documentElement.classList.remove("dark");
+            } else {
+                document.documentElement.classList.add("dark");
+            }
+        })();
+    </script>
 </head>
-<body class="bg-[#1e1e1e] text-white min-h-screen">
+<body class="bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
 
-  <!-- Barra de Navegação padrão do site com botão de Retornar (Fechar aba) -->
-  <header class="navbar">
-    <div style="display: flex; align-items: center; gap: 1rem;">
-      <button onclick="window.close()" class="btn-voltar" style="background: none; border: none; cursor: pointer; color: inherit; display: flex; align-items: center; gap: 0.5rem;">
-        <i class="fa-solid fa-xmark"></i>
-        <span>Retornar (Fechar aba)</span>
-      </button>
-      <span id="data-atual" class="nav-data">12/08/2026</span>
+  <!-- Barra de Navegação Padrão -->
+  <header class="bg-[#25262a] border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between sticky top-0 z-50">
+    <div class="flex items-center gap-4">
+        <button onclick="window.close()" class="bg-[#1e1e1e] border border-gray-600 hover:border-amber-500 hover:text-amber-500 text-gray-300 px-4 py-2 rounded-xl transition flex items-center gap-2 text-sm shadow-md cursor-pointer">
+            <i class="fa-solid fa-xmark"></i>
+            <span>Retornar (Fechar aba)</span>
+        </button>
+        <span class="text-gray-400 text-sm hidden md:block font-mono" id="data-atual">--/--/----</span>
     </div>
 
-    <nav class="nav-menu">
-      <a href="/home_admin" class="nav-link"><i class="fa-solid fa-house"></i> Início</a>
-      <a href="/exibir-mais" class="nav-link"><i class="fa-solid fa-square-plus"></i> Exibir mais</a>
-      <a href="/admin-feedbacks" class="nav-link"><i class="fa-solid fa-headset"></i> Feedback</a>
-      <a href="/categorias" class="nav-link active"><i class="fa-solid fa-newspaper"></i> Categorias</a>
-      <a href="/pesquisa" class="nav-link"><i class="fa-solid fa-magnifying-glass"></i> Pesquisa</a>
+    <nav class="flex flex-1 md:justify-center gap-4 md:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide text-sm md:text-base">
+        <a href="/home_admin" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-house text-amber-500"></i> Início</a>
+        <a href="/exibir-mais" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-square-plus text-amber-500"></i> Exibir mais</a>
+        <a href="/admin-feedbacks" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-headset text-amber-500"></i> Feedback</a>
+        <a href="/categorias" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-newspaper text-amber-500"></i> Categorias</a>
+        <a href="/pesquisa" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-magnifying-glass text-amber-500"></i> Pesquisa</a>
     </nav>
   </header>
 
-  <main class="main-content" style="max-width: 800px; margin: 40px auto; padding: 0 20px;">
+  <!-- Conteúdo Principal -->
+  <main class="w-full max-w-4xl mx-auto px-4 py-12 flex-1">
     
-    <h1 id="ex-titulo" class="titulo-materia" style="font-size: 2.5rem; font-weight: bold; margin-bottom: 10px;"></h1>
-    <h2 id="ex-subtitulo" class="subtitulo-materia" style="font-size: 1.2rem; color: #9ca3af; margin-bottom: 20px;"></h2>
+    <!-- Títulos -->
+    <h1 id="ex-titulo" class="text-3xl md:text-4xl font-bold text-white mb-3"></h1>
+    <h2 id="ex-subtitulo" class="text-lg md:text-xl text-gray-400 mb-6"></h2>
 
-    <div class="meta-info" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #374151; padding-bottom: 15px; margin-bottom: 25px; font-size: 0.9rem; color: #9ca3af;">
+    <!-- Metadados -->
+    <div class="flex flex-wrap justify-between items-center border-b border-gray-700 pb-4 mb-8 text-sm text-gray-400 gap-2">
       <div>
-        <span>Divulgado por: <strong class="autor-destaque" style="color: #F59E0B;">Administrador</strong></span>
-        <span style="margin: 0 0.5rem;">•</span>
-        <span>12/08/2026 11:00</span>
+        <span>Divulgado por: <strong class="text-amber-500">Administrador</strong></span>
+        <span class="mx-2">•</span>
+        <span id="data-criacao-materia">12/08/2026</span>
       </div>
       <div id="ex-link-container"></div>
     </div>
 
     <!-- Imagem Principal / Miniatura -->
-    <div id="container-img-principal" class="hidden" style="margin-bottom: 30px;">
-      <figure class="figura-materia">
-        <img id="ex-img-principal" src="" alt="Miniatura da matéria" style="width: 100%; max-height: 450px; object-fit: cover; border-radius: 6px;" />
-        <figcaption id="ex-fonte-miniatura" class="legenda-imagem" style="font-size: 0.8rem; color: #9ca3af; margin-top: 8px; font-style: italic;"></figcaption>
+    <div id="container-img-principal" class="hidden mb-8">
+      <figure class="rounded-2xl overflow-hidden border border-gray-800 bg-[#25262a]">
+        <img id="ex-img-principal" src="" alt="Miniatura da matéria" class="w-full max-h-[450px] object-cover" />
+        <figcaption id="ex-fonte-miniatura" class="p-3 text-xs text-gray-400 italic bg-[#25262a] border-t border-gray-800"></figcaption>
       </figure>
     </div>
 
-    <!-- Corpo do Artigo com Distribuição Automática das Imagens Extras -->
-    <article id="ex-corpo-artigo" class="corpo-artigo" style="font-size: 1.1rem; line-height: 1.8; color: #e5e7eb;">
+    <!-- Corpo do Artigo com Imagens Extras Integradas -->
+    <article id="ex-corpo-artigo" class="text-gray-200 text-lg leading-relaxed space-y-6">
       <!-- O texto e as imagens extras serão injetados aqui ordenadamente -->
     </article>
 
     <!-- Rodapé e Tags -->
-    <footer style="margin-top: 50px; border-top: 1px solid #374151; padding-top: 20px;">
-      <div class="tags-container" style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
-        <span style="font-weight: 700; font-size: 0.9rem;">Tags:</span>
-        <span class="tag-item" style="background: #27272a; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; color: #F59E0B;">direito</span>
-        <span class="tag-item" style="background: #27272a; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; color: #F59E0B;">noticia</span>
-        <span class="tag-item" style="background: #27272a; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; color: #F59E0B;">juridico</span>
+    <footer class="mt-16 border-t border-gray-700 pt-6">
+      <div class="flex flex-wrap gap-2 items-center mb-4">
+        <span class="font-bold text-sm text-white">Tags:</span>
+        <span class="bg-[#25262a] border border-gray-700 text-amber-500 px-3 py-1 rounded-full text-xs font-semibold">direito</span>
+        <span class="bg-[#25262a] border border-gray-700 text-amber-500 px-3 py-1 rounded-full text-xs font-semibold">noticia</span>
+        <span class="bg-[#25262a] border border-gray-700 text-amber-500 px-3 py-1 rounded-full text-xs font-semibold">juridico</span>
       </div>
-      <div id="ex-rodape-fonte" style="font-size: 0.8rem; color: #9ca3af;"></div>
+      <div id="ex-rodape-fonte" class="text-xs text-gray-500"></div>
     </footer>
 
   </main>
 
   <script>
-    window.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', () => {
+        // Data atual no header
+        const elData = document.getElementById("data-atual");
+        if(elData) elData.textContent = new Intl.DateTimeFormat("pt-BR").format(new Date());
+
+        // Dados vindos do localStorage
         const dados = JSON.parse(localStorage.getItem('temp_materia_preview') || '{}');
 
         // Preenche Títulos
@@ -88,26 +101,23 @@
         if (dados.fonte_original) {
             try {
                 const host = new URL(dados.fonte_original).hostname;
-                linkContainer.innerHTML = `<span>Fonte original: <a href="${dados.fonte_original}" target="_blank" style="color: #F59E0B; text-decoration: underline;">${host}</a></span>`;
-                rodapeFonte.innerHTML = `Consulte a matéria fonte original: <a href="${dados.fonte_original}" target="_blank" style="color: #F59E0B; text-decoration: underline;">${dados.fonte_original}</a>`;
+                linkContainer.innerHTML = `<span>Fonte original: <a href="${dados.fonte_original}" target="_blank" class="text-amber-500 underline hover:text-amber-400">${host}</a></span>`;
+                rodapeFonte.innerHTML = `Consulte a matéria fonte original: <a href="${dados.fonte_original}" target="_blank" class="text-amber-500 underline hover:text-amber-400">${dados.fonte_original}</a>`;
             } catch {
-                linkContainer.innerHTML = `<span>Fonte original: <a href="${dados.fonte_original}" target="_blank" style="color: #F59E0B; text-decoration: underline;">Acessar Link</a></span>`;
+                linkContainer.innerHTML = `<span>Fonte original: <a href="${dados.fonte_original}" target="_blank" class="text-amber-500 underline hover:text-amber-400">Acessar Link</a></span>`;
             }
         }
 
         // Imagem Principal / Miniatura
-        if (dados.miniatura) {
-            document.getElementById('ex-img-principal').src = dados.miniatura;
+        const miniaturaUrl = dados.miniatura || dados.imagem_principal;
+        const miniaturaFonte = dados.fonte_miniatura || dados.fonte_imagem_principal;
+        if (miniaturaUrl) {
+            document.getElementById('ex-img-principal').src = miniaturaUrl;
             document.getElementById('container-img-principal').classList.remove('hidden');
-            if (dados.fonte_miniatura) {
-                document.getElementById('ex-fonte-miniatura').textContent = "Imagem proporcionada por: " + dados.fonte_miniatura;
+            if (miniaturaFonte) {
+                document.getElementById('ex-fonte-miniatura').textContent = "Imagem proporcionada por: " + miniaturaFonte;
             }
         }
-
-        // Distribuição do Texto e Imagens Extras no Corpo
-        const corpoArtigo = document.getElementById('ex-corpo-artigo');
-        const textoBruto = dados.corpo_texto || 'Nenhum texto informado.';
-        const paragrafos = textoBruto.split('\n').filter(p => p.trim() !== '');
 
         // Coleta todas as imagens extras preenchidas
         const imagensExtras = [];
@@ -115,29 +125,50 @@
         if (dados.corpo_2) imagensExtras.push({ url: dados.corpo_2, fonte: dados.fonte_corpo_2 });
         if (dados.corpo_3) imagensExtras.push({ url: dados.corpo_3, fonte: dados.fonte_corpo_3 });
 
-        let imgIndex = 0;
+        // Tratamento e distribuição inteligente do texto e das imagens
+        const corpoArtigo = document.getElementById('ex-corpo-artigo');
+        const textoCompleto = dados.corpo_texto || 'Nenhum texto informado.';
+        
+        // Divide o texto por quebras de linha ou o fatia em pedaços proporcionais se for um bloco único muito longo
+        let pedacosTexto = textoCompleto.split('\n').filter(p => p.trim() !== '');
+        
+        if (pedacosTexto.length === 1 && textoCompleto.length > 300) {
+            // Se o usuário colou um texto corrido gigante sem enter, dividimos em blocos menores para intercalar
+            const tamanhoBloco = Math.ceil(textoCompleto.length / (imagensExtras.length + 1));
+            pedacosTexto = [];
+            for (let i = 0; i < textoCompleto.length; i += tamanhoBloco) {
+                pedacosTexto.push(textoCompleto.substring(i, i + tamanhoBloco));
+            }
+        } else if (pedacosTexto.length === 0) {
+            pedacosTexto = [textoCompleto];
+        }
 
-        paragrafos.forEach((paragrafo, index) => {
-            const p = document.createElement('p');
-            p.style.marginBottom = "20px";
-            p.textContent = paragrafo;
-            corpoArtigo.appendChild(p);
+        // Renderiza o primeiro bloco de texto
+        const pInicial = document.createElement('p');
+        pInicial.className = "break-words whitespace-pre-line";
+        pInicial.textContent = pedacosTexto[0];
+        corpoArtigo.appendChild(pInicial);
 
-            // Insere uma imagem extra a cada 2 parágrafos até esgotar o estoque enviado
-            if ((index + 1) % 2 === 0 && imgIndex < imagensExtras.length) {
-                const imgInfo = imagensExtras[imgIndex];
-                const figure = document.createElement('figure');
-                figure.className = "figura-materia";
-                figure.style.margin = "30px 0";
-                
-                let htmlImg = `<img src="${imgInfo.url}" alt="Imagem complementar" style="width: 100%; max-height: 400px; object-fit: cover; border-radius: 6px;" />`;
-                if (imgInfo.fonte) {
-                    htmlImg += `<figcaption style="font-size: 0.8rem; color: #9ca3af; margin-top: 8px; font-style: italic;">Imagem proporcionada por: ${imgInfo.fonte}</figcaption>`;
-                }
-                figure.innerHTML = htmlImg;
-                corpoArtigo.appendChild(figure);
-                
-                imgIndex++;
+        // Intercala as imagens extras com os blocos seguintes de texto
+        imagensExtras.forEach((imgInfo, index) => {
+            // Insere a imagem
+            const figure = document.createElement('figure');
+            figure.className = "rounded-2xl overflow-hidden border border-gray-800 bg-[#25262a] my-8";
+            
+            let htmlImg = `<img src="${imgInfo.url}" alt="Imagem complementar" class="w-full max-h-[400px] object-cover" />`;
+            if (imgInfo.fonte) {
+                htmlImg += `<figcaption class="p-3 text-xs text-gray-400 italic bg-[#25262a] border-t border-gray-800">Imagem proporcionada por: ${imgInfo.fonte}</figcaption>`;
+            }
+            figure.innerHTML = htmlImg;
+            corpoArtigo.appendChild(figure);
+
+            // Insere o próximo bloco de texto correspondente (se houver)
+            const textoBloco = pedacosTexto[index + 1] || pedacosTexto[pedacosTexto.length - 1];
+            if (textoBloco && imagensExtras.length > index) {
+                const pExtra = document.createElement('p');
+                pExtra.className = "break-words whitespace-pre-line";
+                pExtra.textContent = textoBloco;
+                corpoArtigo.appendChild(pExtra);
             }
         });
     });

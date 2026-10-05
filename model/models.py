@@ -46,7 +46,8 @@ class Usuario(Base):
     nome = Column(String(100), nullable=False)
     email = Column(String(150), unique=True, index=True, nullable=False)
     senha_hash = Column(String(255), nullable=True)
-
+    foto_perfil = Column(String, nullable=True)
+    
     tipo_usuario = Column(
         Enum(TipoUsuario, values_callable=lambda x: [e.value for e in x]),
         nullable=False,

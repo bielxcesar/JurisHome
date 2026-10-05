@@ -3,6 +3,10 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+import shutil
+import os
+from fastapi import UploadFile, File, Form
+
 from database import get_db
 from auth.security import get_current_user
 from model.models import Conteudo, Usuario
@@ -56,7 +60,41 @@ def pagina_politica_de_privacidade(request: Request):
         name="politica_privacidade.html",
         context={"versao_politica": POLITICA_PRIVACIDADE_VERSAO},
     )
+from fastapi import Form
 
+@router.post("/api/perfil/atualizar")
+def atualizar_perfil(
+    nome: str = Form(...),
+    faculdade: str = Form(None),
+    interesse: str = Form(None),
+    foto: UploadFile = File(None),
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    usuario.nome = nome
+    # Se tiver esses campos no model, descomente:
+    # usuario.faculdade = faculdade
+    # usuario.interesse = interesse
+
+    if foto and foto.filename:
+        # Cria a pasta de uploads se não existir
+        pasta_upload = "static/uploads"
+        os.makedirs(pasta_upload, exist_ok=True)
+        
+        # Salva o arquivo com o ID do usuário para evitar conflitos
+        extensao = foto.filename.split(".")[-1]
+        nome_arquivo = f"user_{usuario.id}.{extensao}"
+        caminho_completo = os.path.join(pasta_upload, nome_arquivo)
+        
+        with open(caminho_completo, "wb") as buffer:
+            shutil.copyfileobj(foto.file, buffer)
+            
+        # Salva o caminho relativo no banco
+        usuario.foto_perfil = f"/{caminho_completo}"
+
+    db.commit()
+    db.refresh(usuario)
+    return {"status": "sucesso", "mensagem": "Perfil atualizado com sucesso!"}
 
 @router.get("/configuracoes-usuario", response_class=HTMLResponse)
 @router.get("/templates/confUsuario.html", response_class=HTMLResponse) 
@@ -92,6 +130,19 @@ async def get_home_usuario(
         name="home_Usuario.html"
     )
 
+@router.get("/perfil", response_class=HTMLResponse)
+def pagina_perfil(
+    request: Request,
+    usuario: Usuario = Depends(get_current_user),
+):
+    return templates.TemplateResponse(
+        request=request,
+        name="perfil.html",
+        context={
+            "usuario": usuario,
+            "tipo_usuario": usuario.tipo_usuario.value if hasattr(usuario, "tipo_usuario") and hasattr(usuario.tipo_usuario, "value") else "usuario",
+        },
+    )
 
 @router.get("/pesquisa", response_class=HTMLResponse)
 def pagina_pesquisa(
@@ -156,3 +207,10 @@ def pagina_materia(
 @router.get("/cadastro", response_class=HTMLResponse)
 def pagina_cadastro(request: Request):
     return templates.TemplateResponse(request=request, name="cadastro.html")
+
+@router.get("/preview-materia", response_class=HTMLResponse)
+def pagina_preview_materia(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="novaMateriaEX.html"
+    )

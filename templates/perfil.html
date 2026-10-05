@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Perfil do usuário no JurisHome">
+    <title>Perfil | JurisHome</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        (function() {
+            const temaSalvo = localStorage.getItem("tema_juris");
+            if (temaSalvo === "claro") {
+                document.documentElement.classList.remove("dark");
+            } else {
+                document.documentElement.classList.add("dark");
+            }
+        })();
+    </script>
+</head>
+<body class="bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
+
+    <header class="bg-[#25262a] border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between sticky top-0 z-50">
+        <div class="text-gray-400 text-sm hidden md:block font-mono" id="data-atual">--/--/----</div>
+        
+        <nav class="flex flex-1 md:justify-center gap-4 md:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide text-sm md:text-base">
+            <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-house text-amber-500"></i> Início</a>
+            <a href="/exibir-mais" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-square-plus text-amber-500"></i> Exibir mais</a>
+            <a href="/categorias" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-newspaper text-amber-500"></i> Categorias</a>
+            <a href="/pesquisa" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-magnifying-glass text-amber-500"></i> Pesquisa</a>
+            <a href="/glossario" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-book-open text-amber-500"></i> Glossário</a>
+        </nav>
+
+        <div class="relative ml-4">
+            <button id="btn-perfil" class="w-10 h-10 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500 bg-[#1e1e1e] transition cursor-pointer">
+                <i class="fa-solid fa-user-group"></i>
+            </button>
+
+            <div id="dropdown-perfil" class="hidden absolute right-0 top-14 w-56 bg-[#25262a] border border-gray-700 rounded-lg shadow-2xl flex-col gap-1 p-2 z-[100]">
+                <a href="/perfil" class="text-white bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Perfil <i class="fa-solid fa-user text-amber-500"></i></a>
+                <a href="/configuracoes-usuario" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Configurações <i class="fa-solid fa-gear text-gray-400"></i></a>
+                <a href="/" class="btn-desconectar mt-2 text-white bg-red-600 hover:bg-red-700 px-3 py-2 rounded flex justify-between items-center transition font-semibold">Sair <i class="fa-solid fa-power-off text-white"></i></a>
+            </div>
+        </div>
+    </header>
+
+    <main class="w-full max-w-4xl mx-auto px-4 py-12 flex-1">
+        
+        <div class="flex items-center gap-4 mb-6">
+            <button onclick="history.back()" class="w-10 h-10 bg-[#25262a] border border-gray-600 rounded-full text-gray-300 hover:border-amber-500 hover:text-amber-500 transition flex items-center justify-center text-lg shadow-lg">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <h1 class="text-2xl font-bold text-white tracking-wide">Perfil</h1>
+        </div>
+
+        <div class="bg-[#25262a] border-[3px] border-amber-500 rounded-3xl p-6 md:p-10 shadow-[0_10px_30px_rgba(0,0,0,0.5)] relative">
+            
+            <div id="toast-sucesso" class="hidden absolute top-6 right-6 bg-[#bbf7d0] text-green-800 font-bold px-4 py-2 rounded-lg text-sm shadow-lg flex items-center gap-2 transition-all duration-300">
+                <i class="fa-solid fa-check-circle"></i> Alterado com sucesso
+            </div>
+
+            <div class="flex flex-col md:flex-row items-center md:items-start gap-6 mb-10 border-b border-gray-700 pb-8">
+                
+                <div class="relative group">
+                    <div class="w-24 h-24 rounded-full border-[3px] border-amber-500 bg-[#1e1e1e] flex items-center justify-center text-4xl text-amber-500 font-bold overflow-hidden shadow-inner">
+                        {% if usuario.foto_perfil %}
+                            <img id="avatar-preview" src="{{ usuario.foto_perfil }}" alt="Sua foto" class="w-full h-full object-cover">
+                        {% else %}
+                            <span id="avatar-inicial">{{ usuario.nome[0]|upper if usuario.nome else 'G' }}</span>
+                            <img id="avatar-preview" src="" alt="Sua foto" class="w-full h-full object-cover hidden">
+                        {% endif %}
+                    </div>
+                    <label for="upload-foto" class="absolute bottom-0 right-0 w-8 h-8 bg-[#25262a] border border-gray-500 hover:border-amber-500 hover:text-amber-500 rounded-full flex items-center justify-center cursor-pointer transition shadow-md">
+                        <i class="fa-solid fa-pen-to-square text-xs"></i>
+                    </label>
+                    <input type="file" id="upload-foto" accept="image/*" class="hidden">
+                </div>
+
+                <div class="text-center md:text-left">
+                    <h2 class="text-3xl font-bold text-white mb-1">{{ usuario.nome | default('Gabriel') }}</h2>
+                    <p class="text-gray-400 mb-4">{{ usuario.email | default('gabriel@exemplo.com') }}</p>
+                    
+                    <div class="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                        <span class="border border-amber-500 text-amber-500 px-3 py-1 rounded-full text-xs font-semibold tracking-wide bg-amber-500/10">
+                            {{ usuario.cargo | default('Estudante') }}
+                        </span>
+                        <span class="border border-amber-500 text-amber-500 px-3 py-1 rounded-full text-xs font-semibold tracking-wide bg-amber-500/10">
+                            Conta desde {{ usuario.data_criacao | default('17/12/2025') }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <form id="form-perfil" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <div class="flex flex-col gap-2">
+                        <label for="nome" class="text-gray-300 font-medium text-lg">Nome:</label>
+                        <input type="text" id="nome" name="nome" value="{{ usuario.nome | default('Gabriel') }}" class="bg-transparent border border-amber-500 rounded-xl px-4 py-3 text-white focus:outline-none focus:bg-[#1e1e1e] transition">
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <label for="faculdade" class="text-gray-300 font-medium text-lg">Faculdade:</label>
+                        <input type="text" id="faculdade" name="faculdade" value="{{ usuario.faculdade | default('') }}" placeholder="Nome da instituição" class="bg-transparent border border-amber-500 rounded-xl px-4 py-3 text-white focus:outline-none focus:bg-[#1e1e1e] transition placeholder-gray-600">
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <label for="email" class="text-gray-300 font-medium text-lg">E-mail:</label>
+                        <input type="email" id="email" name="email" value="{{ usuario.email | default('gabriel@exemplo.com') }}" readonly class="bg-[#1e1e1e]/50 border border-amber-500/50 rounded-xl px-4 py-3 text-gray-400 cursor-not-allowed">
+                        <small class="text-gray-500 text-xs">O e-mail não pode ser alterado por aqui.</small>
+                    </div>
+
+                    <div class="flex flex-col gap-2 relative">
+                        <label class="text-gray-300 font-medium text-lg">Matéria de interesse:</label>
+                        
+                        <div id="sanfona-toggle" class="bg-transparent border border-amber-500 rounded-xl px-4 py-3 text-white flex justify-between items-center cursor-pointer select-none hover:bg-[#1e1e1e] transition">
+                            <span id="sanfona-selecionado">{{ usuario.interesse | default('Selecione uma matéria') }}</span>
+                            <i class="fa-solid fa-chevron-down text-amber-500 transition-transform duration-300" id="sanfona-icone"></i>
+                        </div>
+                        <input type="hidden" id="interesse" name="interesse" value="{{ usuario.interesse | default('') }}">
+
+                        <div id="sanfona-opcoes" class="hidden absolute top-full left-0 right-0 mt-2 bg-[#1e1e1e] border border-amber-500 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col">
+                            <div class="px-4 py-3 hover:bg-amber-500 hover:text-black cursor-pointer transition border-b border-gray-800 text-sm font-medium" data-value="Direito Trabalhista">Direito Trabalhista</div>
+                            <div class="px-4 py-3 hover:bg-amber-500 hover:text-black cursor-pointer transition border-b border-gray-800 text-sm font-medium" data-value="Direito Civil">Direito Civil</div>
+                            <div class="px-4 py-3 hover:bg-amber-500 hover:text-black cursor-pointer transition text-sm font-medium" data-value="Direito do Consumidor">Direito do Consumidor</div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="flex justify-end pt-4">
+                    <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-black font-bold text-lg py-3 px-8 rounded-xl transition shadow-lg w-full md:w-auto">
+                        Salvar Alteração
+                    </button>
+                </div>
+            </form>
+
+            <div class="mt-12 bg-[#1e1e1e] rounded-2xl p-6 border border-gray-800 shadow-inner">
+                <h3 class="text-white font-bold mb-6 border-b border-gray-700 pb-2">Segurança e consentimentos</h3>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="flex flex-col gap-1">
+                        <span class="text-gray-300 font-semibold flex items-center gap-2">
+                            <i class="fa-solid fa-circle-check text-green-500"></i> Verificação em duas etapas
+                        </span>
+                        <span class="text-gray-500 text-sm ml-6">Ativa no autenticador</span>
+                    </div>
+
+                    <div class="flex flex-col gap-1">
+                        <span class="text-gray-300 font-semibold flex items-center gap-2">
+                            <i class="fa-solid fa-circle-check text-green-500"></i> Consentimento LGPD
+                        </span>
+                        <span class="text-gray-500 text-sm ml-6">Aceito</span>
+                    </div>
+
+                    <div class="flex flex-col gap-1">
+                        <span class="text-gray-300 font-semibold flex items-center gap-2">
+                            <i class="fa-solid fa-circle-check text-green-500"></i> Versão dos termos
+                        </span>
+                        <span class="text-gray-500 text-sm ml-6">1.0 • atualizado em 12/08/2026</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    {% include "_legal_links.html" %}
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Dropdown do Menu Perfil Superior
+            const botaoPerfil = document.getElementById("btn-perfil");
+            const menuPerfil = document.getElementById("dropdown-perfil");
+            
+            if (botaoPerfil && menuPerfil) {
+                botaoPerfil.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    menuPerfil.classList.toggle("hidden");
+                    menuPerfil.classList.toggle("flex");
+                });
+                document.addEventListener("click", (e) => {
+                    if (!menuPerfil.contains(e.target) && !botaoPerfil.contains(e.target)) {
+                        menuPerfil.classList.add("hidden");
+                        menuPerfil.classList.remove("flex");
+                    }
+                });
+            }
+
+            const elData = document.getElementById("data-atual");
+            if(elData) elData.textContent = new Intl.DateTimeFormat("pt-BR").format(new Date());
+
+            // Lógica da Sanfona de Matéria de Interesse
+            const sanfonaToggle = document.getElementById("sanfona-toggle");
+            const sanfonaOpcoes = document.getElementById("sanfona-opcoes");
+            const sanfonaIcone = document.getElementById("sanfona-icone");
+            const sanfonaSelecionado = document.getElementById("sanfona-selecionado");
+            const inputInteresse = document.getElementById("interesse");
+
+            sanfonaToggle.addEventListener("click", (e) => {
+                e.stopPropagation();
+                sanfonaOpcoes.classList.toggle("hidden");
+                sanfonaIcone.classList.toggle("rotate-180");
+            });
+
+            document.querySelectorAll("#sanfona-opcoes div").forEach(opcao => {
+                opcao.addEventListener("click", () => {
+                    const valor = opcao.getAttribute("data-value");
+                    sanfonaSelecionado.textContent = valor;
+                    inputInteresse.value = valor;
+                    sanfonaOpcoes.classList.add("hidden");
+                    sanfonaIcone.classList.remove("rotate-180");
+                });
+            });
+
+            document.addEventListener("click", () => {
+                sanfonaOpcoes.classList.add("hidden");
+                sanfonaIcone.classList.remove("rotate-180");
+            });
+
+            // Preview da Nova Foto de Perfil
+            const inputFoto = document.getElementById("upload-foto");
+            const imgPreview = document.getElementById("avatar-preview");
+            const avatarInicial = document.getElementById("avatar-inicial");
+
+            inputFoto.addEventListener("change", function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imgPreview.src = e.target.result;
+                        imgPreview.classList.remove("hidden");
+                        if(avatarInicial) avatarInicial.classList.add("hidden");
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // Submissão real do Formulário com Fetch para o Banco de Dados
+            const formPerfil = document.getElementById("form-perfil");
+            const toastSucesso = document.getElementById("toast-sucesso");
+
+            formPerfil.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                
+                const formData = new FormData(formPerfil);
+
+                try {
+                    const resposta = await fetch("/api/perfil/atualizar", {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    if (resposta.ok) {
+                        toastSucesso.classList.remove("hidden");
+                        toastSucesso.classList.add("animate-pulse");
+
+                        // Recarrega a página após 1.5 segundo para atualizar o nome no topo
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        alert("Erro ao atualizar o perfil.");
+                    }
+                } catch (erro) {
+                    console.error("Erro na requisição:", erro);
+                    alert("Erro de conexão com o servidor.");
+                }
+            });
+        });
+    </script>
+</body>
+</html>

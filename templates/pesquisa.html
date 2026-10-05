@@ -1,63 +1,214 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Pesquise matérias jurídicas no JurisHome">
     <title>Pesquisa | JurisHome</title>
+    
+    <!-- Tailwind via CDN substituindo os CSS bloqueados -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/homeAdmin.css?v=20260925-1">
-    <link rel="stylesheet" href="/static/css/figma-app.css?v=20260925-2">
-    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+
+    <script>
+        (function() {
+            const temaSalvo = localStorage.getItem("tema_juris");
+            if (temaSalvo === "claro") {
+                document.documentElement.classList.remove("dark");
+                document.documentElement.setAttribute("data-theme", "light");
+            } else {
+                document.documentElement.classList.add("dark");
+                document.documentElement.setAttribute("data-theme", "dark");
+            }
+        })();
+    </script>
 </head>
-<body class="search-shell" data-tipo-usuario="{{ tipo_usuario }}">
-    <header class="navbar">
-        <div class="nav-data" id="data-atual" aria-label="Data atual">--/--/----</div>
-        <nav class="nav-menu" aria-label="Navegação principal">
-            <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="nav-link"><i class="fa-solid fa-house" aria-hidden="true"></i> Home</a>
-            <a href="/exibir-mais" class="nav-link"><i class="fa-solid fa-square-plus" aria-hidden="true"></i> Exibir mais</a>
+<body class="bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col" data-tipo-usuario="{{ tipo_usuario }}">
+    
+    <!-- Barra de Navegação -->
+    <header class="bg-[#25262a] border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between sticky top-0 z-50">
+        <div class="text-gray-400 text-sm hidden md:block font-mono" id="data-atual">--/--/----</div>
+        
+        <nav class="flex flex-1 md:justify-center gap-4 md:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide text-sm md:text-base">
+            <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-house text-amber-500"></i> Home</a>
+            <a href="/exibir-mais" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-square-plus text-amber-500"></i> Exibir mais</a>
+            
             {% if tipo_usuario == 'administrador' %}
-            <a href="/admin-feedbacks" class="nav-link"><i class="fa-solid fa-inbox" aria-hidden="true"></i> Feedbacks</a>
-            <a href="/admin/auditoria" class="nav-link"><i class="fa-solid fa-list-check" aria-hidden="true"></i> Auditoria</a>
+                <a href="/admin-feedbacks" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-inbox text-amber-500"></i> Feedbacks</a>
+                <a href="/admin/auditoria" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-list-check text-amber-500"></i> Auditoria</a>
             {% else %}
-            <a href="/configuracoes-usuario#feedback" class="nav-link"><i class="fa-solid fa-headset" aria-hidden="true"></i> Suporte</a>
+                <a href="/configuracoes-usuario#feedback" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-headset text-amber-500"></i> Suporte</a>
             {% endif %}
-            <span class="nav-link nav-link-indisponivel" aria-disabled="true"><i class="fa-solid fa-user-group" aria-hidden="true"></i> Sobre nós</span>
-            <a href="/categorias" class="nav-link"><i class="fa-solid fa-newspaper" aria-hidden="true"></i> Categorias</a>
-            <a href="/glossario{% if tipo_usuario != 'administrador' %}?origem=usuario{% endif %}" class="nav-link"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Glossário</a>
-            <a href="/pesquisa" class="nav-link active" aria-current="page"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Pesquisa</a>
+            
+            <span class="text-gray-600 cursor-not-allowed pb-1 flex items-center gap-2" title="Página indisponível"><i class="fa-solid fa-user-group text-gray-600"></i> Sobre nós</span>
+            <a href="/categorias" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-newspaper text-amber-500"></i> Categorias</a>
+            <a href="/pesquisa" class="text-white border-b-2 border-amber-500 pb-1 font-semibold flex items-center gap-2 transition"><i class="fa-solid fa-magnifying-glass text-amber-500"></i> Pesquisa</a>
+            <a href="/glossario{% if tipo_usuario != 'administrador' %}?origem=usuario{% endif %}" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-book-open text-amber-500"></i> Glossário</a>
         </nav>
-        <div class="nav-perfil">
-            <button class="avatar-icon" id="btn-perfil" type="button" aria-label="Abrir configurações" aria-expanded="false" aria-controls="dropdown-perfil">
-                <i class="fa-solid fa-user" aria-hidden="true"></i>
+
+        <div class="relative ml-4">
+            <button id="btn-perfil" class="w-10 h-10 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500 hover:bg-amber-500 hover:text-black transition cursor-pointer">
+                <i class="fa-solid fa-user-group"></i>
             </button>
-            <div class="menu-perfil-dropdown" id="dropdown-perfil">
-                <a href="{% if tipo_usuario == 'administrador' %}/configuracao{% else %}/configuracoes-usuario{% endif %}" class="dropdown-item">Configurações <i class="fa-solid fa-gear" aria-hidden="true"></i></a>
-                <a href="/termos-de-aceite" class="dropdown-item">Termo de Aceite <i class="fa-regular fa-file-lines" aria-hidden="true"></i></a>
-                <a href="/politica-de-privacidade" class="dropdown-item">Privacidade <i class="fa-solid fa-shield-halved" aria-hidden="true"></i></a>
-                <a href="/" class="dropdown-item btn-desconectar">Sair <i class="fa-solid fa-power-off" aria-hidden="true"></i></a>
+
+            <div id="dropdown-perfil" class="hidden absolute right-0 top-14 w-56 bg-[#25262a] border border-gray-700 rounded-lg shadow-2xl flex-col gap-1 p-2 z-[100]">
+                <a href="{% if tipo_usuario == 'administrador' %}/configuracao{% else %}/configuracoes-usuario{% endif %}" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Configurações <i class="fa-solid fa-gear text-gray-400"></i></a>
+                <a href="/" class="btn-desconectar mt-2 text-white bg-red-600 hover:bg-red-700 px-3 py-2 rounded flex justify-between items-center transition font-semibold">Sair <i class="fa-solid fa-power-off text-white"></i></a>
             </div>
         </div>
     </header>
-    <main class="search-page" id="conteudo-principal">
-        <form class="search-form" id="form-pesquisa" role="search">
-            <label class="sr-only" for="campo-pesquisa">Pesquisar matérias</label>
-            <div class="search-control">
-                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-                <input id="campo-pesquisa" name="q" type="search" maxlength="120" placeholder="Pesquisa" autocomplete="off">
-                <button type="submit" aria-label="Pesquisar"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
-            </div>
+
+    <!-- Área Principal de Pesquisa -->
+    <main class="w-full max-w-3xl mx-auto px-4 py-12 flex-1 flex flex-col items-center">
+        
+        <!-- Barra de Busca -->
+        <form id="form-pesquisa" class="w-full relative mb-10 group">
+            <i class="fa-solid fa-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-amber-500 text-lg"></i>
+            <input id="campo-pesquisa" name="q" type="search" placeholder="Pesquisa" autocomplete="off" class="w-full bg-[#2a2b30] border border-gray-800 rounded-xl py-4 pl-14 pr-14 text-white text-lg focus:outline-none focus:border-amber-500 focus:bg-[#25262a] transition shadow-lg placeholder-gray-500">
+            <button type="submit" class="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-500 transition text-xl">
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
         </form>
-        <section class="search-results" id="search-results" aria-live="polite" hidden>
-            <div class="search-results-heading">
-                <h1>Resultados</h1>
-                <span id="search-count"></span>
+
+        <!-- Container de Resultados -->
+        <section id="search-results" class="w-full hidden">
+            <div class="flex justify-between items-end border-b border-gray-800 pb-3 mb-6">
+                <h1 class="text-xl font-bold text-white">Resultados</h1>
+                <span id="search-count" class="text-sm font-medium text-amber-500"></span>
             </div>
-            <div class="search-result-list" id="search-result-list"></div>
-            <p id="search-empty" hidden>Nenhuma matéria encontrada para esta pesquisa.</p>
+            
+            <div id="search-result-list" class="flex flex-col gap-4">
+                <!-- Cards de resultado injetados pelo JS -->
+            </div>
+            
+            <div id="search-empty" class="hidden text-center py-10">
+                <i class="fa-solid fa-magnifying-glass-minus text-4xl text-gray-600 mb-4 block"></i>
+                <p class="text-gray-400 text-lg">Nenhuma matéria encontrada para esta pesquisa.</p>
+            </div>
         </section>
     </main>
+
     {% include "_legal_links.html" %}
-    <script src="/static/js/pesquisa.js?v=20260925-1"></script>
+
+    <!-- Script de Funcionalidade da Pesquisa com Novo Layout (Figma) -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Lógica do Menu de Perfil e Data
+            const botaoPerfil = document.getElementById("btn-perfil");
+            const menuPerfil = document.getElementById("dropdown-perfil");
+            
+            if (botaoPerfil && menuPerfil) {
+                botaoPerfil.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    menuPerfil.classList.toggle("hidden");
+                    menuPerfil.classList.toggle("flex");
+                });
+                document.addEventListener("click", (e) => {
+                    if (!menuPerfil.contains(e.target) && !botaoPerfil.contains(e.target)) {
+                        menuPerfil.classList.add("hidden");
+                        menuPerfil.classList.remove("flex");
+                    }
+                });
+            }
+
+            const elData = document.getElementById("data-atual");
+            if(elData) elData.textContent = new Intl.DateTimeFormat("pt-BR").format(new Date());
+
+            // Lógica de Saída (Logout)
+            document.querySelectorAll(".btn-desconectar").forEach((link) => {
+                link.addEventListener("click", (evento) => {
+                    evento.preventDefault();
+                    window.localStorage.removeItem("jurishome_access_token");
+                    window.sessionStorage.removeItem("jurishome_desafio_2fa");
+                    window.fetch("/api/auth/logout", { method: "POST" })
+                        .finally(() => { window.location.href = "/"; });
+                });
+            });
+
+            // LÓGICA DE PESQUISA
+            const form = document.getElementById("form-pesquisa");
+            const campoBusca = document.getElementById("campo-pesquisa");
+            const containerResultados = document.getElementById("search-results");
+            const listaResultados = document.getElementById("search-result-list");
+            const contador = document.getElementById("search-count");
+            const mensagemVazia = document.getElementById("search-empty");
+            
+            let todasMaterias = [];
+
+            // Busca os dados no servidor uma única vez para filtrar rápido
+            async function carregarAcervo() {
+                try {
+                    const resposta = await fetch("/api/conteudos");
+                    if (resposta.ok) {
+                        todasMaterias = await resposta.json();
+                    }
+                } catch (erro) {
+                    console.error("Erro ao carregar acervo para pesquisa:", erro);
+                }
+            }
+
+            carregarAcervo();
+
+            form.addEventListener("submit", (e) => {
+                e.preventDefault();
+                const termo = campoBusca.value.trim().toLowerCase();
+                
+                if (!termo) {
+                    containerResultados.classList.add("hidden");
+                    return;
+                }
+
+                // Filtra pelo Título ou Categoria
+                const encontrados = todasMaterias.filter(m => 
+                    m.titulo.toLowerCase().includes(termo) || 
+                    (m.categoria && m.categoria.toLowerCase().includes(termo))
+                );
+
+                renderizarResultados(encontrados);
+            });
+
+            function renderizarResultados(resultados) {
+                containerResultados.classList.remove("hidden");
+                listaResultados.innerHTML = "";
+                
+                if (resultados.length === 0) {
+                    listaResultados.classList.add("hidden");
+                    mensagemVazia.classList.remove("hidden");
+                    contador.textContent = "0 encontrados";
+                    return;
+                }
+
+                listaResultados.classList.remove("hidden");
+                mensagemVazia.classList.add("hidden");
+                contador.textContent = `${resultados.length} encontrado${resultados.length > 1 ? 's' : ''}`;
+
+                resultados.forEach(materia => {
+                    // Estrutura do card com miniatura baseada no Figma
+                    const card = document.createElement("a");
+                    card.href = `/materia/${encodeURIComponent(materia.uuid)}`;
+                    card.className = "flex items-center gap-4 p-3 bg-[#2a2b30] border border-gray-800 rounded-xl hover:border-amber-500 hover:shadow-[0_4px_15px_rgba(0,0,0,0.4)] transition duration-300 group cursor-pointer";
+                    
+                    // Tratamento da miniatura (Se não tiver imagem, fica um fundo cinza com ícone)
+                    const miniaturaHTML = materia.imagem_miniatura 
+                        ? `<img src="${materia.imagem_miniatura}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500" alt="Capa">`
+                        : `<div class="w-full h-full flex items-center justify-center bg-gray-800 text-gray-600"><i class="fa-solid fa-image text-2xl"></i></div>`;
+
+                    card.innerHTML = `
+                        <div class="w-28 h-20 sm:w-36 sm:h-24 flex-shrink-0 bg-[#1e1e1e] rounded-lg overflow-hidden relative border border-gray-800">
+                            ${miniaturaHTML}
+                        </div>
+                        <div class="flex-1 flex flex-col justify-center py-1">
+                            <span class="text-xs font-bold text-amber-500 uppercase tracking-wider mb-1 block">${materia.categoria || 'Geral'}</span>
+                            <h3 class="text-sm sm:text-base font-bold text-gray-200 group-hover:text-amber-400 transition leading-snug line-clamp-2 md:line-clamp-3">
+                                ${materia.titulo}
+                            </h3>
+                        </div>
+                    `;
+                    
+                    listaResultados.appendChild(card);
+                });
+            }
+        });
+    </script>
 </body>
 </html>
