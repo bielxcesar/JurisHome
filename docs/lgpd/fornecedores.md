@@ -6,7 +6,7 @@
 | Google Fonts e cdnjs / Cloudflare | fontes e ícones da interface | metadados técnicos normais da requisição |
 | e-MEC / API pública CAU/BR | consulta opcional de IES por código | apenas o código numérico consultado |
 | WhatsApp | compartilhamento iniciado pelo usuário | título e endereço público da matéria |
-| Origem de imagem informada na matéria | carregamento de imagem externa, quando houver URL | requisição do navegador à origem indicada; não há upload automático para Cloudinary |
+| Origem de imagem em conteúdo legado | carregamento externo somente quando houver URL | requisição do navegador à origem indicada; as imagens novas em Base64 são armazenadas no banco e entregues pelo JurisHome |
 
 O login utiliza e-mail, senha e TOTP. A instalação local usa SQLite por padrão e não envia dados à Railway. O código não configura a região de processamento nem a retenção de logs e backups do provedor; confira esses pontos na conta usada para a implantação.
 

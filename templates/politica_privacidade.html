@@ -6,6 +6,7 @@
     <meta name="description" content="Política de Privacidade do sistema JurisHome">
     <title>Política de Privacidade | JurisHome</title>
     <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+    <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
 </head>
 <body class="legal-page">
     <a class="legal-skip-link" href="#conteudo-legal">Ir para o conteúdo</a>
@@ -75,7 +76,7 @@
 
         <section>
             <h2>6. Armazenamento, sessão e dispositivos</h2>
-            <p>Na implantação publicada, os dados são armazenados no PostgreSQL da Railway. Em uma instalação local, o projeto usa SQLite por padrão ou o banco configurado pelo responsável. As matérias podem guardar endereços de imagens; o código atual não envia arquivos ao Cloudinary, e o navegador carrega a imagem a partir do endereço informado.</p>
+            <p>O banco de dados utilizado depende da implantação: o projeto usa SQLite por padrão em ambiente local e pode utilizar PostgreSQL conforme a configuração do responsável. As imagens das matérias são reduzidas e convertidas para JPEG no navegador, codificadas em Base64 e armazenadas em campos de texto do banco de dados. Conteúdos legados também podem conter endereços externos de imagens.</p>
             <p>A sessão autenticada utiliza cookie HTTP-only. O desafio temporário da autenticação em duas etapas pode permanecer no <code>sessionStorage</code>, e preferências como tema visual podem permanecer no <code>localStorage</code>. Esses recursos são usados para segurança e funcionamento da interface, não para publicidade comportamental.</p>
             <p>Esta versão não implementa ferramentas próprias de análise de comportamento ou publicidade. Os serviços externos podem registrar dados técnicos de acesso segundo suas configurações e políticas.</p>
         </section>
@@ -89,7 +90,7 @@
                         <tr><td>Railway</td><td>Hospedagem da versão publicada e do banco PostgreSQL.</td><td>Requisições técnicas e dados armazenados nas tabelas do JurisHome.</td></tr>
                         <tr><td>Google Fonts e cdnjs/Cloudflare</td><td>Entrega de fontes e ícones da interface.</td><td>Metadados técnicos normais da requisição, como endereço IP e agente do navegador.</td></tr>
                         <tr><td>e-MEC e API pública de IES do CAU/BR</td><td>Consulta opcional de instituição de ensino pelo código informado.</td><td>Somente o código numérico consultado; nome e e-mail da conta não são enviados.</td></tr>
-                        <tr><td>Origem de imagem indicada na matéria</td><td>Carregamento de imagem quando o conteúdo contém uma URL externa.</td><td>Requisição do navegador à origem indicada na URL; o JurisHome não faz upload por integração Cloudinary.</td></tr>
+                        <tr><td>Origem de imagem externa, quando presente em conteúdo legado</td><td>Carregamento de imagem quando o conteúdo contém uma URL externa.</td><td>Requisição do navegador à origem indicada na URL. As imagens cadastradas em Base64 são entregues pelo próprio JurisHome.</td></tr>
                         <tr><td>WhatsApp</td><td>Compartilhamento iniciado pelo usuário.</td><td>Título e endereço público da matéria preparados no navegador; contatos e mensagens permanecem sob controle do WhatsApp.</td></tr>
                     </tbody>
                 </table>

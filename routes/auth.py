@@ -14,38 +14,24 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from auth.sessions import (consumir_desafio, consumir_totp, criar_refresh, renovar_sessao,
+    salvar_refresh, apagar_cookies)
+from auth.security import _decodificar_token
 from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy.orm import Session
 
 from auth.security import (
-    cifrar_segredo_2fa,
-    criar_access_token,
-    criar_token_configuracao_2fa,
-    criar_token_nova_senha,
-    criar_token_recuperacao_senha,
-    criar_token_2fa_pendente,
-    decifrar_segredo_2fa,
-    decodificar_token_configuracao_2fa,
-    decodificar_token_nova_senha,
-    decodificar_token_recuperacao_senha,
-    decodificar_token_2fa_pendente,
-    get_current_user,
-    get_current_user_optional,
-    hash_senha,
-    verificar_senha,
+    cifrar_segredo_2fa, criar_access_token, criar_token_configuracao_2fa, criar_token_nova_senha, criar_token_recuperacao_senha, criar_token_2fa_pendente, decifrar_segredo_2fa,
+    decodificar_token_configuracao_2fa, decodificar_token_nova_senha, decodificar_token_recuperacao_senha, decodificar_token_2fa_pendente, get_current_user, get_current_user_optional,
+    hash_senha,verificar_senha,
 )
 from database import get_db
 from feedback_database import get_feedback_db
 from model.models import TipoUsuario, Usuario
 from services.auditoria import registrar_auditoria
-from services.direitos_titular import (
-    anonimizar_feedbacks_atendimento,
-    anonimizar_feedbacks_legados,
-    anonimizar_usuario,
-)
+from services.direitos_titular import (anonimizar_feedbacks_atendimento,anonimizar_feedbacks_legados,anonimizar_usuario,)
 from services.lgpd import TERMOS_VERSAO
-
 
 router = APIRouter(prefix="/api", tags=["Autenticação e usuários"])
 
@@ -206,16 +192,24 @@ def _registrar_falha_autenticacao(usuario: Usuario, agora: datetime | None = Non
         usuario.tentativas_login_falhas = 0
 
 
-def _salvar_cookie_de_sessao(response: Response, token: str, lembrar_conectado: bool = False) -> None:
+def _salvar_cookie_de_sessao(response: Response, token: str, lembrar_conectado: bool = False, db: Session | None = None) -> None:
     response.set_cookie(
         key="jurishome_access_token",
         value=token,
-        max_age=14 * 24 * 60 * 60 if lembrar_conectado else 30 * 60,
+        max_age=30 * 60,
         httponly=True,
         secure=os.getenv("COOKIE_SECURE", "false").lower() == "true",
         samesite="lax",
         path="/",
     )
+    if lembrar_conectado:
+        if db is None:
+            raise RuntimeError("Renovação de sessão exige banco de dados.")
+        refresh = criar_refresh(db, _decodificar_token(token)["sid"])
+        db.commit()
+        salvar_refresh(response, refresh, 14 * 24 * 60 * 60)
+    else:
+        response.delete_cookie("jurishome_refresh_token", path="/")
 
 
 def _verificar_totp(segredo: str, codigo: str) -> bool:
@@ -274,9 +268,52 @@ def preparar_configuracao_2fa(usuario: Usuario, db: Session) -> dict:
         "mensagem": "Configure o aplicativo autenticador para concluir o cadastro.",
     }
 
+class PedidoReset2FA(BaseModel):
+    email: str
+    senha: str
+
+@router.post("/solicitar-reset-2fa")
+def solicitar_reset_2fa(dados: PedidoReset2FA, db: Session = Depends(get_db)):
+    usuario = db.query(Usuario).filter(Usuario.email == dados.email).first()
+    
+    if not usuario or not verificar_senha(dados.senha, usuario.senha_hash):
+        raise HTTPException(status_code=401, detail="E-mail ou senha incorretos.")
+    
+    if not usuario.is_2fa_enabled:
+        raise HTTPException(status_code=400, detail="Este usuário não possui 2FA ativo.")
+
+    from model.models import FeedbackAtendimento
+    import uuid
+    
+    pedido_existente = db.query(FeedbackAtendimento).filter(
+        FeedbackAtendimento.usuario_id == str(usuario.uuid),
+        FeedbackAtendimento.tipo == "Recuperacao 2FA",
+        FeedbackAtendimento.status == "Recebido"
+    ).first()
+
+    if pedido_existente:
+        return {"mensagem": "Você já possui uma solicitação em andamento. Aguarde o suporte."}
+
+    protocolo_gerado = f"REQ-{str(uuid.uuid4())[:8].upper()}"
+    novo_chamado = FeedbackAtendimento(
+        id=str(uuid.uuid4()),
+        protocolo=protocolo_gerado,
+        usuario_id=str(usuario.uuid),
+        usuario_nome=usuario.nome,
+        usuario_email=usuario.email,
+        tipo="Recuperacao 2FA",
+        assunto="Perda de acesso ao Autenticador",
+        mensagem="O usuário confirmou a senha e solicita o reset do token 2FA.",
+        status="Recebido",
+        prioridade="Alta"
+    )
+    
+    db.add(novo_chamado)
+    db.commit()
+    
+    return {"mensagem": "Solicitação enviada com sucesso! O suporte analisará o caso."}
 
 def _serializar_resultado_emec(codigo_emec: int, dados: dict) -> dict | None:
-    #Converte o formato do pacote ``emec-api`` para a resposta pública.
     nome = str(dados.get("nome_da_ies") or dados.get("nome") or "").strip()
     if not nome:
         return None
@@ -295,13 +332,6 @@ def _serializar_resultado_emec(codigo_emec: int, dados: dict) -> dict | None:
 
 
 def consultar_ies_api_publica(codigo_emec: int) -> dict | None:
-    #Consulta uma fonte pública externa por código e-MEC.
-
-    """
-    É uma redundância de rede, não um catálogo do projeto. A consulta solicita
-    apenas os campos necessários para não coletar dados de coordenadores ou
-    outros dados pessoais disponíveis na camada pública.
-    """
     parametros = urlencode(
         {
             "where": f"ies_cdg_mec_ies={codigo_emec}",
@@ -357,13 +387,6 @@ def consultar_ies_api_publica(codigo_emec: int) -> dict | None:
 
 
 def consultar_instituicao_emec(codigo_emec: int) -> dict:
-    #Consulta uma instituição pelo código oficial da IES no e-MEC.
-
-    """
-    A consulta é feita exclusivamente em serviços externos. O ``emec-api`` é
-    a fonte principal; a API pública de IES é consultada somente se o portal
-    e-MEC não devolver dados. Não há catálogo local ou resposta simulada.
-    """
     try:
         from emec_api.api.client import Institution
     except ImportError as erro:
@@ -381,8 +404,6 @@ def consultar_instituicao_emec(codigo_emec: int) -> dict:
         instituicao.parse()
         dados_emec = _serializar_resultado_emec(codigo_emec, instituicao.get_full_json())
     except Exception as erro:
-        # O portal e-MEC pode bloquear leituras automatizadas. A tentativa
-        # seguinte permanece externa e usa somente o código informado.
         logger.warning(
             "A fonte principal e-MEC falhou (%s); tentando a fonte pública de contingência.",
             type(erro).__name__,
@@ -401,14 +422,11 @@ def consultar_instituicao_emec(codigo_emec: int) -> dict:
 
 
 async def obter_instituicao_emec(codigo_emec: int) -> dict:
-    # O pacote e-MEC é síncrono e usa asyncio internamente; a thread evita
-    # bloquear a API do JurisHome durante a consulta externa.
     return await asyncio.to_thread(consultar_instituicao_emec, codigo_emec)
 
 
 @router.get("/universidades/emec/{codigo_emec}")
 async def consultar_universidade(codigo_emec: Annotated[int, Field(ge=1)]):
-    #Retorna dados oficiais de uma IES a partir do código e-MEC.
     return await obter_instituicao_emec(codigo_emec)
 
 
@@ -590,11 +608,13 @@ def validar_2fa(dados: Codigo2FA, response: Response, db: Session = Depends(get_
             detail="Código de autenticação inválido. Confira se data e hora automáticas estão ativadas no celular.",
         )
 
+    consumir_desafio(db, dados.desafio_token, usuario, "2fa_pendente")
+    consumir_totp(db, usuario, segredo, dados.codigo, JANELA_TOTP)
     token = criar_access_token(usuario, dados.lembrar_conectado)
     usuario.tentativas_login_falhas = 0
     usuario.ultima_falha_login = None
     usuario.bloqueado_ate = None
-    _salvar_cookie_de_sessao(response, token, dados.lembrar_conectado)
+    _salvar_cookie_de_sessao(response, token, dados.lembrar_conectado, db)
     registrar_auditoria(
         db,
         acao="autenticacao_2fa",
@@ -605,8 +625,7 @@ def validar_2fa(dados: Codigo2FA, response: Response, db: Session = Depends(get_
         commit=True,
     )
     return {
-        "access_token": token,
-        "token_type": "bearer",  # nosec
+        "autenticado": True,
         "usuario": serializar_usuario(usuario),
     }
 
@@ -663,6 +682,8 @@ def validar_recuperacao_senha(dados: ConfirmacaoRecuperacaoSenha, db: Session = 
         db.commit()
         raise resposta_invalida
 
+    consumir_desafio(db, dados.desafio_token, usuario, "recuperacao_senha")
+    consumir_totp(db, usuario, segredo, dados.codigo, JANELA_TOTP)
     usuario.tentativas_login_falhas = 0
     usuario.ultima_falha_login = None
     usuario.bloqueado_ate = None
@@ -698,11 +719,12 @@ def alterar_senha_recuperada(dados: NovaSenhaRecuperacao, db: Session = Depends(
         limite = usuario.token_validos_apos
         if limite.tzinfo is None:
             limite = limite.replace(tzinfo=timezone.utc)
-        if emitido_em <= int(limite.timestamp()):
+        if emitido_em <= limite.timestamp():
             raise invalida
 
+    consumir_desafio(db, dados.token_redefinicao, usuario, "nova_senha")
     usuario.senha_hash = hash_senha(dados.nova_senha)
-    usuario.token_validos_apos = datetime.fromtimestamp(int(time.time()), tz=timezone.utc).replace(tzinfo=None)
+    usuario.token_validos_apos = datetime.now(timezone.utc).replace(tzinfo=None)
     registrar_auditoria(
         db,
         acao="senha_redefinida",
@@ -783,9 +805,7 @@ def atualizar_senha(
         )
 
     usuario.senha_hash = hash_senha(dados.nova_senha)
-    # O JWT armazena iat em segundos. A mesma precisão evita invalidar o novo
-    # token ao comparar com o instante em que as sessões anteriores expiram.
-    usuario.token_validos_apos = datetime.fromtimestamp(int(time.time()), tz=timezone.utc).replace(tzinfo=None)
+    usuario.token_validos_apos = datetime.now(timezone.utc).replace(tzinfo=None)
     registrar_auditoria(
         db,
         acao="senha_alterada",
@@ -801,8 +821,7 @@ def atualizar_senha(
     _salvar_cookie_de_sessao(response, token)
     return {
         "mensagem": "Senha alterada com sucesso.",
-        "access_token": token,
-        "token_type": "bearer",  # nosec
+        "autenticado": True,
     }
 
 
@@ -814,7 +833,6 @@ def anonimizar_meus_dados(
     db: Session = Depends(get_db),
     feedback_db: Session = Depends(get_feedback_db),
 ):
-    """Anonimiza dados pessoais sem apagar protocolos ou logs de auditoria."""
 
     if usuario.e_root_admin:
         registrar_auditoria(
@@ -852,9 +870,6 @@ def anonimizar_meus_dados(
         feedbacks_atendimento = anonimizar_feedbacks_atendimento(banco_feedback, usuario_id)
         feedbacks_legados = anonimizar_feedbacks_legados(db, usuario_id)
 
-        # Quando o módulo de feedback usa outro banco, os textos pessoais são
-        # descartados primeiro. Em seguida a conta e o log são confirmados no
-        # banco principal.
         if banco_feedback is not db:
             banco_feedback.commit()
 
@@ -883,7 +898,7 @@ def anonimizar_meus_dados(
             detail="Não foi possível concluir a anonimização. Nenhuma nova tentativa foi iniciada.",
         ) from erro
 
-    response.delete_cookie(key="jurishome_access_token", path="/")
+    apagar_cookies(response)
     return {
         "mensagem": "Dados pessoais anonimizados e sessão encerrada.",
         "registro_preservado": {
@@ -896,7 +911,6 @@ def anonimizar_meus_dados(
 
 @router.post("/auth/2fa/ativar-cadastro")
 def ativar_2fa_no_cadastro(dados: Codigo2FA, response: Response, db: Session = Depends(get_db)):
-    """Ativa o TOTP obrigatório e libera o primeiro acesso à conta."""
     try:
         usuario_uuid = decodificar_token_configuracao_2fa(dados.desafio_token)
     except ValueError as erro:
@@ -939,6 +953,8 @@ def ativar_2fa_no_cadastro(dados: Codigo2FA, response: Response, db: Session = D
             detail="Código inválido. Confira o aplicativo e ative data e hora automáticas no celular.",
         )
 
+    consumir_desafio(db, dados.desafio_token, usuario, "2fa_configuracao")
+    consumir_totp(db, usuario, segredo, dados.codigo, JANELA_TOTP)
     usuario.is_2fa_enabled = True
     usuario.tentativas_login_falhas = 0
     usuario.ultima_falha_login = None
@@ -953,11 +969,10 @@ def ativar_2fa_no_cadastro(dados: Codigo2FA, response: Response, db: Session = D
     )
     db.commit()
     token = criar_access_token(usuario, dados.lembrar_conectado)
-    _salvar_cookie_de_sessao(response, token, dados.lembrar_conectado)
+    _salvar_cookie_de_sessao(response, token, dados.lembrar_conectado, db)
     return {
         "mensagem": "Autenticação em duas etapas ativada.",
-        "access_token": token,
-        "token_type": "bearer",  
+        "autenticado": True,
         "usuario": serializar_usuario(usuario),
     }
 
@@ -965,10 +980,21 @@ def ativar_2fa_no_cadastro(dados: Codigo2FA, response: Response, db: Session = D
 @router.post("/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(
     response: Response,
+    request: Request,
     usuario: Usuario | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
-    response.delete_cookie(key="jurishome_access_token", path="/")
+    from model.models import RefreshToken, SessaoAutenticada
+    from auth.sessions import digest
+    registro = db.get(RefreshToken, digest(request.cookies.get("jurishome_refresh_token", "")))
+    if registro:
+        sessao = db.get(SessaoAutenticada, registro.sessao_id)
+        if usuario is None and sessao:
+            usuario = db.get(Usuario, sessao.usuario_id)
+        db.query(SessaoAutenticada).filter_by(id=registro.sessao_id).update({"revogada": True})
+    if usuario:
+        usuario.token_validos_apos = datetime.now(timezone.utc).replace(tzinfo=None)
+    apagar_cookies(response)
     registrar_auditoria(
         db,
         acao="logout",
@@ -978,3 +1004,11 @@ def logout(
         usuario=usuario,
         commit=True,
     )
+
+
+@router.post("/auth/refresh")
+def refresh(request: Request, response: Response, db: Session = Depends(get_db)):
+    acesso, renovacao, validade = renovar_sessao(db, request.cookies.get("jurishome_refresh_token"))
+    _salvar_cookie_de_sessao(response, acesso)
+    salvar_refresh(response, renovacao, validade)
+    return {"autenticado": True}

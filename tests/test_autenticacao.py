@@ -1,15 +1,19 @@
 import asyncio
+import base64
+import time
 import importlib.util
 import json
 import os
 import sys
 import unittest
+from datetime import datetime, timezone
 from io import BytesIO
 from http.cookies import SimpleCookie
 from types import ModuleType
 from unittest.mock import patch
 
 os.environ.setdefault("JurisHome_senha", "segredo-de-teste-jurishome-com-mais-de-32-bytes")
+os.environ.setdefault("TOTP_ENCRYPTION_KEY", base64.urlsafe_b64encode(b"t" * 32).decode("ascii"))
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -72,7 +76,7 @@ class AutenticacaoTests(unittest.TestCase):
 
         app.dependency_overrides[get_db] = banco_de_teste
         corpo = json.dumps(dados).encode("utf-8") if dados is not None else b""
-        cabecalhos = [(b"host", b"testserver"), (b"accept", b"text/html")]
+        cabecalhos = [(b"host", b"testserver"), (b"accept", b"text/html"), (b"origin", b"http://testserver")]
         if dados is not None:
             cabecalhos.append((b"content-type", b"application/json"))
         if token:
@@ -238,7 +242,7 @@ class AutenticacaoTests(unittest.TestCase):
             usuario,
             self.db,
         )
-        self.assertTrue(resultado["access_token"])
+        self.assertTrue(resultado["autenticado"])
         self.assertTrue(verificar_senha("NovaSenha456", usuario.senha_hash))
 
     def test_anonimizacao_remove_dados_e_preserva_rastreabilidade(self):
@@ -253,7 +257,7 @@ class AutenticacaoTests(unittest.TestCase):
             totp_secret="segredo-cifrado-de-teste",
             is_2fa_enabled=True,
             consentimento_lgpd=True,
-            data_consentimento=models.datetime.now(models.timezone.utc).replace(tzinfo=None),
+            data_consentimento=datetime.now(timezone.utc).replace(tzinfo=None),
             versao_termos="1.2",
         )
         atendimento = models.FeedbackAtendimento(
@@ -353,12 +357,13 @@ class AutenticacaoTests(unittest.TestCase):
         primeira_sessao = ativar_2fa_no_cadastro(
             Codigo2FA(
                 desafio_token=configuracao["configuracao_token"],
-                codigo=pyotp.TOTP(configuracao["segredo"]).now(),
+                codigo=pyotp.TOTP(configuracao["segredo"]).at(time.time() - 30),
             ),
             Response(),
             self.db,
         )
-        self.assertTrue(primeira_sessao["access_token"])
+        self.assertTrue(primeira_sessao["autenticado"])
+        self.assertNotIn("access_token", primeira_sessao)
         self.assertTrue(usuario.is_2fa_enabled)
         resposta_login = login(Credenciais(email="diego@example.com", senha="SenhaSegura123"), Response(), self.db)
         self.assertTrue(resposta_login["requer_2fa"])
@@ -371,7 +376,8 @@ class AutenticacaoTests(unittest.TestCase):
             Response(),
             self.db,
         )
-        self.assertTrue(sessao["access_token"])
+        self.assertTrue(sessao["autenticado"])
+        self.assertNotIn("access_token", sessao)
 
     @unittest.skipUnless(importlib.util.find_spec("pyotp"), "pyotp não está instalado")
     def test_bloqueia_brute_force_de_codigo_2fa_sem_resetar_no_login(self):
@@ -465,7 +471,7 @@ class AutenticacaoTests(unittest.TestCase):
             {"desafio_token": cadastro["configuracao_token"], "codigo": pyotp.TOTP(cadastro["segredo"]).now()},
         )
         self.assertEqual(200, codigo)
-        self.assertTrue(json.loads(corpo)["access_token"])
+        self.assertTrue(json.loads(corpo)["autenticado"])
         cookie_resposta = SimpleCookie()
         cookie_resposta.load(next(valor for chave, valor in headers if chave == "set-cookie"))
         cookie = f"jurishome_access_token={cookie_resposta['jurishome_access_token'].value}"
@@ -496,10 +502,10 @@ class AutenticacaoTests(unittest.TestCase):
 
         codigo, headers, corpo = self.requisicao_http(
             "POST", "/api/auth/2fa/validar",
-            {"desafio_token": login_pendente["desafio_token"], "codigo": pyotp.TOTP(cadastro["segredo"]).now()},
+            {"desafio_token": login_pendente["desafio_token"], "codigo": pyotp.TOTP(cadastro["segredo"]).at(time.time() + 30)},
         )
         self.assertEqual(200, codigo)
-        self.assertTrue(json.loads(corpo)["access_token"])
+        self.assertTrue(json.loads(corpo)["autenticado"])
         self.assertTrue(any(chave == "set-cookie" for chave, _ in headers))
 
     def test_favicon_nao_retorna_404(self):

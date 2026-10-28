@@ -46,7 +46,8 @@ class LgpdAuditoriaTests(unittest.TestCase):
         self.assertIn("lista não é personalizada", termos)
         self.assertIn("não oferece, nesta versão, telas para gerenciar contas", termos)
         self.assertIn("PostgreSQL", politica)
-        self.assertIn("não faz upload por integração Cloudinary", politica)
+        self.assertIn("codificadas em Base64", politica)
+        self.assertNotIn("Cloudinary", politica)
         self.assertNotIn("Render", politica)
         self.assertIn("Railway", politica)
         self.assertIn("e-MEC", politica)
@@ -123,7 +124,8 @@ class LgpdAuditoriaTests(unittest.TestCase):
     def test_auditoria_reutiliza_navegacao_administrativa(self):
         auditoria = (self.raiz / "templates" / "auditoria.html").read_text(encoding="utf-8")
         feedbacks = (self.raiz / "templates" / "admin-feedbacks.html").read_text(encoding="utf-8")
-        self.assertIn('/static/css/homeAdmin.css?v=20260925-1', auditoria)
+        self.assertIn('/static/css/auditoria.css?', auditoria)
+        self.assertNotIn('/static/css/homeAdmin.css', auditoria)
         self.assertIn('class="navbar audit-navbar"', auditoria)
         self.assertIn('href="/admin/auditoria" class="nav-link active"', auditoria)
         self.assertIn('id="btn-perfil"', auditoria)
@@ -164,9 +166,10 @@ class LgpdAuditoriaTests(unittest.TestCase):
         self.assertIn('className = "materia-linha"', script)
         self.assertIn('categoria.toLocaleLowerCase("pt-BR") === "direito trabalhista"', script)
         self.assertNotIn("materia.imagem_miniatura", script)
-        for nome in ("homeUsuario.js", "homeAdmin.js"):
+        for nome in ("homeUsuario.js",):
             script_home = (self.raiz / "static" / "js" / nome).read_text(encoding="utf-8")
             self.assertNotIn("aplicarImagem", script_home)
+        self.assertNotIn("aplicarImagem", administrador)
 
     def test_log_remove_campos_sensiveis_e_preserva_rastreabilidade(self):
         usuario = SimpleNamespace(uuid="usr-123", tipo_usuario=TipoUsuario.ADMINISTRADOR)

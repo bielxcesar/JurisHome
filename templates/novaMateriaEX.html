@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pré-visualização da Matéria - JurisHome</title>
+    <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
     <!-- Tailwind via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -49,7 +50,7 @@
     <!-- Metadados -->
     <div class="flex flex-wrap justify-between items-center border-b border-gray-700 pb-4 mb-8 text-sm text-gray-400 gap-2">
       <div>
-        <span>Divulgado por: <strong class="text-amber-500">Administrador</strong></span>
+        <span>Divulgado por: <strong id="ex-autor" class="text-amber-500">Administrador</strong></span>
         <span class="mx-2">•</span>
         <span id="data-criacao-materia">12/08/2026</span>
       </div>
@@ -69,109 +70,169 @@
       <!-- O texto e as imagens extras serão injetados aqui ordenadamente -->
     </article>
 
-    <!-- Rodapé e Tags -->
     <footer class="mt-16 border-t border-gray-700 pt-6">
-      <div class="flex flex-wrap gap-2 items-center mb-4">
+    <div class="flex flex-wrap gap-2 items-center mb-4">
+        <!-- Rótulo fixo -->
         <span class="font-bold text-sm text-white">Tags:</span>
-        <span class="bg-[#25262a] border border-gray-700 text-amber-500 px-3 py-1 rounded-full text-xs font-semibold">direito</span>
-        <span class="bg-[#25262a] border border-gray-700 text-amber-500 px-3 py-1 rounded-full text-xs font-semibold">noticia</span>
-        <span class="bg-[#25262a] border border-gray-700 text-amber-500 px-3 py-1 rounded-full text-xs font-semibold">juridico</span>
-      </div>
-      <div id="ex-rodape-fonte" class="text-xs text-gray-500"></div>
-    </footer>
+        
+        <!-- Container vazio onde o script vai injetar as tags dinâmicas baseadas na categoria -->
+        <div id="ex-tags-container" class="flex flex-wrap gap-2">
+            <!-- O JavaScript vai preencher os spans aqui automaticamente -->
+        </div>
+    </div>
+    
+    <!-- Rodapé da fonte -->
+    <div id="ex-rodape-fonte" class="text-xs text-gray-500"></div>
+</footer>
 
   </main>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // Data atual no header
+        // --- 1. CONFIGURAÇÃO DAS DATAS ---
+        const dataHoje = new Intl.DateTimeFormat("pt-BR").format(new Date());
+
         const elData = document.getElementById("data-atual");
-        if(elData) elData.textContent = new Intl.DateTimeFormat("pt-BR").format(new Date());
+        if(elData) elData.textContent = dataHoje;
 
-        // Dados vindos do localStorage
-        const dados = JSON.parse(localStorage.getItem('temp_materia_preview') || '{}');
+        let dados = {};
+        try { dados = JSON.parse(localStorage.getItem('temp_materia_preview') || '{}') || {}; } catch {}
+        function urlSegura(valor) {
+            try {
+                const url = new URL(valor, window.location.origin);
+                return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+            } catch { return ''; }
+        }
+        function imagemSegura(valor) {
+            if (typeof valor === 'string' && /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(valor)) {
+                return valor;
+            }
+            return urlSegura(valor);
+        }
 
-        // Preenche Títulos
-        document.getElementById('ex-titulo').textContent = dados.titulo || 'Título não informado';
-        document.getElementById('ex-subtitulo').textContent = dados.sub_titulo || '';
+        // CORRIGIDO O ID AQUI: de "ex-data-criacao" para "data-criacao-materia"
+        const elDataCriacao = document.getElementById("data-criacao-materia");
+        if(elDataCriacao) {
+            const dataDaMateria = dados.data_criacao || dados.data_publicacao || dataHoje;
+            elDataCriacao.textContent = dataDaMateria;
+        }
 
-        // Link da Fonte Original
+        // --- 2. CONFIGURAÇÃO DO AUTOR ---
+        // Ajustado para priorizar o nome que você criou ("Admin doidao") se não achar outro no navegador
+        const usuarioLogado = localStorage.getItem('nome_usuario') || 'Admin doidao';
+        const elAutor = document.getElementById('ex-autor');
+        if(elAutor) elAutor.textContent = usuarioLogado;
+
+        // --- 3. PREENCHIMENTO DE TÍTULOS E FONTES ---
+        const elTitulo = document.getElementById('ex-titulo');
+        if(elTitulo) elTitulo.textContent = dados.titulo || 'Título não informado';
+
+        const elSubtitulo = document.getElementById('ex-subtitulo');
+        if(elSubtitulo) elSubtitulo.textContent = dados.sub_titulo || '';
+
         const linkContainer = document.getElementById('ex-link-container');
         const rodapeFonte = document.getElementById('ex-rodape-fonte');
-        if (dados.fonte_original) {
+        if (dados.fonte_original && linkContainer && rodapeFonte) {
             try {
-                const host = new URL(dados.fonte_original).hostname;
-                linkContainer.innerHTML = `<span>Fonte original: <a href="${dados.fonte_original}" target="_blank" class="text-amber-500 underline hover:text-amber-400">${host}</a></span>`;
-                rodapeFonte.innerHTML = `Consulte a matéria fonte original: <a href="${dados.fonte_original}" target="_blank" class="text-amber-500 underline hover:text-amber-400">${dados.fonte_original}</a>`;
+                const endereco = urlSegura(dados.fonte_original);
+                if (!endereco) throw new Error('URL inválida');
+                for (const container of [linkContainer, rodapeFonte]) {
+                    const link = document.createElement('a');
+                    link.href = endereco;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    link.className = 'text-amber-500 underline hover:text-amber-400';
+                    link.textContent = new URL(endereco).hostname;
+                    container.replaceChildren(document.createTextNode('Fonte original: '), link);
+                }
             } catch {
-                linkContainer.innerHTML = `<span>Fonte original: <a href="${dados.fonte_original}" target="_blank" class="text-amber-500 underline hover:text-amber-400">Acessar Link</a></span>`;
+                linkContainer.textContent = 'Fonte original inválida.';
             }
         }
 
-        // Imagem Principal / Miniatura
+        // --- 4. GERAÇÃO DE TAGS DINÂMICAS POR CATEGORIA ---
+        const containerTags = document.getElementById('ex-tags-container');
+        if (containerTags) {
+            const tagsParaExibir = Array.isArray(dados.tags) ? dados.tags.filter(tag => typeof tag === 'string').slice(0, 30) : [];
+
+            // Cria o HTML das tags e insere na tela
+            containerTags.innerHTML = ''; // Limpa o container
+            tagsParaExibir.forEach(tag => {
+                const spanTag = document.createElement('span');
+                // Estilo da Tag usando Tailwind (Fundo escuro, texto ambar)
+                spanTag.className = "bg-[#25262a] border border-gray-700 text-amber-500 text-xs font-semibold px-3 py-1 rounded-full cursor-pointer hover:bg-gray-800 transition-colors";
+                spanTag.textContent = "#" + tag;
+                containerTags.appendChild(spanTag);
+            });
+        }
+
+        // --- 5. IMAGENS E TEXTO (Mantido do seu código original) ---
         const miniaturaUrl = dados.miniatura || dados.imagem_principal;
         const miniaturaFonte = dados.fonte_miniatura || dados.fonte_imagem_principal;
-        if (miniaturaUrl) {
-            document.getElementById('ex-img-principal').src = miniaturaUrl;
-            document.getElementById('container-img-principal').classList.remove('hidden');
-            if (miniaturaFonte) {
-                document.getElementById('ex-fonte-miniatura').textContent = "Imagem proporcionada por: " + miniaturaFonte;
+        const imgPrincipal = document.getElementById('ex-img-principal');
+        const containerImg = document.getElementById('container-img-principal');
+        const fonteMiniatura = document.getElementById('ex-fonte-miniatura');
+
+        if (miniaturaUrl && imgPrincipal && containerImg) {
+            imgPrincipal.src = imagemSegura(miniaturaUrl);
+            containerImg.classList.remove('hidden');
+            if (miniaturaFonte && fonteMiniatura) {
+                fonteMiniatura.textContent = "Imagem proporcionada por: " + miniaturaFonte;
             }
         }
 
-        // Coleta todas as imagens extras preenchidas
         const imagensExtras = [];
         if (dados.corpo_1) imagensExtras.push({ url: dados.corpo_1, fonte: dados.fonte_corpo_1 });
         if (dados.corpo_2) imagensExtras.push({ url: dados.corpo_2, fonte: dados.fonte_corpo_2 });
         if (dados.corpo_3) imagensExtras.push({ url: dados.corpo_3, fonte: dados.fonte_corpo_3 });
 
-        // Tratamento e distribuição inteligente do texto e das imagens
         const corpoArtigo = document.getElementById('ex-corpo-artigo');
-        const textoCompleto = dados.corpo_texto || 'Nenhum texto informado.';
-        
-        // Divide o texto por quebras de linha ou o fatia em pedaços proporcionais se for um bloco único muito longo
-        let pedacosTexto = textoCompleto.split('\n').filter(p => p.trim() !== '');
-        
-        if (pedacosTexto.length === 1 && textoCompleto.length > 300) {
-            // Se o usuário colou um texto corrido gigante sem enter, dividimos em blocos menores para intercalar
-            const tamanhoBloco = Math.ceil(textoCompleto.length / (imagensExtras.length + 1));
-            pedacosTexto = [];
-            for (let i = 0; i < textoCompleto.length; i += tamanhoBloco) {
-                pedacosTexto.push(textoCompleto.substring(i, i + tamanhoBloco));
-            }
-        } else if (pedacosTexto.length === 0) {
-            pedacosTexto = [textoCompleto];
-        }
-
-        // Renderiza o primeiro bloco de texto
-        const pInicial = document.createElement('p');
-        pInicial.className = "break-words whitespace-pre-line";
-        pInicial.textContent = pedacosTexto[0];
-        corpoArtigo.appendChild(pInicial);
-
-        // Intercala as imagens extras com os blocos seguintes de texto
-        imagensExtras.forEach((imgInfo, index) => {
-            // Insere a imagem
-            const figure = document.createElement('figure');
-            figure.className = "rounded-2xl overflow-hidden border border-gray-800 bg-[#25262a] my-8";
+        if (corpoArtigo) {
+            const textoCompleto = dados.corpo_texto || 'Nenhum texto informado.';
+            let pedacosTexto = textoCompleto.split('\n').filter(p => p.trim() !== '');
             
-            let htmlImg = `<img src="${imgInfo.url}" alt="Imagem complementar" class="w-full max-h-[400px] object-cover" />`;
-            if (imgInfo.fonte) {
-                htmlImg += `<figcaption class="p-3 text-xs text-gray-400 italic bg-[#25262a] border-t border-gray-800">Imagem proporcionada por: ${imgInfo.fonte}</figcaption>`;
+            if (pedacosTexto.length === 1 && textoCompleto.length > 300) {
+                const tamanhoBloco = Math.ceil(textoCompleto.length / (imagensExtras.length + 1));
+                pedacosTexto = [];
+                for (let i = 0; i < textoCompleto.length; i += tamanhoBloco) {
+                    pedacosTexto.push(textoCompleto.substring(i, i + tamanhoBloco));
+                }
+            } else if (pedacosTexto.length === 0) {
+                pedacosTexto = [textoCompleto];
             }
-            figure.innerHTML = htmlImg;
-            corpoArtigo.appendChild(figure);
 
-            // Insere o próximo bloco de texto correspondente (se houver)
-            const textoBloco = pedacosTexto[index + 1] || pedacosTexto[pedacosTexto.length - 1];
-            if (textoBloco && imagensExtras.length > index) {
-                const pExtra = document.createElement('p');
-                pExtra.className = "break-words whitespace-pre-line";
-                pExtra.textContent = textoBloco;
-                corpoArtigo.appendChild(pExtra);
-            }
-        });
+            const pInicial = document.createElement('p');
+            pInicial.className = "break-words whitespace-pre-line mb-4";
+            pInicial.textContent = pedacosTexto[0];
+            corpoArtigo.appendChild(pInicial);
+
+            imagensExtras.forEach((imgInfo, index) => {
+                const figure = document.createElement('figure');
+                figure.className = "rounded-2xl overflow-hidden border border-gray-800 bg-[#25262a] my-8";
+                
+                const imagem = document.createElement('img');
+                imagem.src = imagemSegura(imgInfo.url);
+                imagem.alt = 'Imagem complementar';
+                imagem.className = 'w-full max-h-[400px] object-cover';
+                figure.appendChild(imagem);
+                if (imgInfo.fonte) {
+                    const legenda = document.createElement('figcaption');
+                    legenda.className = 'p-3 text-xs text-gray-400 italic bg-[#25262a] border-t border-gray-800';
+                    legenda.textContent = 'Imagem proporcionada por: ' + imgInfo.fonte;
+                    figure.appendChild(legenda);
+                }
+                corpoArtigo.appendChild(figure);
+
+                const textoBloco = pedacosTexto[index + 1] || pedacosTexto[pedacosTexto.length - 1];
+                if (textoBloco && imagensExtras.length > index) {
+                    const pExtra = document.createElement('p');
+                    pExtra.className = "break-words whitespace-pre-line mb-4";
+                    pExtra.textContent = textoBloco;
+                    corpoArtigo.appendChild(pExtra);
+                }
+            });
+        }
     });
-  </script>
+</script>
 </body>
 </html>

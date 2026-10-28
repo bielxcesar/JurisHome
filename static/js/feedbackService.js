@@ -31,7 +31,9 @@
 
         const corpo = await resposta.json().catch(() => ({}));
         if (!resposta.ok) {
-            const detalhe = typeof corpo.detail === "string" ? corpo.detail : "Nao foi possivel concluir a operacao.";
+            const detalhe = typeof corpo.detail === "string" ? corpo.detail
+                : Array.isArray(corpo.detail) ? corpo.detail.map(item => item.msg.replace(/^Value error, /, '')).join(' ')
+                : "Não foi possível concluir a operação.";
             throw new Error(detalhe);
         }
         return corpo;
@@ -65,6 +67,10 @@
             body: JSON.stringify(dados),
         });
         return atualizarCache(feedback);
+    }
+
+    async function listarMeus() {
+        return requisitar("/api/feedbacks/me");
     }
 
     async function alterarStatus(id, status) {
@@ -120,6 +126,7 @@
         listar,
         buscarPorId,
         criar,
+        listarMeus,
         alterarStatus,
         alterarPrioridade,
         responder,

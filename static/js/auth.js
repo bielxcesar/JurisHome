@@ -430,7 +430,7 @@
     }
 
     function concluirLogin(resposta) {
-        if (!resposta.access_token || !resposta.usuario?.tipo_usuario) {
+        if (!resposta.autenticado || !resposta.usuario?.tipo_usuario) {
             throw new Error("A autenticação não foi concluída. Tente novamente.");
         }
         localStorage.removeItem(TOKEN_KEY);

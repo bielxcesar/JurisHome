@@ -5,9 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Painel inicial do JurisHome com matérias organizadas por categoria">
     <title>Início | JurisHome</title>
+    <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
     <!-- Tailwind via CDN para padronização -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
 </head>
 <body class="bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
 
@@ -245,15 +247,17 @@
             function preencherCard(card, categoriaId, tituloId, materia, imgId) {
                 card.dataset.conteudoId = materia.uuid;
                 
-                // MUDANÇA AQUI: Agora ele puxa a categoria exata ou preenche com "Geral" se estiver em branco
+                // Exibe a categoria correta ou "Geral"
                 document.getElementById(categoriaId).textContent = materia.categoria || "Geral";
-                
                 document.getElementById(tituloId).textContent = materia.titulo;
 
                 const imagemFundo = document.getElementById(imgId);
                 if (imagemFundo) {
-                    if (materia.imagem_miniatura) {
-                        imagemFundo.src = materia.imagem_miniatura;
+                    // Verifica vários nomes possíveis que o backend pode usar para a imagem
+                    const urlImagem = materia.imagem_miniatura || materia.imagem || materia.imagem_url || materia.url_imagem || materia.capa || materia.foto;
+
+                    if (urlImagem) {
+                        imagemFundo.src = urlImagem;
                         imagemFundo.classList.remove("hidden");
                     } else {
                         imagemFundo.src = "";

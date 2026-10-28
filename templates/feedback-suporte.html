@@ -5,16 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Canal direto de opiniões e suporte do JurisHome">
     <title>Feedback e Suporte | JurisHome</title>
+    <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/homeAdmin.css?v=20260925-1">
-    <link rel="stylesheet" href="/static/css/figma-app.css?v=20260925-2">
-    <link rel="stylesheet" href="/static/css/feedbacks.css?v=20260913-2">
+    <link rel="stylesheet" href="/static/css/feedbacks.css?v=20261028-2">
     <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+    <link rel="stylesheet" href="/static/css/feedback-history.css?v=20261028-1">
+    <link rel="stylesheet" href="/static/css/juris-ui.css?v=20261028-1">
 </head>
-<body class="feedback-shell">
+<body class="juris-ui feedback-shell">
     <a class="feedback-skip-link" href="#conteudo-principal">Ir para o conteúdo</a>
 
-    <header class="navbar feedback-navbar">
+    <header data-juris-navbar class="navbar feedback-navbar">
         <div class="nav-data" id="data-atual" aria-label="Data atual">--/--/----</div>
 
         <nav class="nav-menu" aria-label="Navegação principal">
@@ -117,12 +118,13 @@
             </section>
 
         </div>
+        {% include "_feedback_history.html" %}
     </main>
 
     <div class="feedback-toast" id="feedback-user-toast" role="status" aria-live="polite" hidden></div>
 
     {% include "_legal_links.html" %}
-    <script src="/static/js/feedbackService.js?v=20260927-1"></script>
-    <script src="/static/js/feedbackUsuario.js?v=20260913-3"></script>
+    <script src="/static/js/feedbackService.js?v=20261028-2"></script>
+    <script src="/static/js/feedbackUsuario.js?v=20261028-2"></script>
 </body>
 </html>

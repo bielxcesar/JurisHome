@@ -1,114 +1,43 @@
-(function aplicarTemaInicial() {
-  const temaSalvo = localStorage.getItem("tema_juris");
-  
-  if (temaSalvo === "claro") {
-    document.body?.classList.add("modo-claro");
-    document.documentElement.classList.remove("dark");
-    document.documentElement.setAttribute("data-theme", "light");
-  } else {
-    document.body?.classList.remove("modo-claro");
-    document.documentElement.classList.add("dark");
-    document.documentElement.setAttribute("data-theme", "dark");
-  }
+(() => {
+    'use strict';
+    function iniciar() {
+        document.body.classList.toggle('modo-claro', document.documentElement.dataset.theme === 'light');
+        const data = document.getElementById('data-atual');
+        if (data) data.textContent = new Intl.DateTimeFormat('pt-BR').format(new Date());
+        const botao = document.getElementById('btn-perfil');
+        const menu = document.getElementById('dropdown-perfil');
+        function fecharMenu() { menu.hidden = true; botao.setAttribute('aria-expanded', 'false'); }
+        botao.addEventListener('click', () => { menu.hidden = !menu.hidden; botao.setAttribute('aria-expanded', String(!menu.hidden)); });
+        document.addEventListener('click', evento => { if (!menu.contains(evento.target) && !botao.contains(evento.target)) fecharMenu(); });
+        document.addEventListener('keydown', evento => { if (evento.key === 'Escape' && !menu.hidden) { fecharMenu(); botao.focus(); } });
+        const copiar = document.getElementById('btn-copiar-link');
+        const mensagem = document.getElementById('msg-copiado');
+        copiar.addEventListener('click', async () => {
+            copiar.disabled = true;
+            try {
+                const endereco = new URL(location.href); endereco.hash = '';
+                await navigator.clipboard.writeText(endereco.href);
+                mensagem.textContent = 'Link copiado!';
+            } catch { mensagem.textContent = 'O navegador não permitiu copiar. Copie o endereço na barra do navegador.'; }
+            finally { mensagem.hidden = false; copiar.disabled = false; }
+        });
+        let tamanho = 18;
+        const diminuir = document.getElementById('materia-font-decrease');
+        const aumentar = document.getElementById('materia-font-increase');
+        function ajustar(valor) {
+            tamanho = Math.max(16, Math.min(24, tamanho + valor));
+            document.body.style.setProperty('--materia-reading-size', `${tamanho}px`);
+            diminuir.disabled = tamanho === 16;
+            aumentar.disabled = tamanho === 24;
+        }
+        diminuir.addEventListener('click', () => ajustar(-2));
+        aumentar.addEventListener('click', () => ajustar(2));
+        document.querySelectorAll('.btn-desconectar').forEach(link => link.addEventListener('click', async evento => {
+            evento.preventDefault();
+            try { const resposta = await fetch('/api/auth/logout', {method: 'POST', credentials: 'same-origin'}); if (!resposta.ok) throw new Error(); location.assign('/'); }
+            catch { const alerta = document.getElementById('materia-alert'); alerta.textContent = 'Não foi possível encerrar a sessão. Tente novamente.'; alerta.hidden = false; alerta.scrollIntoView({block: 'nearest'}); }
+        }));
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar, {once: true});
+    else iniciar();
 })();
-
-document.addEventListener("DOMContentLoaded", () => {
-  carregarTemaSalvo();
-  exibirDataAtual();
-  configurarMenuPerfil();
-  configurarLinksExternos();
-  configurarSaida();
-});
-
-function carregarTemaSalvo() {
-  const temaSalvo = localStorage.getItem("tema_juris");
-
-  if (temaSalvo === "claro") {
-    document.body.classList.add("modo-claro");
-    document.documentElement.classList.remove("dark");
-    document.documentElement.setAttribute("data-theme", "light");
-  } else {
-    document.body.classList.remove("modo-claro");
-    document.documentElement.classList.add("dark");
-    document.documentElement.setAttribute("data-theme", "dark");
-  }
-}
-
-function exibirDataAtual() {
-  const dataElemento = document.getElementById("data-atual");
-  if (dataElemento) {
-    const hoje = new Date();
-    dataElemento.textContent = hoje.toLocaleDateString("pt-BR");
-  }
-}
-
-function configurarMenuPerfil() {
-  const btnPerfil = document.getElementById("btn-perfil");
-  const dropdownPerfil = document.getElementById("dropdown-perfil");
-
-  if (!btnPerfil || !dropdownPerfil) return;
-
-  btnPerfil.addEventListener("click", (e) => {
-    e.stopPropagation();
-    
-    const estaOculto = dropdownPerfil.classList.contains("hidden");
-
-    if (estaOculto) {
-      dropdownPerfil.classList.remove("hidden");
-      dropdownPerfil.classList.add("ativo", "active", "block");
-    } else {
-      dropdownPerfil.classList.add("hidden");
-      dropdownPerfil.classList.remove("ativo", "active", "block");
-    }
-  });
-
-  document.addEventListener("click", (e) => {
-    if (!dropdownPerfil.contains(e.target) && !btnPerfil.contains(e.target)) {
-      dropdownPerfil.classList.add("hidden");
-      dropdownPerfil.classList.remove("ativo", "active", "block");
-    }
-  });
-}
-
-function configurarLinksExternos() {
-  const linksExternos = document.querySelectorAll('a[href^="http"]');
-  linksExternos.forEach((link) => {
-    link.setAttribute("target", "_blank");
-    link.setAttribute("rel", "noopener noreferrer");
-  });
-}
-
-configurarBotaoCopiarLink();
-
-function configurarBotaoCopiarLink() {
-  const btnCopiar = document.getElementById("btn-copiar-link");
-  const msgCopiado = document.getElementById("msg-copiado");
-
-  if (!btnCopiar || !msgCopiado) return;
-
-  btnCopiar.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      
-      msgCopiado.classList.remove("hidden");
-
-      setTimeout(() => {
-        msgCopiado.classList.add("hidden");
-      }, 3000);
-    } catch (err) {
-      console.error("Erro ao copiar o link: ", err);
-    }
-  });
-}
-
-function configurarSaida() {
-  document.querySelectorAll(".btn-desconectar").forEach((link) => {
-    link.addEventListener("click", (evento) => {
-      evento.preventDefault();
-      localStorage.removeItem("jurishome_access_token");
-      sessionStorage.removeItem("jurishome_desafio_2fa");
-      fetch("/api/auth/logout", { method: "POST" })
-        .finally(() => { window.location.href = "/"; });
-    });
-  });
-}

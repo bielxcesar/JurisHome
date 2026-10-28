@@ -2,10 +2,13 @@ import os
 
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.exception_handlers import http_exception_handler
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
+from urllib.parse import urlsplit
+from urllib.parse import quote
 from fastapi.staticfiles import StaticFiles
 
-from database import engine
+from database import engine, SessionLocal
+from services.categorias import garantir_categorias, corrigir_vinculos_legados
 from feedback_database import criar_tabela_feedback
 from model.models import Base, Usuario, Conteudo, Categoria, StatusConteudo
 from auth.security import get_current_admin
@@ -13,9 +16,29 @@ from routes import auth, paginas, admin, auditoria, conteudos, glossario, feedba
 from services.auditoria import iniciar_contexto_auditoria, finalizar_contexto_auditoria
 
 Base.metadata.create_all(bind=engine)
+with SessionLocal() as db_catalogo:
+    garantir_categorias(db_catalogo)
+    corrigir_vinculos_legados(db_catalogo)
 criar_tabela_feedback()
 
 app = FastAPI(title="JurisHome")
+
+
+@app.middleware("http")
+async def validar_origem_requisicao(request: Request, call_next):
+    """Bloqueia operações de escrita iniciadas por outras origens."""
+    if request.method not in {"GET", "HEAD", "OPTIONS"}:
+        origem = request.headers.get("origin") or request.headers.get("referer")
+        esperada = urlsplit(os.getenv("PUBLIC_ORIGIN") or str(request.base_url))
+        recebida = urlsplit(origem) if origem else None
+        if (
+            request.headers.get("sec-fetch-site") == "cross-site"
+            or (recebida and (recebida.scheme, recebida.netloc) != (esperada.scheme, esperada.netloc))
+            or ((request.cookies.get("jurishome_access_token") or request.cookies.get("jurishome_refresh_token")) and not origem
+                and request.headers.get("sec-fetch-site") != "same-origin")
+        ):
+            return JSONResponse(status_code=403, content={"detail": "Origem da requisição não permitida."})
+    return await call_next(request)
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -45,7 +68,7 @@ async def adicionar_cabecalhos_seguranca(request: Request, call_next):
         "camera=(), geolocation=(), microphone=()",
     )
 
-    if request.url.path.startswith(("/api/auth/", "/api/usuarios/me")):
+    if request.url.path.startswith(("/api/auth/", "/api/usuarios/me", "/api/admin/", "/admin/auditoria", "/admin/tabela-noticias")):
         response.headers["Cache-Control"] = "no-store, max-age=0"
         response.headers["Pragma"] = "no-cache"
     return response
@@ -58,10 +81,13 @@ async def tratar_erro_http(request: Request, erro: HTTPException):
         "/configuracoes-usuario", "/templates/confUsuario.html",
         "/home_admin", "/configuracao", "/admin-feedbacks", "/admin/auditoria",
         "/exibir-mais", "/categorias",
+        "/perfil", "/pesquisa", "/feedback",
     }
     if erro.status_code == 401 and (
         request.url.path in paginas_protegidas or request.url.path.startswith("/materia/")
     ):
+        if request.cookies.get("jurishome_refresh_token"):
+            return RedirectResponse(url="/renovar-sessao?destino=" + quote(request.url.path, safe=""), status_code=303)
         resposta = RedirectResponse(url="/?sessao=expirada", status_code=303)
         resposta.delete_cookie(key="jurishome_access_token", path="/")
         return resposta
@@ -69,10 +95,7 @@ async def tratar_erro_http(request: Request, erro: HTTPException):
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# A autorização administrativa permanece ligada por padrão. Só desative
-# explicitamente em uma demonstração local, nunca em produção.
-exigir_auth_admin = os.getenv("REQUIRE_ADMIN_AUTH", "true").lower() == "true"
-admin_dependencies = [Depends(get_current_admin)] if exigir_auth_admin else []
+admin_dependencies = [Depends(get_current_admin)]
 
 app.include_router(paginas.router)
 app.include_router(auth.router)

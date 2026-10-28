@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nova Matéria - JurisHome</title>
+    <script defer src="/static/js/session.js?v=20261028-1"></script>
+    <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -45,9 +47,16 @@
                 <label for="categoria_id" class="w-32 text-right">Categoria:*</label>
                 <select id="categoria_id" required class="flex-1 bg-[#1e1e1e] border rounded border-gray-500 p-2 text-white focus:outline-none focus:border-[#F59E0B]">
                     <option value="" disabled selected>Selecione uma categoria</option>
-                    <option value="ID_DIREITO_TRABALHISTA">Direito Trabalhista</option>
-                    <option value="ID_DIREITO_PENAL">Direito Penal</option>
+                    {% for categoria in categorias %}
+                    <option value="{{ categoria.uuid }}">{{ categoria.nome }}{% if categoria.nome == 'Direito Penal' %} (Criminal){% endif %}</option>
+                    {% endfor %}
                 </select>
+            </div>
+
+            <div class="flex items-start gap-4">
+                <span id="tags-materia-label" class="w-32 text-right text-sm text-gray-300">Tags automáticas:</span>
+                <div class="flex-1"><div id="tags-materia-preview" class="flex flex-wrap gap-2" role="group" aria-labelledby="tags-materia-label" aria-live="polite"><span class="text-sm text-gray-400">Selecione uma categoria para ver as tags.</span></div>
+                <p class="text-xs text-gray-400 mt-2">Essas tags serão salvas com a matéria e exibidas ao final do conteúdo.</p></div>
             </div>
 
             <div class="flex items-center gap-4">
@@ -163,12 +172,34 @@
             </div>
         </form>
 
-        <!-- Div de feedback para mensagens de retorno na tela -->
         <div id="mensagem-retorno" class="mt-4 text-center font-bold hidden"></div>
     </div>
 
+    <script id="categorias-tags" type="application/json">{{ tags_por_categoria | tojson }}</script>
     <script>
-        // Função para exibir o preview visual imediato da imagem selecionada
+        const tagsPorCategoria = JSON.parse(document.getElementById('categorias-tags').textContent);
+        function tagsSelecionadas() {
+            return tagsPorCategoria[document.getElementById('categoria_id').value] || [];
+        }
+        function atualizarTagsCategoria() {
+            const area = document.getElementById('tags-materia-preview');
+            area.replaceChildren();
+            const tags = tagsSelecionadas();
+            if (!tags.length) {
+                const aviso = document.createElement('span');
+                aviso.className = 'text-sm text-gray-400';
+                aviso.textContent = 'Selecione uma categoria com tags predefinidas.';
+                area.append(aviso);
+            }
+            tags.forEach(tag => {
+                const elemento = document.createElement('span');
+                elemento.className = 'bg-amber-500/10 border border-amber-500/40 text-amber-400 text-xs px-3 py-1 rounded-full';
+                elemento.textContent = tag;
+                area.append(elemento);
+            });
+        }
+        document.getElementById('categoria_id').addEventListener('change', atualizarTagsCategoria);
+        atualizarTagsCategoria();
         function mostrarPreviewCaixa(inputElement, previewId, textoId) {
             const previewContainer = document.getElementById(previewId);
             const textoContainer = document.getElementById(textoId);
@@ -188,16 +219,17 @@
             }
         }
 
-        // Função de compressão otimizada
         async function comprimirImagem(inputElement) {
-            return new Promise((resolve) => {
+            return new Promise((resolve, reject) => {
                 if (!inputElement || !inputElement.files || !inputElement.files[0]) {
-                    return resolve('');
+                    return resolve(null); // MUITO IMPORTANTE: Retorna null em vez de '' se não houver foto
                 }
                 const file = inputElement.files[0];
                 const reader = new FileReader();
+                reader.onerror = () => reject(new Error('Não foi possível ler a imagem.'));
                 reader.onload = (e) => {
                     const img = new Image();
+                    img.onerror = () => reject(new Error('O arquivo selecionado não é uma imagem válida.'));
                     img.src = e.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
@@ -230,16 +262,14 @@
             });
         }
 
-        // Envio do formulário via fetch com validação das fontes de imagem
         document.addEventListener('DOMContentLoaded', () => {
             const formNovaMateria = document.getElementById('form-nova-materia');
             const msgRetorno = document.getElementById('mensagem-retorno');
 
             if (formNovaMateria) {
                 formNovaMateria.addEventListener('submit', async (e) => {
-                    e.preventDefault(); // Impede o recarregamento padrão da página
+                    e.preventDefault(); 
 
-                    // Mapeia os pares de inputs de imagem e suas respectivas fontes
                     const paresImagens = [
                         { input: document.getElementById('input_miniatura'), fonte: document.getElementById('fonte_miniatura'), nome: 'Miniatura (Principal)' },
                         { input: document.getElementById('input_corpo_1'), fonte: document.getElementById('fonte_corpo_1'), nome: 'Imagem no Corpo 1' },
@@ -247,7 +277,6 @@
                         { input: document.getElementById('input_corpo_3'), fonte: document.getElementById('fonte_corpo_3'), nome: 'Imagem no Corpo 3' }
                     ];
 
-                    // Valida se cada imagem anexada possui a sua respectiva fonte preenchida
                     for (let par of paresImagens) {
                         if (par.input && par.input.files && par.input.files.length > 0) {
                             if (!par.fonte || !par.fonte.value.trim()) {
@@ -262,7 +291,6 @@
                     msgRetorno.className = "mt-4 text-center font-bold text-amber-500 block";
 
                     try {
-                        // Comprime todas as imagens antes de enviar
                         const miniaturaComprimida = await comprimirImagem(document.getElementById('input_miniatura'));
                         const corpo1Comprimida = await comprimirImagem(document.getElementById('input_corpo_1'));
                         const corpo2Comprimida = await comprimirImagem(document.getElementById('input_corpo_2'));
@@ -272,26 +300,23 @@
                             titulo: document.getElementById('titulo').value,
                             sub_titulo: document.getElementById('sub_titulo').value,
                             categoria_id: document.getElementById('categoria_id').value,
+                            tags: tagsSelecionadas().join(', '),
                             tipo_fonte: document.getElementById('tipo_fonte').value,
                             corpo_texto: document.getElementById('corpo_texto').value,
                             resumo_home: document.getElementById('resumo_home').value,
                             fonte_original: document.getElementById('fonte_original').value,
                             
-                            miniatura: miniaturaComprimida,
-                            fonte_miniatura: document.getElementById('fonte_miniatura')?.value || '',
+                            // Agora o Python vai receber os base64 bonitinhos ou null!
+                            imagem_miniatura: miniaturaComprimida,
+                            fonte_imagem: document.getElementById('fonte_miniatura')?.value || null,
                             
-                            corpo_1: corpo1Comprimida,
-                            fonte_corpo_1: document.getElementById('fonte_corpo_1')?.value || '',
-                            
-                            corpo_2: corpo2Comprimida,
-                            fonte_corpo_2: document.getElementById('fonte_corpo_2')?.value || '',
-                            
-                            corpo_3: corpo3Comprimida,
-                            fonte_corpo_3: document.getElementById('fonte_corpo_3')?.value || ''
+                            imagem_corpo: corpo1Comprimida,
+                            imagem_extra_2: corpo2Comprimida,
+                            imagem_extra_3: corpo3Comprimida
                         };
 
-                        // Realiza o envio via fetch incluindo credenciais/cookies de admin
-                        const resposta = await fetch('/api/materia', {
+                        const resposta = await fetch('/criar-materia', {
+                            method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
                             },
@@ -303,6 +328,7 @@
                             msgRetorno.textContent = "Matéria cadastrada com sucesso!";
                             msgRetorno.className = "mt-4 text-center font-bold text-green-500 block";
                             formNovaMateria.reset();
+                            atualizarTagsCategoria();
                             setTimeout(() => { window.location.href = '/home_admin'; }, 2000);
                         } else {
                             const erroData = await resposta.json().catch(() => ({}));
@@ -317,7 +343,6 @@
                 });
             }
 
-            // Evento de clique do botão de pré-visualização
             const btnPreview = document.getElementById('btn-preview');
             if (btnPreview) {
                 btnPreview.addEventListener('click', async () => {
@@ -326,9 +351,14 @@
                     const corpo2Comprimida = await comprimirImagem(document.getElementById('input_corpo_2'));
                     const corpo3Comprimida = await comprimirImagem(document.getElementById('input_corpo_3'));
 
+                    const comboCategoria = document.getElementById('categoria_id');
+                    const nomeCategoria = comboCategoria.options[comboCategoria.selectedIndex]?.text || '';
+
                     const dadosMateria = {
                         titulo: document.getElementById('titulo').value,
                         sub_titulo: document.getElementById('sub_titulo').value,
+                        categoria: nomeCategoria, 
+                        tags: tagsSelecionadas(),
                         corpo_texto: document.getElementById('corpo_texto').value,
                         fonte_original: document.getElementById('fonte_original').value,
                         
@@ -347,7 +377,9 @@
 
                     try {
                         localStorage.setItem('temp_materia_preview', JSON.stringify(dadosMateria));
-                        window.open('/preview-materia', '_blank');
+                        
+                        // Rota corrigida para bater com o teu FastAPI
+                        window.open('/nova-materia-ex', '_blank');
                     } catch (e) {
                         alert("O tamanho dos arquivos excede o limite. Tente usar imagens menores.");
                         console.error(e);

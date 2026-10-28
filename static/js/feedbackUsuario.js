@@ -14,6 +14,8 @@
         preencherDataAtual();
         configurarMenuPerfil();
         configurarFormulario();
+        document.getElementById("feedback-history-refresh")?.addEventListener("click", carregarHistorico);
+        carregarHistorico();
     }
 
     function aplicarTemaSalvo() {
@@ -29,6 +31,14 @@
         const botao = document.getElementById("btn-perfil");
         const menu = document.getElementById("dropdown-perfil");
         if (!botao || !menu) return;
+        document.querySelectorAll(".btn-desconectar").forEach(link => link.addEventListener("click", async evento => {
+            evento.preventDefault();
+            try {
+                const resposta = await window.fetch('/api/auth/logout', {method: 'POST'});
+                if (!resposta.ok) throw new Error();
+                window.location.assign('/');
+            } catch { window.alert('Não foi possível encerrar a sessão. Tente novamente.'); }
+        }));
 
         const fecharMenu = () => {
             menu.classList.remove("ativo");
@@ -71,7 +81,10 @@
             if (tipo.value) limparErro(tipo, "erro-tipo");
         });
 
-        radios.forEach((radio) => radio.addEventListener("change", atualizarEstrelas));
+        radios.forEach((radio) => {
+            radio.setAttribute('aria-label', `${radio.value} estrela(s)`);
+            radio.addEventListener("change", atualizarEstrelas);
+        });
         form.addEventListener("submit", enviarFeedback);
     }
 
@@ -83,6 +96,7 @@
         const selecionado = Number(document.querySelector('input[name="avaliacao"]:checked')?.value || 0);
         document.querySelectorAll(".feedback-stars label").forEach((rotulo, indice) => {
             rotulo.classList.toggle("is-selected", indice < selecionado);
+            rotulo.classList.toggle("selecionada", indice < selecionado);
         });
     }
 
@@ -128,6 +142,7 @@
     function definirErro(campo, erroId, mensagem) {
         campo.setAttribute("aria-invalid", "true");
         document.getElementById(erroId).textContent = mensagem;
+        campo.setAttribute("aria-describedby", erroId);
     }
 
     function limparErro(campo, erroId) {
@@ -140,11 +155,14 @@
         const sucesso = document.getElementById("feedback-sucesso");
         const erroGeral = document.getElementById("feedback-erro-geral");
         sucesso.hidden = true;
+        sucesso.classList.add("hidden");
         erroGeral.hidden = true;
+        erroGeral.classList.add("hidden");
         if (!validarFormulario()) return;
 
         const form = evento.currentTarget;
         const botao = document.getElementById("feedback-enviar");
+        if (botao.disabled) return;
         const textoBotao = botao.querySelector(".feedback-button-text");
         botao.disabled = true;
         botao.classList.add("is-loading");
@@ -164,14 +182,66 @@
             atualizarEstrelas();
             sucesso.textContent = `Feedback enviado! Protocolo: ${criado.protocolo}.`;
             sucesso.hidden = false;
+            sucesso.classList.remove("hidden");
             sucesso.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            await carregarHistorico();
         } catch (erro) {
             erroGeral.textContent = erro.message || "Não foi possível enviar agora. Tente de novo.";
             erroGeral.hidden = false;
+            erroGeral.classList.remove("hidden");
         } finally {
             botao.disabled = false;
             botao.classList.remove("is-loading");
             textoBotao.textContent = "Enviar feedback";
+        }
+    }
+
+    let carregandoHistorico = false;
+    async function carregarHistorico() {
+        const lista = document.getElementById('feedback-history-list');
+        if (!lista || carregandoHistorico) return;
+        carregandoHistorico = true;
+        const estado = document.getElementById('feedback-history-state');
+        const botao = document.getElementById('feedback-history-refresh');
+        botao.disabled = true;
+        lista.setAttribute('aria-busy', 'true');
+        estado.textContent = 'Carregando seus atendimentos…';
+        try {
+            const registros = await service.listarMeus();
+            lista.replaceChildren();
+            registros.forEach(feedback => {
+                const detalhes = document.createElement('details');
+                detalhes.className = 'feedback-history-item';
+                const resumo = document.createElement('summary');
+                resumo.textContent = `${feedback.protocolo} · ${feedback.assunto} — ${feedback.status}`;
+                detalhes.append(resumo);
+                const original = document.createElement('p');
+                original.textContent = feedback.mensagem;
+                detalhes.append(original);
+                (feedback.respostas || []).forEach(resposta => {
+                    const artigo = document.createElement('article');
+                    artigo.className = 'feedback-history-response';
+                    const autor = document.createElement('strong');
+                    autor.textContent = resposta.autor || 'Equipe JurisHome';
+                    const texto = document.createElement('p');
+                    texto.textContent = resposta.mensagem;
+                    artigo.append(autor, texto);
+                    detalhes.append(artigo);
+                });
+                if (!feedback.respostas?.length) {
+                    const espera = document.createElement('small');
+                    espera.textContent = 'Aguardando resposta da equipe.';
+                    detalhes.append(espera);
+                }
+                lista.append(detalhes);
+            });
+            estado.textContent = registros.length ? `${registros.length} atendimento(s). Abra um protocolo para ver as respostas.` : 'Você ainda não enviou nenhum feedback.';
+        } catch (erro) {
+            estado.textContent = `${erro.message} Use Atualizar para tentar novamente.`;
+        } finally {
+            lista.setAttribute('aria-busy', 'false');
+            botao.disabled = false;
+            carregandoHistorico = false;
         }
     }
 })();

@@ -2,6 +2,12 @@
     "use strict";
 
     const elementos = {};
+    const LIMITE = 25;
+    let deslocamento = 0;
+    let snapshot = null;
+    let consultaAplicada = {};
+    let controlador;
+    let sequencia = 0;
 
     document.addEventListener("DOMContentLoaded", () => {
         aplicarTemaSalvo();
@@ -21,18 +27,20 @@
 
         elementos.form.addEventListener("submit", (evento) => {
             evento.preventDefault();
-            carregar();
+            aplicarFiltros();
         });
-        document.getElementById("audit-refresh").addEventListener("click", carregar);
+        document.getElementById("audit-refresh").addEventListener("click", () => { deslocamento = 0; snapshot = null; carregar(); });
         document.getElementById("audit-clear").addEventListener("click", () => {
             elementos.form.reset();
-            carregar();
+            aplicarFiltros();
         });
-        carregar();
+        document.getElementById('audit-previous').addEventListener('click', () => { deslocamento = Math.max(0, deslocamento - LIMITE); carregar(); });
+        document.getElementById('audit-next').addEventListener('click', () => { deslocamento += LIMITE; carregar(); });
+        aplicarFiltros();
     });
 
     function aplicarTemaSalvo() {
-        document.body.classList.toggle("modo-claro", window.localStorage.getItem("tema_juris") === "claro");
+        try { document.body.classList.toggle("modo-claro", window.localStorage.getItem("tema_juris") === "claro"); } catch {}
     }
 
     function preencherDataAtual() {
@@ -64,32 +72,64 @@
 
     function configurarSaida() {
         document.querySelectorAll(".btn-desconectar").forEach((link) => {
-            link.addEventListener("click", (evento) => {
+            link.addEventListener("click", async (evento) => {
                 evento.preventDefault();
-                window.localStorage.removeItem("jurishome_access_token");
-                window.sessionStorage.removeItem("jurishome_desafio_2fa");
-                window.fetch("/api/auth/logout", { method: "POST" })
-                    .finally(() => { window.location.href = "/"; });
+                try {
+                    const resposta = await window.fetch("/api/auth/logout", { method: "POST" });
+                    if (!resposta.ok) throw new Error();
+                    window.location.assign('/');
+                } catch {
+                    elementos.alerta.textContent = 'Não foi possível encerrar a sessão. Tente novamente.';
+                    elementos.alerta.hidden = false;
+                }
             });
         });
     }
 
+    function aplicarFiltros() {
+        const inicio = document.getElementById('audit-start').value;
+        const fim = document.getElementById('audit-end').value;
+        if (inicio && fim && inicio > fim) {
+            elementos.alerta.textContent = 'A data inicial deve ser anterior ou igual à data final.';
+            elementos.alerta.hidden = false;
+            document.getElementById('audit-end').focus();
+            return;
+        }
+        consultaAplicada = {};
+        if (elementos.busca.value.trim()) consultaAplicada.busca = elementos.busca.value.trim();
+        if (elementos.acao.value) consultaAplicada.acao = elementos.acao.value;
+        if (elementos.resultado.value) consultaAplicada.resultado = elementos.resultado.value;
+        if (inicio) consultaAplicada.inicio = new Date(`${inicio}T00:00:00`).toISOString();
+        if (fim) { const data = new Date(`${fim}T00:00:00`); data.setDate(data.getDate() + 1); consultaAplicada.fim = data.toISOString(); }
+        deslocamento = 0;
+        snapshot = null;
+        carregar();
+    }
+
     async function carregar() {
+        controlador?.abort();
+        controlador = new AbortController();
+        const atual = ++sequencia;
         alternarEstado("carregando");
-        const parametros = new URLSearchParams({ limite: "100" });
-        if (elementos.busca.value.trim()) parametros.set("busca", elementos.busca.value.trim());
-        if (elementos.acao.value) parametros.set("acao", elementos.acao.value);
-        if (elementos.resultado.value) parametros.set("resultado", elementos.resultado.value);
+        const parametros = new URLSearchParams({ ...consultaAplicada, limite: String(LIMITE), deslocamento: String(deslocamento) });
+        if (snapshot) parametros.set('ate_id', String(snapshot));
 
         try {
-            const resposta = await fetch(`/api/admin/auditoria?${parametros.toString()}`);
+            const resposta = await fetch(`/api/admin/auditoria?${parametros.toString()}`, {signal: controlador.signal, credentials: 'same-origin', cache: 'no-store'});
             const dados = await resposta.json().catch(() => ({}));
-            if (!resposta.ok) throw new Error(dados.detail || "Não foi possível carregar os logs.");
+            if (atual !== sequencia) return;
+            if (!resposta.ok) throw new Error(typeof dados.detail === 'string' ? dados.detail : "Não foi possível carregar os registros. Confira os filtros e tente novamente.");
+            snapshot = dados.ateId;
             preencherAcoes(dados.acoesDisponiveis || []);
             renderizar(dados.itens || []);
-            document.getElementById("audit-total").textContent = String(dados.totalExibido ?? 0);
+            document.getElementById("audit-total").textContent = String(dados.total ?? dados.totalExibido ?? 0);
+            document.getElementById('audit-shown').textContent = String(dados.totalExibido ?? 0);
+            document.getElementById('audit-page').textContent = `Página ${Math.floor(deslocamento / LIMITE) + 1} de ${Math.max(1, Math.ceil((dados.total || 0) / LIMITE))}`;
+            document.getElementById('audit-previous').disabled = deslocamento === 0;
+            document.getElementById('audit-next').disabled = !dados.temProxima;
             document.getElementById("audit-updated").textContent = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(new Date());
         } catch (erro) {
+            if (erro.name === 'AbortError' || atual !== sequencia) return;
             elementos.alerta.textContent = erro.message || "Não foi possível carregar os logs.";
             alternarEstado("erro");
         }
@@ -149,6 +189,8 @@
         adicionarDefinicao(lista, "Recurso", `${item.recursoTipo}${item.recursoId ? ` · ${item.recursoId}` : ""}`);
         adicionarDefinicao(lista, "Correlação", item.correlacaoId);
         card.append(lista);
+        const detalhes = formatarDetalhes(item.detalhes);
+        if (detalhes) { const texto = document.createElement('p'); texto.className = 'audit-details'; texto.textContent = detalhes; card.append(texto); }
         return card;
     }
 
@@ -226,6 +268,10 @@
     }
 
     function alternarEstado(estado) {
+        document.querySelector('.audit-panel').setAttribute('aria-busy', String(estado === 'carregando'));
+        document.querySelector('.audit-pagination').hidden = !['lista', 'vazio'].includes(estado);
+        document.getElementById('audit-previous').disabled = true;
+        document.getElementById('audit-next').disabled = true;
         elementos.loading.hidden = estado !== "carregando";
         elementos.alerta.hidden = estado !== "erro";
         elementos.vazio.hidden = estado !== "vazio";

@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 import os
 import unittest
@@ -8,6 +9,7 @@ from unittest.mock import patch
 from urllib.parse import urlencode, urlsplit
 
 os.environ.setdefault("JurisHome_senha", "segredo-de-teste-jurishome-com-mais-de-32-bytes")
+os.environ.setdefault("TOTP_ENCRYPTION_KEY", base64.urlsafe_b64encode(b"t" * 32).decode("ascii"))
 
 import jwt
 from sqlalchemy import create_engine
@@ -91,13 +93,14 @@ class TestesSeguranca(unittest.TestCase):
         finally:
             sessao.close()
 
-    def _request(self, method, path, data=None, token=None, cookie=None):
+    def _request(self, method, path, data=None, token=None, cookie=None, extra_headers=()):
         overrides_anteriores = self.app.dependency_overrides.copy()
         self.app.dependency_overrides[get_db] = self._banco_teste
         self.app.dependency_overrides[get_feedback_db] = self._banco_teste
 
         corpo = json.dumps(data).encode("utf-8") if data is not None else b""
         cabecalhos = [(b"host", b"testserver"), (b"accept", b"text/html")]
+        cabecalhos.extend(extra_headers)
         if data is not None:
             cabecalhos.append((b"content-type", b"application/json"))
         if token:
@@ -160,6 +163,267 @@ class TestesSeguranca(unittest.TestCase):
             with self.subTest(caminho=caminho):
                 status, _, _ = self._request("GET", caminho)
                 self.assertEqual(401, status)
+
+    def test_escrita_rejeita_origem_externa_inclusive_no_login(self):
+        for origem in (b"https://malicioso.test", b"http://testserver.malicioso.test", b"null"):
+            with self.subTest(origem=origem):
+                status, _, _ = self._request(
+                    "POST", "/api/auth/login",
+                    {"email": "pessoa@example.test", "senha": "Senha123"},
+                    extra_headers=((b"origin", origem),),
+                )
+                self.assertEqual(403, status)
+
+    def test_logout_revoga_token_copiado(self):
+        usuario = self._usuario()
+        token = criar_access_token(usuario)
+        status, _, _ = self._request("POST", "/api/auth/logout", token=token)
+        self.assertEqual(204, status)
+        status, _, _ = self._request("GET", "/api/usuarios/me", token=token)
+        self.assertEqual(401, status)
+
+    def test_cookie_exige_origem_em_operacoes_de_escrita(self):
+        usuario = self._usuario()
+        cookie = f"jurishome_access_token={criar_access_token(usuario)}"
+        status, _, _ = self._request("POST", "/api/auth/logout", cookie=cookie)
+        self.assertEqual(403, status)
+        status, _, _ = self._request(
+            "POST", "/api/auth/logout", cookie=cookie,
+            extra_headers=((b"origin", b"http://testserver"),),
+        )
+        self.assertEqual(204, status)
+
+    def test_upload_rejeita_html_disfarcado_e_arquivo_grande(self):
+        from io import BytesIO
+        from fastapi import HTTPException, UploadFile
+        from routes.paginas import atualizar_perfil
+
+        usuario = self._usuario()
+        for dados, esperado in ((b"<script>alert(1)</script>", 422), (b"x" * (2 * 1024 * 1024 + 1), 413)):
+            with self.subTest(esperado=esperado):
+                with self.assertRaises(HTTPException) as contexto:
+                    atualizar_perfil(nome="Nome válido", foto=UploadFile(filename="foto.jpg", file=BytesIO(dados)), db=self.db, usuario=usuario)
+                self.assertEqual(esperado, contexto.exception.status_code)
+
+    def test_materia_base64_so_aparece_apos_aprovacao_do_root(self):
+        from io import BytesIO
+        from PIL import Image
+        from model.models import Categoria, Conteudo
+        categoria = Categoria(uuid=str(uuid.uuid4()), nome="Direito de teste")
+        self.db.add(categoria)
+        self.db.commit()
+        admin = self._usuario(TipoUsuario.ADMINISTRADOR)
+        token = criar_access_token(admin)
+        saida = BytesIO()
+        Image.new("RGB", (12, 8), "red").save(saida, format="PNG")
+        imagem = "data:image/png;base64," + base64.b64encode(saida.getvalue()).decode("ascii")
+        status, _, _ = self._request("POST", "/criar-materia", {
+            "titulo": "Matéria Base64", "corpo_texto": "Texto da matéria.",
+            "categoria_id": categoria.uuid, "tipo_fonte": "legislacao",
+            "imagem_miniatura": imagem, "imagem_corpo": imagem,
+        }, token=token)
+        self.assertEqual(200, status)
+        materia = self.db.query(Conteudo).filter_by(titulo="Matéria Base64").one()
+        self.assertTrue(materia.imagem_miniatura.startswith("data:image/jpeg;base64,"))
+        status, _, corpo = self._request("GET", "/api/conteudos")
+        self.assertEqual([], json.loads(corpo))
+        status, _, _ = self._request("PUT", f"/aprovar-materia/{materia.uuid}", token=token)
+        self.assertEqual(403, status)
+        root = self._usuario(TipoUsuario.ADMINISTRADOR)
+        root.e_root_admin = True
+        self.db.commit()
+        status, _, _ = self._request("PUT", f"/aprovar-materia/{materia.uuid}", token=criar_access_token(root))
+        self.assertEqual(200, status)
+        status, _, corpo = self._request("GET", "/api/conteudos")
+        self.assertEqual(["Matéria Base64"], [item["titulo"] for item in json.loads(corpo)])
+
+    def test_materia_rejeita_categoria_inexistente_e_imagem_disfarcada(self):
+        from model.models import Categoria
+        admin = self._usuario(TipoUsuario.ADMINISTRADOR)
+        token = criar_access_token(admin)
+        dados = {"titulo": "Teste", "corpo_texto": "Texto", "categoria_id": "inexistente", "tipo_fonte": "doutrina"}
+        status, _, _ = self._request("POST", "/criar-materia", dados, token=token)
+        self.assertEqual(422, status)
+        categoria = Categoria(uuid=str(uuid.uuid4()), nome="Teste imagem")
+        self.db.add(categoria)
+        self.db.commit()
+        dados["categoria_id"] = categoria.uuid
+        for imagem in ("data:image/svg+xml;base64,PHN2Zz4=", "data:image/jpeg;base64,PGh0bWw+", 'https://exemplo.test/" onerror="alert(1)'):
+            with self.subTest(imagem=imagem):
+                status, _, _ = self._request("POST", "/criar-materia", {**dados, "imagem_miniatura": imagem}, token=token)
+                self.assertEqual(422, status)
+
+    def test_usuario_consulta_somente_seus_feedbacks_sem_observacoes_internas(self):
+        primeiro = self._usuario()
+        segundo = self._usuario()
+        token_primeiro = criar_access_token(primeiro)
+        token_segundo = criar_access_token(segundo)
+        criados = []
+        for token in (token_primeiro, token_segundo):
+            status, _, corpo = self._request("POST", "/api/feedbacks", {
+                "tipo": "Dúvida", "assunto": "Dúvida de acesso", "mensagem": "Como consultar as minhas respostas?",
+            }, token=token)
+            self.assertEqual(201, status)
+            criados.append(json.loads(corpo))
+        admin = self._usuario(TipoUsuario.ADMINISTRADOR)
+        token_admin = criar_access_token(admin)
+        status, _, _ = self._request("POST", f"/api/admin/feedbacks/{criados[0]['id']}/respostas", {"mensagem": "Você pode consultar em Meus atendimentos."}, token=token_admin)
+        self.assertEqual(200, status)
+        status, _, _ = self._request("POST", f"/api/admin/feedbacks/{criados[0]['id']}/observacoes", {"mensagem": "Anotação exclusiva da equipe."}, token=token_admin)
+        self.assertEqual(200, status)
+        status, _, corpo = self._request("GET", "/api/feedbacks/me", token=token_primeiro)
+        self.assertEqual(200, status)
+        registros = json.loads(corpo)
+        self.assertEqual([criados[0]["id"]], [registro["id"] for registro in registros])
+        self.assertEqual(1, len(registros[0]["respostas"]))
+        self.assertNotIn("observacoesInternas", registros[0])
+        self.assertNotIn("Anotação exclusiva", corpo.decode("utf-8"))
+        self.assertTrue(all(item["visibilidade"] != "interna" for item in registros[0]["historico"]))
+        status, _, _ = self._request("GET", f"/api/admin/feedbacks/{criados[1]['id']}", token=token_primeiro)
+        self.assertEqual(403, status)
+
+    def test_auditoria_paginada_snapshot_privacidade_e_periodo(self):
+        from model.models import LogAuditoria
+        admin = self._usuario(TipoUsuario.ADMINISTRADOR)
+        token = criar_access_token(admin)
+        for indice in range(3):
+            self.db.add(LogAuditoria(acao="teste_consulta", recurso_tipo="teste", recurso_id=str(indice), usuario_tipo="administrador", resultado="sucesso", correlacao_id=str(uuid.uuid4()), detalhes_json=json.dumps({"motivo": "teste", "token_legado": "nao-exibir", "lista": [{"senha": "nao-exibir"}]}), criado_em=datetime(2026,10,20,12,indice)))
+        self.db.commit()
+        status, headers, corpo = self._request("GET", "/api/admin/auditoria?limite=2", token=token)
+        self.assertEqual(200, status)
+        self.assertIn("no-store", headers["cache-control"])
+        dados = json.loads(corpo)
+        self.assertEqual(3, dados["total"])
+        self.assertEqual(2, len(dados["itens"]))
+        self.assertTrue(dados["temProxima"])
+        self.assertNotIn("nao-exibir", corpo.decode())
+        self.db.add(LogAuditoria(acao="nova_acao", recurso_tipo="teste", usuario_tipo="administrador", resultado="falha", correlacao_id=str(uuid.uuid4())))
+        self.db.commit()
+        status, _, corpo = self._request("GET", f"/api/admin/auditoria?limite=2&deslocamento=2&ate_id={dados['ateId']}", token=token)
+        pagina = json.loads(corpo)
+        self.assertEqual(3, pagina["total"])
+        self.assertEqual(1, len(pagina["itens"]))
+        self.assertNotIn(pagina["itens"][0]["id"], [item["id"] for item in dados["itens"]])
+        self.assertFalse(pagina["temProxima"])
+        periodo = urlencode({"inicio": "2026-10-20T00:00:00-03:00", "fim": "2026-10-21T00:00:00-03:00"})
+        status, _, corpo = self._request("GET", f"/api/admin/auditoria?{periodo}", token=token)
+        self.assertEqual(200, status)
+        self.assertEqual(3, json.loads(corpo)["total"])
+        status, _, _ = self._request("GET", "/api/admin/auditoria?inicio=2026-10-21T00:00:00Z&fim=2026-10-20T00:00:00Z", token=token)
+        self.assertEqual(422, status)
+
+    def test_auditoria_identifica_admin_entre_dependencia_e_endpoint(self):
+        from model.models import LogAuditoria
+        aluno = self._usuario()
+        admin = self._usuario(TipoUsuario.ADMINISTRADOR)
+        status, _, corpo = self._request("POST", "/api/feedbacks", {"tipo": "Dúvida", "assunto": "Teste do responsável", "mensagem": "Mensagem de teste para validar a auditoria."}, token=criar_access_token(aluno))
+        self.assertEqual(201, status)
+        feedback = json.loads(corpo)
+        status, _, _ = self._request("POST", f"/api/admin/feedbacks/{feedback['id']}/respostas", {"mensagem": "Resposta administrativa."}, token=criar_access_token(admin))
+        self.assertEqual(200, status)
+        self.db.expire_all()
+        registro = self.db.query(LogAuditoria).filter_by(acao="feedback_respondido").one()
+        self.assertEqual(admin.uuid, registro.usuario_id)
+        self.assertEqual("administrador", registro.usuario_tipo)
+
+    def test_materia_renderiza_texto_seguro_base64_e_menu_por_perfil(self):
+        from io import BytesIO
+        from PIL import Image
+        from model.models import Categoria, Conteudo, TipoFonte, StatusConteudo
+        admin = self._usuario(TipoUsuario.ADMINISTRADOR)
+        estudante = self._usuario()
+        categoria = Categoria(uuid=str(uuid.uuid4()), nome="Direito Civil")
+        self.db.add(categoria)
+        self.db.flush()
+        imagem = BytesIO()
+        Image.new("RGB", (20, 10), "gold").save(imagem, format="JPEG")
+        base64_imagem = "data:image/jpeg;base64," + base64.b64encode(imagem.getvalue()).decode("ascii")
+        materia = Conteudo(titulo="Matéria para leitura segura", resumo_home="Resumo de teste", corpo_texto='<script>alert("teste")</script>\n' + 'texto' * 250,
+            categoria_id=categoria.uuid, autor_id=admin.uuid, tipo_fonte=TipoFonte.DOUTRINA, status=StatusConteudo.EM_ANALISE,
+            imagem_miniatura=base64_imagem, imagem_corpo=base64_imagem, fonte_original="javascript:alert(1)")
+        self.db.add(materia)
+        self.db.commit()
+        caminho = f"/materia/{materia.uuid}"
+        token_admin = criar_access_token(admin)
+        token_estudante = criar_access_token(estudante)
+        status, _, corpo = self._request("GET", caminho, token=token_admin)
+        self.assertEqual(200, status)
+        html = corpo.decode("utf-8")
+        self.assertIn("&lt;script&gt;", html)
+        self.assertNotIn('javascript:alert', html)
+        self.assertIn(base64_imagem, html)
+        self.assertIn('href="/admin-feedbacks"', html)
+        self.assertIn('href="/admin/auditoria"', html)
+        self.assertNotIn('Favoritos', html)
+        self.assertNotIn('>Salvar<', html)
+        status, _, _ = self._request("GET", caminho, token=token_estudante)
+        self.assertEqual(404, status)
+        materia.status = StatusConteudo.APROVADO
+        self.db.commit()
+        status, _, corpo = self._request("GET", caminho, token=token_estudante)
+        self.assertEqual(200, status)
+        self.assertNotIn(b'href="/admin/auditoria"', corpo)
+        self.assertIn(b'configuracoes-usuario#feedback', corpo)
+
+    def test_catalogo_idempotente_preserva_aliases_e_renderiza_opcoes(self):
+        from model.models import Categoria
+        from services.categorias import garantir_categorias, CATALOGO
+        existente = Categoria(uuid=str(uuid.uuid4()), nome="Direito do Trabalho")
+        self.db.add(existente)
+        self.db.commit()
+        self.assertEqual(len(CATALOGO) - 1, garantir_categorias(self.db))
+        self.assertEqual(0, garantir_categorias(self.db))
+        self.assertEqual(len(CATALOGO), self.db.query(Categoria).count())
+        admin = self._usuario(TipoUsuario.ADMINISTRADOR)
+        status, _, corpo = self._request("GET", "/nova-materia", token=criar_access_token(admin))
+        self.assertEqual(200, status)
+        html = corpo.decode()
+        self.assertIn("Direito do Consumidor", html)
+        self.assertIn("Direito Penal (Criminal)", html)
+        self.assertIn(existente.uuid, html)
+        self.assertIn('id="categorias-tags"', html)
+        self.assertIn('CLT', html)
+        self.assertNotIn('value="ID_DIREITO_', html)
+
+    def test_tags_salvas_pelo_servidor_e_atualizadas_com_a_categoria(self):
+        from model.models import Categoria, Conteudo
+        from services.categorias import garantir_categorias
+        garantir_categorias(self.db)
+        trabalhista = self.db.query(Categoria).filter_by(nome="Direito Trabalhista").one()
+        consumidor = self.db.query(Categoria).filter_by(nome="Direito do Consumidor").one()
+        admin = self._usuario(TipoUsuario.ADMINISTRADOR)
+        token = criar_access_token(admin)
+        status, _, _ = self._request("POST", "/criar-materia", {"titulo": "Tags por categoria", "corpo_texto": "Texto da matéria para teste.", "categoria_id": trabalhista.uuid, "tipo_fonte": "legislacao", "tags": "clt, Trabalho, bolsa de estudo"}, token=token)
+        self.assertEqual(200, status)
+        self.db.expire_all()
+        materia = self.db.query(Conteudo).filter_by(titulo="Tags por categoria").one()
+        tags = materia.tags.split(", ")
+        self.assertEqual(1, sum(tag.casefold() == "clt" for tag in tags))
+        self.assertIn("emprego", tags)
+        status, _, corpo = self._request("GET", f"/materia/{materia.uuid}", token=token)
+        self.assertEqual(200, status)
+        self.assertIn(b'Tags da mat', corpo)
+        self.assertIn(b'>CLT</span>', corpo)
+        status, _, _ = self._request("PUT", f"/editar-materia/{materia.uuid}", {"categoria_id": consumidor.uuid}, token=token)
+        self.assertEqual(200, status)
+        self.db.refresh(materia)
+        self.assertIn("CDC", materia.tags)
+        self.assertIn("bolsa de estudo", materia.tags)
+        self.assertNotIn("CLT", materia.tags)
+
+    def test_corrige_apenas_vinculo_de_categoria_de_exemplo_conhecido(self):
+        from model.models import Conteudo, TipoFonte, Categoria
+        from services.categorias import garantir_categorias, corrigir_vinculos_legados
+        admin = self._usuario(TipoUsuario.ADMINISTRADOR)
+        garantir_categorias(self.db)
+        materia = Conteudo(titulo="Matéria antiga", resumo_home="Resumo", corpo_texto="Texto", categoria_id="ID_DIREITO_PENAL", autor_id=admin.uuid, tipo_fonte=TipoFonte.DOUTRINA)
+        self.db.add(materia)
+        self.db.commit()
+        self.assertEqual(1, corrigir_vinculos_legados(self.db))
+        self.assertEqual(0, corrigir_vinculos_legados(self.db))
+        self.db.refresh(materia)
+        self.assertEqual("Direito Penal", self.db.get(Categoria, materia.categoria_id).nome)
+        self.assertIn("criminal", materia.tags)
 
     def test_estudante_autenticado_nao_acessa_telas_nem_apis_admin(self):
         estudante = self._usuario()
@@ -225,6 +489,237 @@ class TestesSeguranca(unittest.TestCase):
             with self.subTest(token=token[:12]):
                 status, _, _ = self._request("GET", "/api/usuarios/me", token=token)
                 self.assertEqual(401, status)
+
+    def test_tokens_exigem_campos_obrigatorios_e_datas_numericas_validas(self):
+        usuario = self._usuario()
+        agora = datetime.now(timezone.utc).timestamp()
+        base = {"sub": usuario.uuid, "tipo": "acesso", "iat": agora, "exp": agora + 300}
+        casos = []
+        for campo in ("sub", "tipo", "iat", "exp"):
+            casos.append({chave: valor for chave, valor in base.items() if chave != campo})
+        for campo in ("iat", "exp"):
+            for valor in (True, "123", float("nan"), float("inf"), -1e30):
+                casos.append({**base, campo: valor})
+        casos.append({**base, "sub": ""})
+        casos.append({**base, "iat": agora - 10, "exp": agora - 20})
+        for payload in casos:
+            with self.subTest(payload=payload):
+                token = jwt.encode(payload, security.SECRET_KEY, algorithm="HS256")
+                status, _, _ = self._request("GET", "/api/usuarios/me", token=token)
+                self.assertEqual(401, status)
+
+    def test_desafios_tambem_exigem_expiracao(self):
+        decodificadores = (
+            ("2fa_pendente", security.decodificar_token_2fa_pendente),
+            ("2fa_configuracao", security.decodificar_token_configuracao_2fa),
+            ("recuperacao_senha", security.decodificar_token_recuperacao_senha),
+            ("nova_senha", security.decodificar_token_nova_senha),
+        )
+        for tipo, decodificar in decodificadores:
+            with self.subTest(tipo=tipo):
+                token = jwt.encode({"sub": "conta-teste", "tipo": tipo, "iat": datetime.now(timezone.utc)}, security.SECRET_KEY, algorithm="HS256")
+                with self.assertRaises(ValueError):
+                    decodificar(token)
+
+    def test_hash_ausente_nao_provoca_erro_interno(self):
+        self.assertFalse(verificar_senha("Senha123", None))
+        self.assertFalse(verificar_senha(None, "hash"))
+
+    def test_desafio_2fa_consumido_nao_pode_ser_reutilizado(self):
+        import pyotp
+        from routes.auth import validar_2fa
+        usuario = self._usuario()
+        desafio = criar_token_2fa_pendente(usuario)
+        dados = Codigo2FA(desafio_token=desafio, codigo=pyotp.TOTP("JBSWY3DPEHPK3PXP").now())
+        self.assertTrue(validar_2fa(dados, Response(), self.db)["autenticado"])
+        with self.assertRaises(Exception) as contexto:
+            validar_2fa(dados, Response(), self.db)
+        self.assertEqual(401, contexto.exception.status_code)
+        self.db.rollback()
+
+    def test_mesmo_totp_nao_funciona_em_outro_desafio(self):
+        import pyotp
+        from routes.auth import validar_2fa
+        usuario = self._usuario()
+        codigo = pyotp.TOTP("JBSWY3DPEHPK3PXP").now()
+        for indice in range(2):
+            dados = Codigo2FA(desafio_token=criar_token_2fa_pendente(usuario), codigo=codigo)
+            if indice == 0:
+                validar_2fa(dados, Response(), self.db)
+            else:
+                with self.assertRaises(Exception) as contexto:
+                    validar_2fa(dados, Response(), self.db)
+                self.assertEqual(401, contexto.exception.status_code)
+                self.db.rollback()
+
+    def test_desafio_anterior_a_revogacao_nao_emite_sessao(self):
+        import pyotp
+        from routes.auth import validar_2fa
+        usuario = self._usuario()
+        desafio = criar_token_2fa_pendente(usuario)
+        usuario.token_validos_apos = datetime.now(timezone.utc).replace(tzinfo=None)
+        self.db.commit()
+        with self.assertRaises(Exception) as contexto:
+            validar_2fa(Codigo2FA(desafio_token=desafio, codigo=pyotp.TOTP("JBSWY3DPEHPK3PXP").now()), Response(), self.db)
+        self.assertEqual(401, contexto.exception.status_code)
+        self.db.rollback()
+
+    def _sessao_renovavel(self):
+        from auth.sessions import criar_refresh
+        usuario = self._usuario()
+        acesso = criar_access_token(usuario, lembrar_conectado=True)
+        sid = security._decodificar_token(acesso)["sid"]
+        refresh = criar_refresh(self.db, sid)
+        self.db.commit()
+        return usuario, acesso, refresh, sid
+
+    def test_lembrar_conectado_nao_alonga_access_token(self):
+        _, acesso, _, _ = self._sessao_renovavel()
+        payload = security._decodificar_token(acesso)
+        self.assertLessEqual(payload["exp"] - payload["iat"], 1800)
+
+    def test_refresh_rota_e_reutilizacao_revoga_toda_a_sessao(self):
+        from auth.sessions import renovar_sessao
+        from model.models import SessaoAutenticada
+        _, acesso, antigo, sid = self._sessao_renovavel()
+        novo_acesso, novo_refresh, _ = renovar_sessao(self.db, antigo)
+        self.assertNotEqual(antigo, novo_refresh)
+        self.assertEqual(sid, security._decodificar_token(novo_acesso)["sid"])
+        self.assertLessEqual((self.db.get(SessaoAutenticada, sid).expira_em - datetime.now(timezone.utc).replace(tzinfo=None)).total_seconds(), 14 * 86400)
+        with self.assertRaises(Exception) as contexto:
+            renovar_sessao(self.db, antigo)
+        self.assertEqual(401, contexto.exception.status_code)
+        self.assertTrue(self.db.get(SessaoAutenticada, sid).revogada)
+        for token in (acesso, novo_acesso):
+            status, _, _ = self._request("GET", "/api/usuarios/me", token=token)
+            self.assertEqual(401, status)
+        with self.assertRaises(Exception):
+            renovar_sessao(self.db, novo_refresh)
+
+    def test_refresh_exige_origem_e_cookie_http_only(self):
+        _, _, refresh, _ = self._sessao_renovavel()
+        cookie = f"jurishome_refresh_token={refresh}"
+        status, _, _ = self._request("POST", "/api/auth/refresh", cookie=cookie)
+        self.assertEqual(403, status)
+        status, headers, _ = self._request("POST", "/api/auth/refresh", cookie=cookie, extra_headers=((b"origin", b"http://testserver"),))
+        self.assertEqual(200, status)
+        self.assertIn("HttpOnly", headers["set-cookie"])
+        self.assertIn("SameSite=strict", headers["set-cookie"])
+
+    def test_refresh_expirado_ou_revogado_pela_senha_falha(self):
+        from auth.sessions import renovar_sessao
+        from model.models import SessaoAutenticada
+        usuario, _, refresh, sid = self._sessao_renovavel()
+        usuario.token_validos_apos = datetime.now(timezone.utc).replace(tzinfo=None)
+        self.db.commit()
+        with self.assertRaises(Exception) as contexto:
+            renovar_sessao(self.db, refresh)
+        self.assertEqual(401, contexto.exception.status_code)
+        self.db.rollback()
+        usuario.token_validos_apos = None
+        self.db.get(SessaoAutenticada, sid).expira_em = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=1)
+        self.db.commit()
+        with self.assertRaises(Exception) as contexto:
+            renovar_sessao(self.db, refresh)
+        self.assertEqual(401, contexto.exception.status_code)
+
+    def test_logout_com_access_expirado_revoga_refresh(self):
+        from auth.sessions import renovar_sessao
+        _, _, refresh, _ = self._sessao_renovavel()
+        status, _, _ = self._request("POST", "/api/auth/logout", cookie=f"jurishome_refresh_token={refresh}", extra_headers=((b"origin", b"http://testserver"),))
+        self.assertEqual(204, status)
+        with self.assertRaises(Exception) as contexto:
+            renovar_sessao(self.db, refresh)
+        self.assertEqual(401, contexto.exception.status_code)
+
+    def test_pagina_protegida_renova_sessao_sem_aceitar_redirecionamento_externo(self):
+        _, _, refresh, _ = self._sessao_renovavel()
+        status, headers, _ = self._request("GET", "/home_usuario", cookie=f"jurishome_refresh_token={refresh}")
+        self.assertEqual(303, status)
+        self.assertTrue(headers["location"].startswith("/renovar-sessao?destino="))
+        status, _, corpo = self._request("GET", "/renovar-sessao?destino=https%3A%2F%2Fmalicioso.test")
+        self.assertEqual(200, status)
+        self.assertNotIn(b"malicioso.test", corpo)
+        self.assertIn(b"/home_usuario", corpo)
+
+    def test_chave_totp_independe_da_chave_jwt_e_rotacao_preserva_dados(self):
+        from cryptography.fernet import Fernet
+        anterior = Fernet.generate_key().decode("ascii")
+        nova = Fernet.generate_key().decode("ascii")
+        with patch.dict(os.environ, {"TOTP_ENCRYPTION_KEY": anterior, "TOTP_PREVIOUS_KEYS": "", "TOTP_LEGACY_JWT_KEY": ""}):
+            cifrado = security.cifrar_segredo_2fa("JBSWY3DPEHPK3PXP")
+        with patch.dict(os.environ, {"TOTP_ENCRYPTION_KEY": nova, "TOTP_PREVIOUS_KEYS": anterior, "TOTP_LEGACY_JWT_KEY": ""}), patch.object(security, "SECRET_KEY", "outra-chave-jwt-independente-com-32-bytes"):
+            self.assertEqual("JBSWY3DPEHPK3PXP", security.decifrar_segredo_2fa(cifrado))
+        with patch.dict(os.environ, {"TOTP_ENCRYPTION_KEY": nova, "TOTP_PREVIOUS_KEYS": "", "TOTP_LEGACY_JWT_KEY": ""}):
+            with self.assertRaises(ValueError):
+                security.decifrar_segredo_2fa(cifrado)
+
+    def test_consumo_concorrente_so_autoriza_uma_tentativa(self):
+        import tempfile
+        from concurrent.futures import ThreadPoolExecutor
+        from pathlib import Path
+        from threading import Barrier
+        from fastapi import HTTPException
+        from auth.sessions import consumir_desafio
+        from model.models import DesafioConsumido
+        with tempfile.TemporaryDirectory() as pasta:
+            engine = create_engine("sqlite:///" + (Path(pasta) / "concorrencia.db").as_posix(), connect_args={"check_same_thread": False})
+            Base.metadata.create_all(engine)
+            Fabrica = sessionmaker(bind=engine)
+            with Fabrica() as db:
+                usuario = Usuario(uuid=str(uuid.uuid4()), nome="Teste concorrente", email="concorrente@example.test", tipo_usuario=TipoUsuario.ESTUDANTE)
+                db.add(usuario)
+                db.commit()
+                usuario_id = usuario.uuid
+                token = criar_token_2fa_pendente(usuario)
+            barreira = Barrier(2)
+            def tentar(_):
+                with Fabrica() as db:
+                    usuario = db.get(Usuario, usuario_id)
+                    barreira.wait(timeout=10)
+                    try:
+                        consumir_desafio(db, token, usuario, "2fa_pendente")
+                        db.commit()
+                        return 200
+                    except HTTPException as erro:
+                        db.rollback()
+                        return erro.status_code
+            try:
+                with ThreadPoolExecutor(max_workers=2) as executor:
+                    self.assertEqual([200, 401], sorted(executor.map(tentar, range(2))))
+                with Fabrica() as db:
+                    self.assertEqual(1, db.query(DesafioConsumido).count())
+            finally:
+                engine.dispose()
+
+    def test_falha_na_recifragem_nao_altera_registros(self):
+        from cryptography.fernet import Fernet, MultiFernet, InvalidToken
+        from migrar_seguranca import recifrar
+        usuario = self._usuario()
+        original = usuario.totp_secret
+        chave = security._chaves_2fa()[0]
+        invalido = Usuario(uuid=str(uuid.uuid4()), nome="Cifra inválida", email="cifra@example.test", totp_secret="invalido", tipo_usuario=TipoUsuario.ESTUDANTE)
+        self.db.add(invalido)
+        self.db.commit()
+        with self.assertRaises(InvalidToken):
+            recifrar(self.db, MultiFernet([chave]), Fernet(Fernet.generate_key()))
+        self.db.rollback()
+        self.assertEqual(original, self.db.get(Usuario, usuario.uuid).totp_secret)
+        self.db.delete(invalido)
+        self.db.commit()
+        nova = Fernet(Fernet.generate_key())
+        self.assertEqual(1, recifrar(self.db, MultiFernet([chave]), nova))
+        self.db.commit()
+        self.assertEqual(b"JBSWY3DPEHPK3PXP", nova.decrypt(usuario.totp_secret.encode("ascii")))
+
+    def test_rollback_preserva_desafio_para_nova_tentativa(self):
+        from auth.sessions import consumir_desafio
+        usuario = self._usuario()
+        token = criar_token_2fa_pendente(usuario)
+        consumir_desafio(self.db, token, usuario, "2fa_pendente")
+        self.db.rollback()
+        consumir_desafio(self.db, token, usuario, "2fa_pendente")
+        self.db.commit()
 
     def test_cookie_de_sessao_e_http_only_com_same_site_e_secure_configuravel(self):
         from routes.auth import _salvar_cookie_de_sessao

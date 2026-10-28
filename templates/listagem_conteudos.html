@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Matérias jurídicas recentes e organizadas por categoria no JurisHome">
     <title>{% if visao == 'recentes' %}Exibir mais{% else %}Categorias{% endif %} | JurisHome</title>
-    
+    <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
+    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
     <!-- Tailwind via CDN substituindo os CSS bloqueados -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -22,14 +23,15 @@
             }
         })();
     </script>
+    <link rel="stylesheet" href="/static/css/juris-ui.css?v=20261028-1">
 </head>
-<body class="bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col" data-visao="{{ visao }}" data-tipo-usuario="{{ tipo_usuario }}">
+<body class="juris-ui juris-list bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col" data-visao="{{ visao }}" data-tipo-usuario="{{ tipo_usuario }}">
     
     <!-- Barra de Navegação Padronizada -->
-    <header class="bg-[#25262a] border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between sticky top-0 z-50">
+    <header data-juris-navbar class="bg-[#25262a] border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between sticky top-0 z-50">
         <div class="text-gray-400 text-sm hidden md:block font-mono" id="data-atual">--/--/----</div>
         
-        <nav class="flex flex-1 md:justify-center gap-4 md:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide text-sm md:text-base">
+        <nav aria-label="Navegação principal" class="flex flex-1 md:justify-center gap-4 md:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide text-sm md:text-base">
             <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-house text-amber-500"></i> Home</a>
             
             <a href="/exibir-mais" class="{% if visao == 'recentes' %}text-white border-b-2 border-amber-500 pb-1 font-semibold{% else %}text-gray-300 hover:text-amber-500 pb-1{% endif %} flex items-center gap-2 transition" {% if visao == 'recentes' %}aria-current="page"{% endif %}><i class="fa-solid fa-square-plus text-amber-500"></i> Exibir mais</a>
@@ -50,7 +52,7 @@
         </nav>
 
         <div class="relative ml-4">
-            <button id="btn-perfil" class="w-10 h-10 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500 hover:bg-amber-500 hover:text-black transition cursor-pointer">
+            <button type="button" aria-label="Abrir menu do perfil" aria-expanded="false" aria-controls="dropdown-perfil" id="btn-perfil" class="w-10 h-10 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500 hover:bg-amber-500 hover:text-black transition cursor-pointer">
                 <i class="fa-solid fa-user-group"></i>
             </button>
 
@@ -120,11 +122,20 @@
                     e.stopPropagation();
                     menuPerfil.classList.toggle("hidden");
                     menuPerfil.classList.toggle("flex");
+                    botaoPerfil.setAttribute('aria-expanded', String(!menuPerfil.classList.contains('hidden')));
                 });
                 document.addEventListener("click", (e) => {
                     if (!menuPerfil.contains(e.target) && !botaoPerfil.contains(e.target)) {
                         menuPerfil.classList.add("hidden");
                         menuPerfil.classList.remove("flex");
+                        botaoPerfil.setAttribute('aria-expanded', 'false');
+                    }
+                });
+                document.addEventListener('keydown', (evento) => {
+                    if (evento.key === 'Escape') {
+                        menuPerfil.classList.add('hidden');
+                        menuPerfil.classList.remove('flex');
+                        botaoPerfil.setAttribute('aria-expanded', 'false');
                     }
                 });
             }

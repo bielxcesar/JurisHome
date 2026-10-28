@@ -5,32 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Termos jurídicos explicados para estudantes iniciantes, com exemplos e referências legais.">
     <title>Glossário jurídico | JurisHome</title>
+    <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
     
     <!-- Tailwind via CDN para padronização e remoção de CSS com bloqueio MIME -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <script src="/static/js/glossario.js?v=20261028" defer></script>
+    <script src="/static/js/session.js" defer></script>
     <script>
-        (function() {
-            const temaSalvo = localStorage.getItem("tema_juris");
-            if (temaSalvo === "claro") {
-                document.documentElement.classList.remove("dark");
-                document.documentElement.setAttribute("data-theme", "light");
-            } else {
-                document.documentElement.classList.add("dark");
-                document.documentElement.setAttribute("data-theme", "dark");
-            }
+        (() => {
+            let claro = false;
+            try { claro = localStorage.getItem('tema_juris') === 'claro'; } catch (_) {}
+            document.documentElement.classList.toggle('dark', !claro);
+            document.documentElement.dataset.theme = claro ? 'light' : 'dark';
         })();
     </script>
+<link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261028">
+<link rel="stylesheet" href="/static/css/glossario.css?v=20261028">
 </head>
-<body class="bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
+<body class="juris-ui glossario-shell bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
     
     <!-- Barra de Navegação Padronizada (Mesma da Home e Pesquisa) -->
-    <header class="bg-[#25262a] border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between sticky top-0 z-50">
+    <a class="glossario-skip" href="#conteudo">Pular para o conteúdo</a>
+    <header data-juris-navbar class="bg-[#25262a] border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between sticky top-0 z-50">
         <div class="text-gray-400 text-sm hidden md:block font-mono" id="data-atual">--/--/----</div>
         
-        <nav class="flex flex-1 md:justify-center gap-4 md:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide text-sm md:text-base">
-            <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-house text-amber-500"></i> Início</a>
+        <nav aria-label="Navegação principal" class="flex flex-1 md:justify-center gap-4 md:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide text-sm md:text-base">
+            <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-house text-amber-500"></i> Home</a>
             <a href="/exibir-mais" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-square-plus text-amber-500"></i> Exibir mais</a>
             
             {% if tipo_usuario == 'administrador' %}
@@ -43,11 +46,11 @@
             <span class="text-gray-600 cursor-not-allowed pb-1 flex items-center gap-2" title="Página indisponível"><i class="fa-solid fa-user-group text-gray-600"></i> Sobre nós</span>
             <a href="/categorias" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-newspaper text-amber-500"></i> Categorias</a>
             <a href="/pesquisa" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-magnifying-glass text-amber-500"></i> Pesquisa</a>
-            <a href="/glossario" class="text-white border-b-2 border-amber-500 pb-1 font-semibold flex items-center gap-2 transition"><i class="fa-solid fa-book-open text-amber-500"></i> Glossário</a>
+            <a href="/glossario" aria-current="page" class="text-white border-b-2 border-amber-500 pb-1 font-semibold flex items-center gap-2 transition"><i class="fa-solid fa-book-open text-amber-500"></i> Glossário</a>
         </nav>
 
         <div class="relative ml-4">
-            <button id="btn-perfil" class="w-10 h-10 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500 hover:bg-amber-500 hover:text-black transition cursor-pointer">
+            <button type="button" aria-label="Abrir menu do perfil" aria-controls="dropdown-perfil" aria-expanded="false" id="btn-perfil" class="w-10 h-10 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500 hover:bg-amber-500 hover:text-black transition cursor-pointer">
                 <i class="fa-solid fa-user-group"></i>
             </button>
 
@@ -60,8 +63,9 @@
         </div>
     </header>
 
-    <main id="conteudo" class="w-full max-w-6xl mx-auto px-4 py-12 flex-1">
+    <main id="conteudo" tabindex="-1" class="w-full max-w-6xl mx-auto px-4 py-12 flex-1">
         
+        <p id="glossario-alerta" role="alert" hidden></p>
         <!-- Seção de Introdução -->
         <section class="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12" aria-labelledby="titulo-glossario">
             <div>
@@ -172,40 +176,5 @@
 
     {% include "_legal_links.html" %}
 
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            // Lógica do Menu de Perfil e Data
-            const botaoPerfil = document.getElementById("btn-perfil");
-            const menuPerfil = document.getElementById("dropdown-perfil");
-            
-            if (botaoPerfil && menuPerfil) {
-                botaoPerfil.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    menuPerfil.classList.toggle("hidden");
-                    menuPerfil.classList.toggle("flex");
-                });
-                document.addEventListener("click", (e) => {
-                    if (!menuPerfil.contains(e.target) && !botaoPerfil.contains(e.target)) {
-                        menuPerfil.classList.add("hidden");
-                        menuPerfil.classList.remove("flex");
-                    }
-                });
-            }
-
-            const elData = document.getElementById("data-atual");
-            if(elData) elData.textContent = new Intl.DateTimeFormat("pt-BR").format(new Date());
-
-            // Lógica de Saída (Logout)
-            document.querySelectorAll(".btn-desconectar").forEach((link) => {
-                link.addEventListener("click", (evento) => {
-                    evento.preventDefault();
-                    window.localStorage.removeItem("jurishome_access_token");
-                    window.sessionStorage.removeItem("jurishome_desafio_2fa");
-                    window.fetch("/api/auth/logout", { method: "POST" })
-                        .finally(() => { window.location.href = "/"; });
-                });
-            });
-        });
-    </script>
 </body>
 </html>

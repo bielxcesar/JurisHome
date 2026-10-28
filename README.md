@@ -40,7 +40,18 @@ Em pesquisa realizada com acadêmicos, evidenciou-se a frustração com o excess
 - 💬 **Canal de Feedback e Auditoria**: Envio de dúvidas e sugestões pelos alunos, com painel administrativo para respostas, organização de atendimentos e consulta de registros de auditoria.
 - 🛡️ **Privacidade (LGPD)**: Rotina de retenção e manutenção de dados disponível no sistema.
 
-*Nota sobre o escopo:* Nesta versão de entrega, as funções de cadastro/edição de novas matérias, recuperação de senha por e-mail, login via Google e upload de imagens (Cloudinary) não estão ativas na interface.
+*Nota sobre o escopo:* O cadastro de matérias está disponível na área administrativa. As imagens são reduzidas no navegador, convertidas para JPEG e codificadas em Base64; o backend recebe o JSON e armazena as imagens em campos de texto do banco. A publicação depende de aprovação do administrador principal. Login via Google e recuperação de senha por e-mail não estão implementados; a recuperação atual usa o aplicativo autenticador.
+
+### Como funciona o cadastro de matéria
+
+1. O administrador abre `/nova-materia`, preenche o conteúdo, seleciona uma categoria existente e anexa a miniatura e, opcionalmente, até três imagens do corpo.
+2. O navegador reduz as imagens para até 800 × 800 pixels, preservando a proporção, e gera JPEG com qualidade 0,7. O resultado é codificado como Data URL em Base64 e enviado em JSON para `/criar-materia`.
+3. O backend verifica o acesso administrativo, a existência da categoria e o conteúdo real das imagens. Aceita JPEG, PNG ou WebP, limita cada imagem a 1 MB decodificado e 16 milhões de pixels de entrada, e normaliza o resultado para JPEG de até 800 × 800 pixels antes de persistir nos campos de texto do conteúdo.
+4. A matéria é vinculada ao administrador autenticado e salva com status `em_analise`. Apenas o administrador principal pode aprová-la; a listagem pública retorna somente conteúdos aprovados.
+
+O preview é um rascunho temporário no navegador e não publica nem salva uma matéria no banco. Base64 é uma codificação de transporte e armazenamento; a compactação ocorre na redução e conversão para JPEG. Os créditos das imagens do corpo aparecem no preview, mas ainda não são enviados nem persistidos individualmente; apenas o crédito da miniatura é salvo em `fonte_imagem`.
+
+As áreas do Direito são inicializadas automaticamente pelo catálogo em `services/categorias.py`, preservando categorias e identificadores existentes. Ao selecionar uma área, o formulário mostra suas tags predefinidas. O servidor inclui e salva essas tags mesmo quando elas não são enviadas pelo navegador; o preview usa a mesma configuração e a matéria exibe as tags ao final. A mudança de categoria na edição atualiza as tags automáticas e preserva as tags adicionais que não pertenciam ao conjunto anterior.
 
 ---
 

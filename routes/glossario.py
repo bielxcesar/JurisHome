@@ -2,7 +2,9 @@ from string import ascii_uppercase
 from typing import Annotated
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
+from auth.security import get_current_user_optional
+from model.models import Usuario
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -26,9 +28,11 @@ def pagina_glossario(
     q: Busca = "",
     letra: Letra = "",
     origem: str = Query(default="", max_length=10, pattern=r"^(usuario)?$"),
+    usuario: Usuario | None = Depends(get_current_user_optional),
 ):
     resultado = consultar_glossario(q, letra)
-    origem_usuario = origem == "usuario"
+    tipo_usuario = usuario.tipo_usuario.value if usuario else "usuario"
+    origem_usuario = tipo_usuario != "administrador"
 
     def url_glossario(**parametros: str) -> str:
         if origem_usuario:
@@ -49,6 +53,7 @@ def pagina_glossario(
         name="glossario.html",
         context={
             **resultado,
+            "tipo_usuario": tipo_usuario,
             "links_letras": links_letras,
             "url_todas": url_glossario(q=resultado["q"]),
             "url_glossario": url_glossario(),

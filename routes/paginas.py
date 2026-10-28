@@ -3,14 +3,20 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-import shutil
-import os
+import uuid
+from io import BytesIO
+from pathlib import Path
+from PIL import Image, UnidentifiedImageError
 from fastapi import UploadFile, File, Form
 
 from database import get_db
 from auth.security import get_current_user
-from model.models import Conteudo, Usuario
+from model.models import Conteudo, Usuario, TipoUsuario, StatusConteudo
 from services.lgpd import POLITICA_PRIVACIDADE_VERSAO, TERMOS_VERSAO
+from services.imagens import url_fonte_segura, url_imagem_segura
+from services.categorias import combinar_tags
+from urllib.parse import quote
+import math
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -27,6 +33,14 @@ def pagina_2fatores(request: Request):
         request=request,
         name="2fatores.html"
     )
+
+
+@router.get("/renovar-sessao", response_class=HTMLResponse)
+def pagina_renovar_sessao(request: Request, destino: str = "/home_usuario"):
+    permitidos = {"/home_usuario", "/home_admin", "/perfil", "/pesquisa", "/categorias", "/exibir-mais", "/configuracoes-usuario", "/configuracao", "/admin-feedbacks", "/admin/auditoria", "/feedback"}
+    if destino not in permitidos and not (destino.startswith("/materia/") and destino.removeprefix("/materia/").replace("-", "").isalnum()):
+        destino = "/home_usuario"
+    return templates.TemplateResponse(request=request, name="renovar_sessao.html", context={"destino": destino})
 
 
 @router.get("/recuperar-senha", response_class=HTMLResponse)
@@ -71,27 +85,34 @@ def atualizar_perfil(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
-    usuario.nome = nome
+    nome = nome.strip()
+    if not 3 <= len(nome) <= 100:
+        raise HTTPException(status_code=422, detail="O nome deve ter entre 3 e 100 caracteres.")
     # Se tiver esses campos no model, descomente:
     # usuario.faculdade = faculdade
     # usuario.interesse = interesse
 
     if foto and foto.filename:
-        # Cria a pasta de uploads se não existir
-        pasta_upload = "static/uploads"
-        os.makedirs(pasta_upload, exist_ok=True)
-        
-        # Salva o arquivo com o ID do usuário para evitar conflitos
-        extensao = foto.filename.split(".")[-1]
-        nome_arquivo = f"user_{usuario.id}.{extensao}"
-        caminho_completo = os.path.join(pasta_upload, nome_arquivo)
-        
-        with open(caminho_completo, "wb") as buffer:
-            shutil.copyfileobj(foto.file, buffer)
-            
-        # Salva o caminho relativo no banco
-        usuario.foto_perfil = f"/{caminho_completo}"
+        limite = 2 * 1024 * 1024
+        conteudo = foto.file.read(limite + 1)
+        if len(conteudo) > limite:
+            raise HTTPException(status_code=413, detail="A foto deve ter no máximo 2 MB.")
+        try:
+            with Image.open(BytesIO(conteudo)) as imagem:
+                if imagem.format not in {"JPEG", "PNG", "WEBP"} or imagem.width * imagem.height > 16_000_000:
+                    raise ValueError("Formato ou dimensões inválidos")
+                imagem.load()
+                imagem = imagem.convert("RGB")
+                imagem.thumbnail((1024, 1024))
+                pasta = Path("static/uploads")
+                pasta.mkdir(parents=True, exist_ok=True)
+                nome_arquivo = f"{uuid.uuid4().hex}.jpg"
+                imagem.save(pasta / nome_arquivo, format="JPEG", quality=85)
+        except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as erro:
+            raise HTTPException(status_code=422, detail="Envie uma imagem JPEG, PNG ou WebP válida.") from erro
+        usuario.foto_perfil = f"/static/uploads/{nome_arquivo}"
 
+    usuario.nome = nome
     db.commit()
     db.refresh(usuario)
     return {"status": "sucesso", "mensagem": "Perfil atualizado com sucesso!"}
@@ -116,6 +137,11 @@ def pagina_configuracoes_usuario(
             "mostrar_exclusao_dados": True,
         },
     )
+
+
+@router.get("/feedback", response_class=HTMLResponse)
+def pagina_feedback(request: Request, usuario: Usuario = Depends(get_current_user)):
+    return templates.TemplateResponse(request=request, name="feedback-suporte.html")
 
 
 @router.get("/home_usuario", response_class=HTMLResponse)
@@ -188,10 +214,23 @@ def pagina_materia(
 ):
     conteudo = db.query(Conteudo).filter(Conteudo.uuid == conteudo_id).first()
     
-    if not conteudo:
+    if not conteudo or (
+        conteudo.status != StatusConteudo.APROVADO
+        and usuario.tipo_usuario != TipoUsuario.ADMINISTRADOR
+    ):
         raise HTTPException(status_code=404, detail="Conteúdo não encontrado")
     
-    tags_lista = [tag.strip() for tag in conteudo.tags.split(",")] if conteudo.tags else []
+    tags_lista = combinar_tags(conteudo.categoria.nome if conteudo.categoria else "", conteudo.tags)
+    paragrafos = [linha.strip() for linha in (conteudo.corpo_texto or "").splitlines() if linha.strip()]
+    imagens = [url_imagem_segura(valor) for valor in (conteudo.imagem_corpo, conteudo.imagem_extra_2, conteudo.imagem_extra_3)]
+    blocos = []
+    for indice in range(max(len(paragrafos), len(imagens))):
+        if indice < len(paragrafos):
+            blocos.append({"tipo": "texto", "texto": paragrafos[indice]})
+        if indice < len(imagens) and imagens[indice]:
+            blocos.append({"tipo": "imagem", "url": imagens[indice], "alt": f"Imagem complementar {indice + 1} da matéria"})
+    endereco = str(request.url)
+    mensagem = quote(f"{conteudo.titulo}\n{endereco}", safe="")
 
     return templates.TemplateResponse(
         request=request,
@@ -200,6 +239,12 @@ def pagina_materia(
             "materia": conteudo,
             "tags": tags_lista,
             "tipo_usuario": usuario.tipo_usuario.value,
+            "blocos_materia": blocos,
+            "capa_materia": url_imagem_segura(conteudo.imagem_miniatura),
+            "fonte_materia": url_fonte_segura(conteudo.fonte_original),
+            "tempo_leitura": max(1, math.ceil(len((conteudo.corpo_texto or "").split()) / 200)),
+            "compartilhar_whatsapp": f"https://api.whatsapp.com/send?text={mensagem}",
+            "compartilhar_email": f"mailto:?subject={quote(conteudo.titulo, safe='')}&body={mensagem}",
         }
     )
 

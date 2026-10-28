@@ -1,6 +1,7 @@
 #Cria a configuracao local sem sobrescrever um .env existente.
 from pathlib import Path
 import secrets
+import base64
 import sys
 
 
@@ -24,7 +25,7 @@ def preparar_ambiente(diretorio: Path = ROOT) -> bool:
         raise ValueError("O modelo .env.example precisa conter exatamente um marcador de chave local.")
 
     destino.write_text(
-        conteudo.replace(PLACEHOLDER, secrets.token_urlsafe(48)),
+        conteudo.replace(PLACEHOLDER, secrets.token_urlsafe(48)).replace("__GERAR_CHAVE_TOTP__", base64.urlsafe_b64encode(secrets.token_bytes(32)).decode("ascii")),
         encoding="utf-8",
     )
     print("Configuracao local criada em .env com uma chave aleatoria e banco SQLite.")

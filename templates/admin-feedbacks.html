@@ -5,14 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Painel administrativo de feedbacks do JurisHome">
     <title>Feedbacks recebidos | JurisHome</title>
+    <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/feedbacks.css?v=20260913-3">
+    <link rel="stylesheet" href="/static/css/feedbacks.css?v=20261028-2">
     <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+    <link rel="stylesheet" href="/static/css/feedback-history.css?v=20261028-1">
+    <link rel="stylesheet" href="/static/css/juris-ui.css?v=20261028-1">
 </head>
-<body class="feedback-shell feedback-admin-shell feedback-admin-simple">
+<body class="juris-ui feedback-shell feedback-admin-shell feedback-admin-simple">
     <a class="feedback-skip-link" href="#conteudo-principal">Ir para o conteúdo</a>
 
-    <header class="navbar feedback-navbar">
+    <header data-juris-navbar class="navbar feedback-navbar">
         <div class="nav-data" id="data-atual" aria-label="Data atual">--/--/----</div>
 
         <nav class="nav-menu" aria-label="Navegação administrativa">
@@ -28,7 +31,7 @@
 
         <div class="nav-perfil">
             <button class="avatar-icon feedback-avatar-button" id="btn-perfil" type="button" aria-label="Abrir configurações do administrador" aria-expanded="false" aria-controls="dropdown-perfil">
-                <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
+                <i class="fa-solid fa-user-group" aria-hidden="true"></i>
             </button>
             <div class="menu-perfil-dropdown" id="dropdown-perfil">
                 <a href="/configuracao" class="dropdown-item">Configuração <i class="fa-solid fa-gear" aria-hidden="true"></i></a>
@@ -67,7 +70,8 @@
         <section class="feedback-panel feedback-admin-list-panel" aria-labelledby="admin-list-title">
             <div class="feedback-admin-list-heading">
                 <h2 id="admin-list-title">Mensagens dos usuários</h2>
-                <span class="feedback-count-badge" id="admin-result-count" aria-live="polite">0 registros</span>
+                <div class="feedback-list-tools"><span class="feedback-count-badge" id="admin-result-count" aria-live="polite">0 registros</span>
+                <button type="button" class="feedback-secondary-button" id="admin-refresh">Atualizar</button></div>
             </div>
 
             <form class="feedback-filter-bar" id="feedback-filter-form" role="search">
@@ -84,6 +88,7 @@
                 </div>
                 <button class="feedback-secondary-button feedback-clear-button" id="admin-clear-filters" type="button"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Limpar</button>
             </form>
+            <p id="admin-load-state" role="status" aria-live="polite">Carregando os atendimentos…</p>
 
             <div class="feedback-table-wrap" tabindex="0" aria-label="Tabela de feedbacks">
                 <table class="feedback-admin-table">
@@ -101,6 +106,11 @@
                 </table>
             </div>
             <div class="feedback-admin-mobile-list" id="admin-feedback-mobile-list"></div>
+            <nav class="feedback-pagination" aria-label="Páginas dos atendimentos">
+                <button type="button" class="feedback-secondary-button" id="admin-previous" disabled>Anterior</button>
+                <span id="admin-page-label" aria-live="polite">Página 1</span>
+                <button type="button" class="feedback-secondary-button" id="admin-next" disabled>Próxima</button>
+            </nav>
 
             <div class="feedback-empty" id="admin-feedback-empty" hidden>
                 <span class="feedback-empty-icon"><i class="fa-solid fa-filter-circle-xmark" aria-hidden="true"></i></span>
@@ -125,9 +135,10 @@
             </header>
 
             <div class="feedback-dialog-body feedback-admin-dialog-body">
+                <p id="feedback-admin-dialog-notice" role="status" aria-live="polite" hidden></p>
                 <section class="feedback-requester-card" aria-label="Dados do usuário">
                     <span class="feedback-requester-avatar" id="feedback-admin-avatar" aria-hidden="true">@</span>
-                    <div><a id="feedback-admin-user-email" href="#"></a></div>
+                    <div><span id="feedback-admin-user-name"></span><a id="feedback-admin-user-email"></a></div>
                     <span id="feedback-admin-created-date"></span>
                 </section>
 
@@ -172,7 +183,7 @@
     <div class="feedback-toast" id="feedback-admin-toast" role="status" aria-live="polite" hidden></div>
 
     {% include "_legal_links.html" %}
-    <script src="/static/js/feedbackService.js?v=20260927-1"></script>
-    <script src="/static/js/feedbackAdmin.js?v=20260913-7"></script>
+    <script src="/static/js/feedbackService.js?v=20261028-2"></script>
+    <script src="/static/js/feedbackAdmin.js?v=20261028-2"></script>
 </body>
 </html>

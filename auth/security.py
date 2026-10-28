@@ -1,6 +1,9 @@
 import base64
 import hashlib
 import os
+import math
+import secrets
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -8,10 +11,10 @@ import bcrypt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt import PyJWTError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, object_session
 
 from database import get_db
-from model.models import Usuario, TipoUsuario
+from model.models import Usuario, TipoUsuario, SessaoAutenticada
 from services.auditoria import definir_ator_auditoria
 from dotenv import load_dotenv
 
@@ -22,14 +25,38 @@ if not SECRET_KEY:
 
     raise RuntimeError(
         "A variável de ambiente 'JurisHome_senha' não está definida. "
-        "Defina-a antes de iniciar a aplicação."
+        "Defina-a com uma chave secreta segura para a aplicação."
     )
+
+if len(SECRET_KEY.encode("utf-8")) < 32 or SECRET_KEY == "__GERAR_CHAVE_LOCAL__":
+    raise RuntimeError("JurisHome_senha deve ser uma chave aleatória com pelo menos 32 bytes.")
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 ACCESS_TOKEN_REMEMBER_DAYS = 14
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+
+
+def _decodificar_token(token: str) -> dict:
+    """Exige o contrato comum a todos os tokens, além da assinatura."""
+    try:
+        payload = jwt.decode(
+            token, SECRET_KEY, algorithms=[ALGORITHM],
+            options={"require": ["sub", "tipo", "iat", "exp"]},
+        )
+        if not isinstance(payload["sub"], str) or not payload["sub"].strip():
+            raise ValueError("Identificador inválido")
+        for campo in ("iat", "exp"):
+            valor = payload[campo]
+            if isinstance(valor, bool) or not isinstance(valor, (int, float)) or not math.isfinite(valor):
+                raise ValueError("Data inválida")
+            datetime.fromtimestamp(valor, tz=timezone.utc)
+        if payload["exp"] <= payload["iat"]:
+            raise ValueError("Validade inválida")
+        return payload
+    except (ValueError, TypeError, OverflowError, OSError) as erro:
+        raise jwt.InvalidTokenError("Token inválido.") from erro
 
 
 def hash_senha(senha: str) -> str:
@@ -40,6 +67,8 @@ def hash_senha(senha: str) -> str:
 
 
 def verificar_senha(senha: str, senha_hash: str) -> bool:
+    if not isinstance(senha, str) or not isinstance(senha_hash, str):
+        return False
     senha_bytes = senha.encode("utf-8")
     if len(senha_bytes) > 72:
         return False
@@ -49,30 +78,39 @@ def verificar_senha(senha: str, senha_hash: str) -> bool:
         return False
 
 
-def criar_access_token(usuario: Usuario, lembrar_conectado: bool = False) -> str:
+def criar_access_token(usuario: Usuario, lembrar_conectado: bool = False, *, sessao_id: str | None = None) -> str:
     agora = datetime.now(timezone.utc)
-    validade = (
-        timedelta(days=ACCESS_TOKEN_REMEMBER_DAYS)
-        if lembrar_conectado
-        else timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    )
+    validade = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    if sessao_id is None:
+        db = object_session(usuario)
+        if db is None:
+            raise ValueError("A emissão de sessão exige usuário persistido.")
+        sessao = SessaoAutenticada(
+            id=str(uuid.uuid4()), usuario_id=usuario.uuid,
+            criada_em=agora.replace(tzinfo=None),
+            expira_em=(agora + (timedelta(days=ACCESS_TOKEN_REMEMBER_DAYS) if lembrar_conectado else validade)).replace(tzinfo=None),
+        )
+        db.add(sessao)
+        db.commit()
+        sessao_id = sessao.id
     payload = {
         "sub": str(usuario.uuid),
         "tipo": "acesso",
-        "iat": agora,
+        "sid": sessao_id,
+        "iat": agora.timestamp(),
         "exp": agora + validade,
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
 def criar_token_2fa_pendente(usuario: Usuario) -> str:
-    """Cria um token curto que só pode ser usado na confirmação do 2FA."""
     agora = datetime.now(timezone.utc)
     return jwt.encode(
         {
             "sub": str(usuario.uuid),
             "tipo": "2fa_pendente",
-            "iat": agora,
+            "iat": agora.timestamp(),
+            "jti": secrets.token_urlsafe(32),
             "exp": agora + timedelta(minutes=5),
         },
         SECRET_KEY,
@@ -81,13 +119,13 @@ def criar_token_2fa_pendente(usuario: Usuario) -> str:
 
 
 def criar_token_configuracao_2fa(usuario: Usuario) -> str:
-    """Cria um token curto para concluir a ativação obrigatória do 2FA."""
     agora = datetime.now(timezone.utc)
     return jwt.encode(
         {
             "sub": str(usuario.uuid),
             "tipo": "2fa_configuracao",
-            "iat": agora,
+            "iat": agora.timestamp(),
+            "jti": secrets.token_urlsafe(32),
             "exp": agora + timedelta(minutes=10),
         },
         SECRET_KEY,
@@ -101,7 +139,8 @@ def criar_token_recuperacao_senha(email_hash: str) -> str:
         {
             "sub": email_hash,
             "tipo": "recuperacao_senha",
-            "iat": agora,
+            "iat": agora.timestamp(),
+            "jti": secrets.token_urlsafe(32),
             "exp": agora + timedelta(minutes=10),
         },
         SECRET_KEY,
@@ -111,7 +150,7 @@ def criar_token_recuperacao_senha(email_hash: str) -> str:
 
 def decodificar_token_recuperacao_senha(token: str) -> str:
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = _decodificar_token(token)
     except PyJWTError as erro:
         raise ValueError("Desafio de recuperação inválido ou expirado.") from erro
 
@@ -126,7 +165,8 @@ def criar_token_nova_senha(usuario: Usuario) -> str:
         {
             "sub": str(usuario.uuid),
             "tipo": "nova_senha",
-            "iat": agora,
+            "iat": agora.timestamp(),
+            "jti": secrets.token_urlsafe(32),
             "exp": agora + timedelta(minutes=5),
         },
         SECRET_KEY,
@@ -134,9 +174,9 @@ def criar_token_nova_senha(usuario: Usuario) -> str:
     )
 
 
-def decodificar_token_nova_senha(token: str) -> tuple[str, int]:
+def decodificar_token_nova_senha(token: str) -> tuple[str, float]:
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = _decodificar_token(token)
     except PyJWTError as erro:
         raise ValueError("Autorização para redefinir senha inválida ou expirada.") from erro
 
@@ -144,12 +184,12 @@ def decodificar_token_nova_senha(token: str) -> tuple[str, int]:
     emitido_em = payload.get("iat")
     if payload.get("tipo") != "nova_senha" or not usuario_uuid or emitido_em is None:
         raise ValueError("Autorização para redefinir senha inválida ou expirada.")
-    return str(usuario_uuid), int(emitido_em)
+    return str(usuario_uuid), float(emitido_em)
 
 
 def decodificar_token_2fa_pendente(token: str) -> str:
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = _decodificar_token(token)
     except PyJWTError as erro:
         raise ValueError("Desafio de duas etapas inválido ou expirado.") from erro
 
@@ -160,7 +200,7 @@ def decodificar_token_2fa_pendente(token: str) -> str:
 
 def decodificar_token_configuracao_2fa(token: str) -> str:
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = _decodificar_token(token)
     except PyJWTError as erro:
         raise ValueError("Configuração de duas etapas inválida ou expirada.") from erro
 
@@ -170,14 +210,28 @@ def decodificar_token_configuracao_2fa(token: str) -> str:
 
 
 def cifrar_segredo_2fa(segredo: str) -> str:
-    """Protege o segredo TOTP antes de persistir no banco."""
     try:
         from cryptography.fernet import Fernet
     except ImportError as erro:
         raise RuntimeError("Dependência de criptografia indisponível.") from erro
 
-    chave = base64.urlsafe_b64encode(hashlib.sha256(SECRET_KEY.encode("utf-8")).digest())
-    return Fernet(chave).encrypt(segredo.encode("utf-8")).decode("utf-8")
+    return _chaves_2fa()[0].encrypt(segredo.encode("utf-8")).decode("utf-8")
+
+
+def _chaves_2fa():
+    from cryptography.fernet import Fernet
+    chave = os.getenv("TOTP_ENCRYPTION_KEY")
+    if not chave:
+        raise RuntimeError("Configure TOTP_ENCRYPTION_KEY com uma chave Fernet independente.")
+    anteriores = [item.strip() for item in os.getenv("TOTP_PREVIOUS_KEYS", "").split(",") if item.strip()]
+    try:
+        chaves = [Fernet(item.encode("ascii")) for item in [chave, *anteriores]]
+        legada = os.getenv("TOTP_LEGACY_JWT_KEY")
+        if legada:
+            chaves.append(Fernet(base64.urlsafe_b64encode(hashlib.sha256(legada.encode("utf-8")).digest())))
+        return chaves
+    except (ValueError, UnicodeError) as erro:
+        raise RuntimeError("Configuração de chaves TOTP inválida.") from erro
 
 
 def decifrar_segredo_2fa(segredo_cifrado: str) -> str:
@@ -186,10 +240,10 @@ def decifrar_segredo_2fa(segredo_cifrado: str) -> str:
     except ImportError as erro:
         raise RuntimeError("Dependência de criptografia indisponível.") from erro
 
-    chave = base64.urlsafe_b64encode(hashlib.sha256(SECRET_KEY.encode("utf-8")).digest())
+    from cryptography.fernet import MultiFernet
     try:
-        return Fernet(chave).decrypt(segredo_cifrado.encode("utf-8")).decode("utf-8")
-    except InvalidToken as erro:
+        return MultiFernet(_chaves_2fa()).decrypt(segredo_cifrado.encode("utf-8")).decode("utf-8")
+    except (InvalidToken, ValueError, UnicodeError) as erro:
         raise ValueError("Não foi possível ler a configuração de duas etapas.") from erro
 
 
@@ -209,7 +263,7 @@ def get_current_user(
         raise credenciais_invalidas
 
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = _decodificar_token(token)
     except PyJWTError:
         raise credenciais_invalidas
 
@@ -223,6 +277,10 @@ def get_current_user(
         raise credenciais_invalidas
 
     agora_utc = datetime.now(timezone.utc)
+    sessao = db.get(SessaoAutenticada, payload.get("sid")) if isinstance(payload.get("sid"), str) else None
+    if (not sessao or sessao.usuario_id != usuario.uuid or sessao.revogada
+            or sessao.expira_em <= agora_utc.replace(tzinfo=None)):
+        raise credenciais_invalidas
     bloqueado_ate = usuario.bloqueado_ate
     if bloqueado_ate and bloqueado_ate.tzinfo is None:
         bloqueado_ate = bloqueado_ate.replace(tzinfo=timezone.utc)
@@ -239,7 +297,7 @@ def get_current_user(
         token_validos_apos = usuario.token_validos_apos
         if token_validos_apos.tzinfo is None:
             token_validos_apos = token_validos_apos.replace(tzinfo=timezone.utc)
-        if iat_dt < token_validos_apos:
+        if iat_dt < token_validos_apos or sessao.criada_em.replace(tzinfo=timezone.utc) <= token_validos_apos:
             raise credenciais_invalidas
 
     definir_ator_auditoria(usuario)
@@ -251,7 +309,6 @@ def get_current_user_optional(
     token: str | None = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ) -> Usuario | None:
-    """Retorna o usuário quando a sessão é válida, sem tornar a rota obrigatória."""
 
     try:
         return get_current_user(request=request, token=token, db=db)

@@ -1,213 +1,90 @@
 <!DOCTYPE html>
 <html lang="pt-BR" class="dark">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{ materia.titulo }} - JurisHome</title>
-    
-    <!-- Tailwind via CDN substituindo todos os CSS antigos -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-
-    <script>
-        (function() {
-            const temaSalvo = localStorage.getItem("tema_juris");
-            if (temaSalvo === "claro") {
-                document.documentElement.classList.remove("dark");
-                document.documentElement.setAttribute("data-theme", "light");
-            } else {
-                document.documentElement.classList.add("dark");
-                document.documentElement.setAttribute("data-theme", "dark");
-            }
-        })();
-    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ materia.titulo }} | JurisHome</title>
+    <link rel="icon" href="/static/images/micrologo.png.png" type="image/png">
+    <script>try { document.documentElement.dataset.theme = localStorage.getItem('tema_juris') === 'claro' ? 'light' : 'dark'; document.documentElement.classList.toggle('dark', document.documentElement.dataset.theme !== 'light'); } catch {}</script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+    <link rel="stylesheet" href="/static/css/juris-ui.css?v=20261028-1">
+    <link rel="stylesheet" href="/static/css/materia.css?v=20261028-4">
+    <script defer src="/static/js/materia.js?v=20261028-4"></script>
 </head>
-<body class="bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
-
-    <!-- Barra de Navegação -->
-    <header class="bg-[#25262a] border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between sticky top-0 z-50">
-        
-        <div class="flex items-center gap-4">
-            <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="bg-[#1e1e1e] border border-gray-700 hover:border-amber-500 hover:text-amber-500 text-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 transition text-sm font-semibold">
-                <i class="fa-solid fa-arrow-left"></i>
-                <span class="hidden sm:inline">Voltar ao início</span>
-            </a>
-            <span id="data-atual" class="text-gray-400 text-sm hidden lg:block font-mono">--/--/----</span>
-        </div>
-
-        <nav class="flex gap-4 md:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide text-sm md:text-base">
-            <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-house text-amber-500"></i> Início</a>
-            <a href="/exibir-mais" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-square-plus text-amber-500"></i> Exibir mais</a>
-            <a href="/categorias" class="text-white border-b-2 border-amber-500 pb-1 font-semibold flex items-center gap-2 transition"><i class="fa-solid fa-newspaper text-amber-500"></i> Categorias</a>
-            <a href="/pesquisa" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-magnifying-glass text-amber-500"></i> Pesquisa</a>
+<body class="juris-ui materia-shell">
+    <a class="materia-skip" href="#conteudo-materia">Ir para o conteúdo da matéria</a>
+    <header data-juris-navbar>
+        <div id="data-atual" aria-label="Data atual">--/--/----</div>
+        <nav aria-label="Navegação principal">
+            <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}"><i class="fa-solid fa-house" aria-hidden="true"></i> Home</a>
+            <a href="/exibir-mais"><i class="fa-solid fa-square-plus" aria-hidden="true"></i> Exibir mais</a>
+            {% if tipo_usuario == 'administrador' %}
+            <a href="/admin-feedbacks"><i class="fa-solid fa-inbox" aria-hidden="true"></i> Feedbacks</a>
+            <a href="/admin/auditoria"><i class="fa-solid fa-list-check" aria-hidden="true"></i> Auditoria</a>
+            {% else %}
+            <a href="/configuracoes-usuario#feedback"><i class="fa-solid fa-headset" aria-hidden="true"></i> Suporte</a>
+            {% endif %}
+            <span aria-disabled="true" title="Página ainda não disponível"><i class="fa-solid fa-user-group" aria-hidden="true"></i> Sobre nós</span>
+            <a href="/categorias"><i class="fa-solid fa-newspaper" aria-hidden="true"></i> Categorias</a>
+            <a href="/pesquisa"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Pesquisa</a>
+            <a href="/glossario{% if tipo_usuario != 'administrador' %}?origem=usuario{% endif %}"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Glossário</a>
         </nav>
-
-        <div class="relative ml-4">
-            <button id="btn-perfil" class="w-10 h-10 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500 hover:bg-amber-500 hover:text-black transition cursor-pointer">
-                <i class="fa-solid fa-user-group"></i>
-            </button>
-
-            <div id="dropdown-perfil" class="hidden absolute right-0 top-14 w-56 bg-[#25262a] border border-gray-700 rounded-lg shadow-2xl flex-col gap-1 p-2 z-[100]">
-                <a href="{% if tipo_usuario == 'administrador' %}/configuracao{% else %}/configuracoes-usuario{% endif %}" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Perfil <i class="fa-solid fa-user text-gray-400"></i></a>
-                <a href="{% if tipo_usuario == 'administrador' %}/admin-feedbacks{% else %}/configuracoes-usuario#feedback{% endif %}" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Suporte <i class="fa-solid fa-headset text-gray-400"></i></a>
-                <a href="/" class="btn-desconectar mt-2 text-white bg-red-600 hover:bg-red-700 px-3 py-2 rounded flex justify-between items-center transition font-semibold">Sair <i class="fa-solid fa-power-off text-white"></i></a>
+        <div>
+            <button id="btn-perfil" type="button" aria-label="Abrir menu do perfil" aria-expanded="false" aria-controls="dropdown-perfil"><i class="fa-solid fa-user-group" aria-hidden="true"></i></button>
+            <div id="dropdown-perfil" hidden>
+                <a href="{% if tipo_usuario == 'administrador' %}/configuracao{% else %}/configuracoes-usuario{% endif %}">Configurações <i class="fa-solid fa-gear" aria-hidden="true"></i></a>
+                <a href="/termos-de-aceite">Termo de Aceite <i class="fa-regular fa-file-lines" aria-hidden="true"></i></a>
+                <a href="/politica-de-privacidade">Privacidade <i class="fa-solid fa-shield-halved" aria-hidden="true"></i></a>
+                <a href="/" class="btn-desconectar">Sair <i class="fa-solid fa-power-off" aria-hidden="true"></i></a>
             </div>
         </div>
     </header>
-
-    <main class="w-full max-w-4xl mx-auto px-4 py-10 flex-1">
-        
-        <!-- Cabeçalho da Matéria -->
-        <header class="mb-8 border-b border-gray-800 pb-6">
-            <h1 class="text-3xl md:text-5xl font-bold text-white leading-tight mb-4">{{ materia.titulo }}</h1>
-            
-            {% if materia.sub_titulo %}
-                <h2 class="text-xl text-gray-400 font-light mb-6">{{ materia.sub_titulo }}</h2>
-            {% endif %}
-
-            <div class="flex flex-wrap items-center gap-4 text-sm text-gray-500 font-medium">
-                <div class="bg-[#2a2b30] px-4 py-2 rounded-lg flex items-center gap-2 border border-gray-800">
-                    <i class="fa-solid fa-pen-nib text-amber-500"></i>
-                    <span>Por <strong class="text-gray-300">{{ materia.autor.nome if materia.autor else 'Redação' }}</strong></span>
+    <main class="materia-main" id="conteudo-principal">
+        <nav class="materia-breadcrumb" aria-label="Localização"><a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}">Home</a><span aria-hidden="true">/</span><a href="/exibir-mais">Matérias</a><span aria-hidden="true">/</span><span>{{ materia.categoria.nome if materia.categoria else 'Direito' }}</span></nav>
+        <header class="materia-heading" id="visao-geral">
+            <div class="materia-kicker"><span>{{ materia.categoria.nome if materia.categoria else 'Direito' }}</span><small>Conteúdo jurídico</small></div>
+            <h1>{{ materia.titulo }}</h1>
+            {% if materia.sub_titulo %}<p class="materia-subtitle">{{ materia.sub_titulo }}</p>{% endif %}
+            <div class="materia-meta">
+                <span><i class="fa-solid fa-pen-nib" aria-hidden="true"></i> Curadoria: <strong>{{ materia.autor.nome if materia.autor else 'Equipe JurisHome' }}</strong></span>
+                {% if materia.criado_em %}<time datetime="{{ materia.criado_em.isoformat() }}"><i class="fa-regular fa-calendar" aria-hidden="true"></i> {{ materia.criado_em.strftime('%d/%m/%Y') }}</time>{% endif %}
+                <span><i class="fa-regular fa-clock" aria-hidden="true"></i> {{ tempo_leitura }} min de leitura</span>
+                <div class="materia-reading-controls" role="group" aria-label="Tamanho do texto">
+                    <button type="button" id="materia-font-decrease" aria-label="Diminuir tamanho do texto">A−</button>
+                    <button type="button" id="materia-font-increase" aria-label="Aumentar tamanho do texto">A+</button>
                 </div>
-                <span class="flex items-center gap-2"><i class="fa-regular fa-clock"></i> {{ materia.criado_em.strftime('%d/%m/%Y %H:%M') if materia.criado_em else '' }}</span>
-                
-                {% if materia.fonte_original %}
-                    <span class="flex items-center gap-2 ml-auto">
-                        <i class="fa-solid fa-link text-amber-500"></i>
-                        <a href="{{ materia.fonte_original }}" target="_blank" rel="noopener noreferrer" class="text-amber-500 hover:underline">Fonte original</a>
-                    </span>
-                {% endif %}
             </div>
         </header>
-
-        <!-- Imagem de Capa -->
-        {% if materia.imagem_miniatura %}
-            <figure class="mb-10 w-full rounded-2xl overflow-hidden shadow-2xl border border-gray-800 relative group">
-                <img src="{{ materia.imagem_miniatura }}" alt="{{ materia.titulo }}" class="w-full h-auto max-h-[500px] object-cover group-hover:scale-105 transition duration-700" />
-                {% if materia.fonte_imagem %}
-                    <figcaption class="absolute bottom-0 w-full bg-black/70 backdrop-blur text-gray-300 text-xs px-4 py-2 text-right">
-                        Foto: {{ materia.fonte_imagem }}
-                    </figcaption>
-                {% endif %}
-            </figure>
-        {% endif %}
-
-        <!-- Conteúdo Injetado via JS -->
-        <article id="corpo-materia" class="text-gray-300 text-lg leading-relaxed space-y-6">
-            <!-- Renderizado pelo script abaixo -->
-        </article>
-
-        <!-- Redes Sociais e Compartilhamento -->
-        <div class="mt-16 bg-[#25262a] border border-gray-800 rounded-xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <span class="text-white font-semibold flex items-center gap-2"><i class="fa-solid fa-share-nodes text-amber-500"></i> Compartilhar matéria:</span>
-            
-            <div class="flex gap-3">
-                <a href="https://api.whatsapp.com/send?text={{ materia.titulo|urlencode }}%20{{ request.url }}" target="_blank" rel="noopener noreferrer" class="w-12 h-12 bg-green-600 hover:bg-green-500 text-white rounded-full flex items-center justify-center text-xl transition shadow-lg" title="WhatsApp">
-                    <i class="fa-brands fa-whatsapp"></i>
-                </a>
-                <a href="mailto:?subject={{ materia.titulo|urlencode }}&body=Confira%20esta%20mat%C3%A9ria:%20{{ request.url }}" class="w-12 h-12 bg-gray-600 hover:bg-gray-500 text-white rounded-full flex items-center justify-center text-xl transition shadow-lg" title="E-mail">
-                    <i class="fa-solid fa-envelope"></i>
-                </a>
-                <button type="button" id="btn-copiar-link" class="w-12 h-12 bg-blue-600 hover:bg-blue-500 text-white rounded-full flex items-center justify-center text-xl transition shadow-lg relative" title="Copiar Link">
-                    <i class="fa-solid fa-link"></i>
-                </button>
+        <div class="materia-layout">
+            <div class="materia-column">
+                {% if capa_materia %}<figure class="materia-cover"><img src="{{ capa_materia }}" alt="Imagem de apoio da matéria: {{ materia.titulo }}" decoding="async">{% if materia.fonte_imagem %}<figcaption>Fonte da imagem: {{ materia.fonte_imagem }}</figcaption>{% endif %}</figure>{% endif %}
+                <article id="conteudo-materia" class="materia-content" aria-label="Texto da matéria" tabindex="-1">
+                    {% for bloco in blocos_materia %}
+                        {% if bloco.tipo == 'texto' %}<p>{{ bloco.texto }}</p>
+                        {% else %}<figure><img src="{{ bloco.url }}" alt="{{ bloco.alt }}" loading="lazy" decoding="async"></figure>{% endif %}
+                    {% else %}<p>O texto desta matéria ainda não foi disponibilizado.</p>{% endfor %}
+                </article>
+                <section class="materia-share" id="compartilhar" aria-labelledby="titulo-compartilhar">
+                    <div><h2 id="titulo-compartilhar">Compartilhe com seu grupo de estudos</h2><p>Envie o link para que outras pessoas consultem a matéria.</p></div>
+                    <div class="materia-share-actions">
+                        <a href="{{ compartilhar_whatsapp }}" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> WhatsApp</a>
+                        <a href="{{ compartilhar_email }}"><i class="fa-regular fa-envelope" aria-hidden="true"></i> E-mail</a>
+                        <button type="button" id="btn-copiar-link"><i class="fa-solid fa-link" aria-hidden="true"></i> Copiar link</button>
+                    </div>
+                    <p id="msg-copiado" role="status" aria-live="polite" hidden></p>
+                </section>
+                {% if tags %}<section class="materia-tags" aria-labelledby="materia-tags-title"><h2 id="materia-tags-title">Tags da matéria</h2>{% for tag in tags %}<span>{{ tag }}</span>{% endfor %}</section>{% endif %}
             </div>
-            <span id="msg-copiado" class="hidden text-green-400 text-sm font-semibold mt-2 sm:mt-0"><i class="fa-solid fa-check"></i> Copiado!</span>
+            <aside class="materia-sidebar" aria-labelledby="materia-sidebar-title">
+                <h2 id="materia-sidebar-title">Nesta matéria</h2>
+                <nav aria-label="Seções da matéria"><a href="#visao-geral">01 <span>Visão geral</span></a><a href="#conteudo-materia">02 <span>Conteúdo</span></a><a href="#compartilhar">03 <span>Compartilhar</span></a></nav>
+                {% if fonte_materia %}<a class="materia-source" href="{{ fonte_materia }}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Consultar fonte original</a>{% endif %}
+                <p>Material selecionado para apoiar seus estudos. Consulte a fonte original para verificar o contexto completo.</p>
+            </aside>
         </div>
-
-        <footer class="mt-12 mb-8">
-            {% if tags %}
-                <div class="flex flex-wrap items-center gap-3">
-                    <span class="text-gray-400 font-semibold text-sm uppercase tracking-wider"><i class="fa-solid fa-tags text-amber-500"></i> Tags:</span>
-                    {% for tag in tags %}
-                        <span class="bg-[#2a2b30] border border-gray-700 text-gray-300 px-3 py-1 rounded-full text-sm hover:border-amber-500 cursor-default transition">
-                            {{ tag }}
-                        </span>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        </footer>
-
+        <p id="materia-alert" role="alert" hidden></p>
     </main>
-
     {% include "_legal_links.html" %}
-
-    <script src="{{ url_for('static', path='/js/materia.js') }}"></script>
-
-    <!-- Script de Injeção de Texto e Perfil Atualizado para Tailwind -->
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            // Dropdown do perfil
-            const botaoPerfil = document.getElementById("btn-perfil");
-            const menuPerfil = document.getElementById("dropdown-perfil");
-            
-            if (botaoPerfil && menuPerfil) {
-                botaoPerfil.addEventListener("click", (evento) => {
-                    evento.stopPropagation();
-                    menuPerfil.classList.toggle("hidden");
-                    menuPerfil.classList.toggle("flex");
-                });
-
-                document.addEventListener("click", (evento) => {
-                    if (!menuPerfil.contains(evento.target) && !botaoPerfil.contains(evento.target)) {
-                        menuPerfil.classList.add("hidden");
-                        menuPerfil.classList.remove("flex");
-                    }
-                });
-            }
-
-            // Data atual
-            const elData = document.getElementById("data-atual");
-            if(elData) elData.textContent = new Intl.DateTimeFormat("pt-BR").format(new Date());
-
-            // Botão de Copiar Link
-            const btnCopiar = document.getElementById("btn-copiar-link");
-            const msgCopiado = document.getElementById("msg-copiado");
-            
-            if(btnCopiar) {
-                btnCopiar.addEventListener("click", () => {
-                    navigator.clipboard.writeText(window.location.href).then(() => {
-                        msgCopiado.classList.remove("hidden");
-                        setTimeout(() => msgCopiado.classList.add("hidden"), 3000);
-                    });
-                });
-            }
-        });
-
-        // Montagem do texto e imagens
-        const textoCompleto = {{ (materia.corpo_texto or '') | tojson | safe }};
-        const imgCorpo1 = {{ (materia.imagem_corpo or '') | tojson | safe }};
-        const imgCorpo2 = {{ (materia.imagem_extra_2 or '') | tojson | safe }};
-        const imgCorpo3 = {{ (materia.imagem_extra_3 or '') | tojson | safe }};
-
-        const paragrafos = textoCompleto.split(/\n+/).filter(p => p.trim() !== '');
-        let htmlConteudo = '';
-
-        // Injetando as classes do Tailwind diretamente nas tags HTML geradas
-        if (paragrafos.length > 0) htmlConteudo += `<p class="mb-6">${paragrafos[0]}</p>`;
-        
-        if (imgCorpo1 && imgCorpo1.length > 10) {
-            htmlConteudo += `<figure class="my-10 w-full overflow-hidden rounded-xl border border-gray-800 shadow-xl"><img src="${imgCorpo1}" class="w-full h-auto max-h-[500px] object-cover" alt="Imagem do corpo 1"></figure>`;
-        }
-
-        if (paragrafos.length > 1) htmlConteudo += `<p class="mb-6">${paragrafos[1]}</p>`;
-        
-        if (imgCorpo2 && imgCorpo2.length > 10) {
-            htmlConteudo += `<figure class="my-10 w-full overflow-hidden rounded-xl border border-gray-800 shadow-xl"><img src="${imgCorpo2}" class="w-full h-auto max-h-[500px] object-cover" alt="Imagem do corpo 2"></figure>`;
-        }
-
-        if (paragrafos.length > 2) htmlConteudo += `<p class="mb-6">${paragrafos[2]}</p>`;
-        
-        if (imgCorpo3 && imgCorpo3.length > 10) {
-            htmlConteudo += `<figure class="my-10 w-full overflow-hidden rounded-xl border border-gray-800 shadow-xl"><img src="${imgCorpo3}" class="w-full h-auto max-h-[500px] object-cover" alt="Imagem do corpo 3"></figure>`;
-        }
-
-        for (let i = 3; i < paragrafos.length; i++) {
-            htmlConteudo += `<p class="mb-6">${paragrafos[i]}</p>`;
-        }
-
-        document.getElementById('corpo-materia').innerHTML = htmlConteudo;
-    </script>
 </body>
 </html>

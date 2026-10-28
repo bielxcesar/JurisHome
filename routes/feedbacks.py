@@ -87,7 +87,10 @@ class MensagemAdministrativa(BaseModel):
     @field_validator("mensagem")
     @classmethod
     def limpar_mensagem(cls, valor: str) -> str:
-        return valor.strip()
+        valor = valor.strip()
+        if not valor:
+            raise ValueError("Digite uma mensagem antes de enviar.")
+        return valor
 
 
 def _agora() -> datetime:
@@ -188,8 +191,6 @@ def _confirmar_alteracao(db: Session, feedback: FeedbackAtendimento) -> dict:
 
 
 def _auditar_se_disponivel(audit_db, **dados) -> None:
-    # As funções também são chamadas diretamente pelos testes unitários, onde
-    # o valor padrão ainda é um objeto Depends em vez de uma sessão real.
     if isinstance(audit_db, Session):
         registrar_auditoria(audit_db, commit=True, **dados)
 
@@ -252,6 +253,17 @@ def criar_feedback(
 def listar_feedbacks(db: Session = Depends(get_feedback_db)):
     registros = db.query(FeedbackAtendimento).order_by(FeedbackAtendimento.criado_em.desc()).all()
     return [_serializar(item) for item in registros]
+
+
+@public_router.get("/me")
+def listar_meus_feedbacks(
+    db: Session = Depends(get_feedback_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    registros = db.query(FeedbackAtendimento).filter(
+        FeedbackAtendimento.usuario_id == usuario.uuid,
+    ).order_by(FeedbackAtendimento.criado_em.desc()).all()
+    return [_serializar(item, incluir_interno=False) for item in registros]
 
 
 @admin_router.get("/{feedback_id}")

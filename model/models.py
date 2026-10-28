@@ -1,16 +1,25 @@
 import enum
 import uuid as uuid_lib
 from datetime import datetime, timezone
+from dateutil import tz
 
 from sqlalchemy import (
     Column, Integer, String, Text, DateTime, Enum, ForeignKey, Boolean,
-    CheckConstraint, UniqueConstraint, func
+    CheckConstraint, UniqueConstraint
 )
 from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import relationship
 
 from database import Base
 
+# =====================================================================
+# Configuração do Fuso Horário Local (São Paulo / Brasília)
+# =====================================================================
+fuso_br = tz.gettz("America/Sao_Paulo")
+
+def obter_hora_local():
+    """Retorna a data e hora atual no fuso horário do Brasil."""
+    return datetime.now(fuso_br)
 
 class TipoUsuario(str, enum.Enum):
     ESTUDANTE = "estudante"
@@ -73,8 +82,8 @@ class Usuario(Base):
     data_consentimento = Column(DateTime, nullable=True)
     versao_termos = Column(String(50), default="1.0")
 
-    criado_em = Column(DateTime, server_default=func.now(), nullable=False)
-    atualizado_em = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+    criado_em = Column(DateTime, default=obter_hora_local, nullable=False)
+    atualizado_em = Column(DateTime, default=obter_hora_local, onupdate=obter_hora_local, nullable=False)
 
     conteudos_criados = relationship("Conteudo", back_populates="autor")
     feedbacks = relationship("Feedback", back_populates="usuario")
@@ -84,10 +93,40 @@ class Usuario(Base):
     )
 
 
+class DesafioConsumido(Base):
+    __tablename__ = "auth_desafios_consumidos"
+    digest = Column(String(64), primary_key=True)
+    usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), nullable=False, index=True)
+    expira_em = Column(DateTime, nullable=False, index=True)
+
+
+class CodigoTotpConsumido(Base):
+    __tablename__ = "auth_totp_consumidos"
+    usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), primary_key=True)
+    segredo_digest = Column(String(64), primary_key=True)
+    intervalo = Column(Integer, primary_key=True)
+
+
+class SessaoAutenticada(Base):
+    __tablename__ = "auth_sessoes"
+    id = Column(String(36), primary_key=True, default=gerar_uuid)
+    usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), nullable=False, index=True)
+    criada_em = Column(DateTime, nullable=False)
+    expira_em = Column(DateTime, nullable=False, index=True)
+    revogada = Column(Boolean, nullable=False, default=False)
+
+
+class RefreshToken(Base):
+    __tablename__ = "auth_refresh_tokens"
+    digest = Column(String(64), primary_key=True)
+    sessao_id = Column(String(36), ForeignKey("auth_sessoes.id"), nullable=False, index=True)
+    usado = Column(Boolean, nullable=False, default=False)
+
+
 class Categoria(Base):
     __tablename__ = "categorias"
 
-    uuid = Column(CHAR(36), primary_key=True, default=lambda: str(uuid_lib.uuid4()))
+    uuid = Column(CHAR(36), primary_key=True, default=gerar_uuid)
     nome = Column(String(100), nullable=False, unique=True)
     descricao = Column(Text, nullable=True)
 
@@ -98,7 +137,7 @@ class Categoria(Base):
 class Subcategoria(Base):
     __tablename__ = "subcategorias"
 
-    uuid = Column(CHAR(36), primary_key=True, default=lambda: str(uuid_lib.uuid4()))
+    uuid = Column(CHAR(36), primary_key=True, default=gerar_uuid)
     nome = Column(String(100), nullable=False)
     categoria_id = Column(CHAR(36), ForeignKey("categorias.uuid"), nullable=False)
 
@@ -143,7 +182,8 @@ class Conteudo(Base):
     subcategoria_id = Column(CHAR(36), ForeignKey("subcategorias.uuid"), nullable=True)
     autor_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), nullable=False)
 
-    criado_em = Column(DateTime, server_default=func.now(), nullable=False)
+    # Corrigido para pegar a hora do Brasil na criação do conteúdo
+    criado_em = Column(DateTime, default=obter_hora_local, nullable=False)
 
     categoria = relationship("Categoria", back_populates="conteudos")
     subcategoria = relationship("Subcategoria", back_populates="conteudos")
@@ -160,14 +200,14 @@ class Feedback(Base):
 
     usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), nullable=True)
     conteudo_id = Column(CHAR(36), ForeignKey("conteudos.uuid"), nullable=True)
-    criado_em = Column(DateTime, server_default=func.now(), nullable=False)
+    
+    criado_em = Column(DateTime, default=obter_hora_local, nullable=False)
 
     usuario = relationship("Usuario", back_populates="feedbacks")
     conteudo = relationship("Conteudo", back_populates="feedbacks")
 
 
 class FeedbackAtendimento(Base):
-
     __tablename__ = "feedback_atendimentos"
 
     id = Column(String(50), primary_key=True)
@@ -186,8 +226,9 @@ class FeedbackAtendimento(Base):
     historico_json = Column(Text, nullable=False, default="[]")
     novo = Column(Boolean, nullable=False, default=True)
     arquivado = Column(Boolean, nullable=False, default=False)
-    criado_em = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-    atualizado_em = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    
+    criado_em = Column(DateTime, default=obter_hora_local, nullable=False)
+    atualizado_em = Column(DateTime, default=obter_hora_local, onupdate=obter_hora_local, nullable=False)
 
     __table_args__ = (
         CheckConstraint("avaliacao IS NULL OR (avaliacao >= 1 AND avaliacao <= 5)", name="ck_feedback_avaliacao"),
@@ -208,4 +249,5 @@ class LogAuditoria(Base):
     resultado = Column(String(20), nullable=False, index=True)
     correlacao_id = Column(String(36), nullable=False, index=True)
     detalhes_json = Column(Text, nullable=False, default="{}")
+    
     criado_em = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)

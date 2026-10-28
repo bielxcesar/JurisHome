@@ -6,6 +6,24 @@ from services.glossario import consultar_glossario, normalizar
 
 
 class GlossarioTests(unittest.TestCase):
+    def test_menu_usa_perfil_real_e_preserva_ordem(self):
+        from types import SimpleNamespace
+        from starlette.requests import Request
+        from routes.glossario import pagina_glossario
+        from model.models import TipoUsuario
+
+        request = Request({"type": "http", "method": "GET", "path": "/glossario", "headers": []})
+        admin = SimpleNamespace(tipo_usuario=TipoUsuario.ADMINISTRADOR)
+        html = pagina_glossario(request, q="", letra="", origem="usuario", usuario=admin).body.decode()
+        nav = html.split('aria-label="Navegação principal"')[1].split('</nav>')[0]
+        nomes = ["Home", "Exibir mais", "Feedbacks", "Auditoria", "Sobre nós", "Categorias", "Pesquisa", "Glossário"]
+        self.assertEqual([nav.index(nome) for nome in nomes], sorted(nav.index(nome) for nome in nomes))
+        self.assertIn('aria-current="page"', nav)
+        self.assertNotIn('Suporte', nav)
+        visitante = pagina_glossario(request, q="", letra="", origem="", usuario=None).body.decode()
+        self.assertIn('Suporte', visitante)
+        self.assertNotIn('href="/admin/auditoria"', visitante)
+
     def test_busca_ignora_acentos_caixa_e_espacos(self):
         resultado = consultar_glossario("  ACORDAO  ")
         self.assertEqual([t["id"] for t in resultado["itens"]], ["acordao"])
