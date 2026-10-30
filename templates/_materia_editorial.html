@@ -1,0 +1,13 @@
+{% macro fonte(credito) -%}
+{% if credito.texto %}<span class="materia-credit">Fonte: {% if credito.url %}<a href="{{ credito.url }}" target="_blank" rel="noopener noreferrer" title="{{ credito.completo }}">{{ credito.texto }} ↗</a>{% else %}<span title="{{ credito.completo }}">{{ credito.texto }}</span>{% endif %}</span>{% endif %}
+{%- endmacro %}
+{% if capa_materia %}<figure class="materia-cover"><img src="{{ capa_materia }}" alt="{{ alt_capa }}" decoding="async">{% if legenda_capa or credito_capa.texto %}<figcaption>{% if legenda_capa %}<span>{{ legenda_capa }}</span>{% endif %}{{ fonte(credito_capa) }}</figcaption>{% endif %}</figure>{% endif %}
+<article id="conteudo-materia" class="materia-content materia-align-{{ alinhamento_editorial }}" aria-label="Texto da matéria" tabindex="-1">
+{% for bloco in blocos_editoriais %}
+{% if bloco.tipo == 'imagem' %}<figure class="materia-image-{{ bloco.largura }}"><img src="{{ bloco.url }}" alt="{{ bloco.alt }}" loading="lazy" decoding="async">{% if bloco.legenda or bloco.credito.texto %}<figcaption>{% if bloco.legenda %}<span>{{ bloco.legenda }}</span>{% endif %}{{ fonte(bloco.credito) }}</figcaption>{% endif %}</figure>
+{% elif bloco.tipo == 'subtitulo' %}<h2>{{ bloco.texto }}</h2>
+{% elif bloco.tipo == 'citacao' %}<blockquote>{{ bloco.texto }}</blockquote>
+{% elif bloco.tipo == 'lista' %}<ul><li>{{ bloco.texto }}</li></ul>
+{% else %}<p>{{ bloco.texto }}</p>{% endif %}
+{% else %}<p>O texto desta matéria ainda não foi disponibilizado.</p>{% endfor %}
+</article>

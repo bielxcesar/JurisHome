@@ -42,6 +42,474 @@ from routes.auth import (
 
 
 class TestesSeguranca(unittest.TestCase):
+    def test_home_curiosidades_respeita_perfil_e_autenticacao(self):
+        aluno = self._usuario()
+        token = criar_access_token(aluno)
+        status, _, corpo = self._request("GET", "/home_usuario", token=token)
+        self.assertEqual(status, 200)
+        self.assertIn('href="/curiosidades"', corpo.decode())
+        self.assertIn('href="/juridle"', corpo.decode())
+        self.assertIn("Canto recreativo", corpo.decode())
+        self.assertNotIn('href="/nova-materia"', corpo.decode())
+        status, _, corpo = self._request("GET", "/juridle", token=token)
+        self.assertEqual(status, 200)
+        self.assertIn("quatro alternativas", corpo.decode())
+        self.assertNotIn('href="/admin/auditoria"', corpo.decode())
+        status, _, _ = self._request("GET", "/juridle")
+        self.assertNotEqual(status, 200)
+        status, _, corpo = self._request("GET", "/curiosidades", token=token)
+        self.assertEqual(status, 200)
+        self.assertIn("Habeas corpus", corpo.decode())
+        self.assertNotIn('href="/admin/auditoria"', corpo.decode())
+        status, _, _ = self._request("GET", "/curiosidades")
+        self.assertNotEqual(status, 200)
+
+    def test_catalogo_publico_categorias_expoe_somente_uuid_nome(self):
+        categoria = models.Categoria(uuid=str(uuid.uuid4()), nome="Direito Civil")
+        self.db.add(categoria)
+        self.db.commit()
+        status, _, corpo = self._request("GET", "/api/categorias")
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(corpo), [{"uuid": categoria.uuid, "nome": "Direito Civil"}])
+
+    def test_separacao_das_homes_e_configuracoes_por_perfil(self):
+        admin = self._usuario(TipoUsuario.ADMINISTRADOR)
+        token = criar_access_token(admin)
+        for caminho in ('/home_usuario', '/home_Usuario.html', '/templates/home_Usuario.html'):
+            status, headers, _ = self._request('GET', caminho, token=token)
+            self.assertEqual(status, 404)
+            self.assertNotIn('location', headers)
+        status, headers, _ = self._request('GET', '/configuracoes-usuario', token=token)
+        self.assertEqual(status, 404)
+        leitor = self._usuario()
+        status, _, _ = self._request('GET', '/home_admin', token=criar_access_token(leitor))
+        self.assertEqual(status, 404)
+
+    def test_cadastro_admin_restrito_sem_escalada_ou_senha_na_resposta(self):
+        admin = self._usuario(TipoUsuario.ADMINISTRADOR)
+        token = criar_access_token(admin)
+        dados = {'nome': 'Suporte de teste', 'email': 'SUPORTE@example.test', 'senha': 'SenhaSegura123'}
+        status, _, _ = self._request('POST', '/api/admin/criar-admin', dados, token=token)
+        self.assertEqual(status, 403)
+        admin.e_root_admin = True
+        self.db.commit()
+        status, _, corpo = self._request('POST', '/api/admin/criar-admin', dados, token=token)
+        self.assertEqual(status, 201)
+        self.assertNotIn(dados['senha'].encode(), corpo)
+        novo = self.db.query(Usuario).filter_by(email='suporte@example.test').one()
+        self.assertFalse(novo.e_root_admin)
+        self.assertFalse(novo.is_2fa_enabled)
+        self.assertTrue(verificar_senha(dados['senha'], novo.senha_hash))
+        status, _, _ = self._request('POST', '/api/admin/criar-admin', dados, token=token)
+        self.assertEqual(status, 409)
+        status, _, _ = self._request('POST', '/api/admin/criar-admin', {**dados, 'e_root_admin': True}, token=token)
+        self.assertEqual(status, 422)
+        status, _, _ = self._request('POST', '/api/admin/criar-admin', {**dados, 'email': 'invalido'}, token=token)
+        self.assertEqual(status, 422)
+
+    def test_juridle_gabarito_privado_retomada_uso_unico_e_rodada_perfeita(self):
+        jogador = self._usuario()
+        token = criar_access_token(jogador)
+        status, _, corpo = self._request('POST', '/api/juridle/rodadas', {}, token=token)
+        self.assertEqual(status, 200)
+        rodada = json.loads(corpo)['rodada']
+        self.assertEqual(set(rodada['pergunta']), {'enunciado', 'definicao', 'opcoes'})
+        self.assertEqual(len(rodada['pergunta']['opcoes']), 4)
+        status, _, retomada = self._request('POST', '/api/juridle/rodadas', {}, token=token)
+        self.assertEqual(json.loads(retomada)['rodada']['uuid'], rodada['uuid'])
+        registro = self.db.get(models.JuridleRodada, rodada['uuid'])
+        gabarito = json.loads(registro.perguntas_json)
+        outro = self._usuario()
+        caminho = '/api/juridle/rodadas/' + rodada['uuid'] + '/respostas'
+        status, _, _ = self._request('POST', caminho, {'pergunta': 0, 'opcao': 0}, token=criar_access_token(outro))
+        self.assertEqual(status, 404)
+        status, _, _ = self._request('POST', caminho, {'pergunta': 1, 'opcao': 0}, token=token)
+        self.assertEqual(status, 409)
+        for i in range(5):
+            dados = {'pergunta': i, 'opcao': gabarito[i]['correta']}
+            status, _, resposta = self._request('POST', caminho, dados, token=token)
+            self.assertEqual(status, 200)
+            status, _, repetida = self._request('POST', caminho, dados, token=token)
+            self.assertEqual(status, 200)
+            self.assertEqual(json.loads(resposta)['progresso'], json.loads(repetida)['progresso'])
+        final = json.loads(resposta)
+        self.assertTrue(final['rodada']['coroa'])
+        self.assertEqual(final['progresso']['sequencia'], 5)
+        self.assertEqual(final['progresso']['frequencia'], 1)
+        self.assertEqual(final['progresso']['coroas'], 1)
+        status, _, _ = self._request('POST', caminho, {'pergunta': 0, 'opcao': (gabarito[0]['correta']+1)%4}, token=token)
+        self.assertEqual(status, 409)
+        status, _, _ = self._request('POST', caminho, {'pergunta': 0, 'opcao': True}, token=token)
+        self.assertEqual(status, 422)
+
+    def test_juridle_erro_zera_sequencia_e_rodada_expirada_nao_aceita_resposta(self):
+        from services import juridle
+        jogador = self._usuario()
+        rodada = juridle.iniciar(self.db, jogador.uuid)
+        perguntas = json.loads(rodada.perguntas_json)
+        juridle.responder(self.db, jogador.uuid, rodada.uuid, 0, perguntas[0]['correta'])
+        juridle.responder(self.db, jogador.uuid, rodada.uuid, 1, (perguntas[1]['correta']+1)%4)
+        self.assertEqual(juridle.progresso(self.db, jogador.uuid)['sequencia'], 0)
+        self.assertEqual(juridle.progresso(self.db, jogador.uuid)['melhorSequencia'], 1)
+        rodada.expira_em = juridle.agora() - timedelta(seconds=1)
+        self.db.commit()
+        from fastapi import HTTPException
+        with self.assertRaises(HTTPException) as erro:
+            juridle.responder(self.db, jogador.uuid, rodada.uuid, 2, 0)
+        self.assertEqual(erro.exception.status_code, 409)
+        nova = juridle.iniciar(self.db, jogador.uuid)
+        self.assertNotEqual(nova.uuid, rodada.uuid)
+
+    def test_feedback_complemento_pertence_ao_autor_e_reabre_fila(self):
+        leitor = self._usuario()
+        token = criar_access_token(leitor)
+        dados = {'tipo': 'Sugestão', 'assunto': 'Minha sugestão', 'mensagem': 'Uma melhoria para a plataforma.'}
+        status, _, corpo = self._request('POST', '/api/feedbacks', dados, token=token)
+        self.assertEqual(status, 201)
+        original = json.loads(corpo)
+        status, _, duplicado = self._request('POST', '/api/feedbacks', dados, token=token)
+        self.assertEqual(json.loads(duplicado)['id'], original['id'])
+        caminho = '/api/feedbacks/' + original['id'] + '/mensagens'
+        outro = self._usuario()
+        status, _, _ = self._request('POST', caminho, {'mensagem': 'Complemento privado'}, token=criar_access_token(outro))
+        self.assertEqual(status, 404)
+        status, _, corpo = self._request('POST', caminho, {'mensagem': 'Complemento do autor'}, token=token)
+        self.assertEqual(status, 200)
+        d = json.loads(corpo)
+        self.assertEqual(d['status'], 'Em análise')
+        self.assertTrue(d['novo'])
+        self.assertNotIn('observacoesInternas', d)
+        self.assertEqual(d['respostas'][-1]['papel'], 'leitor')
+        self._request('POST', caminho, {'mensagem': 'Complemento do autor'}, token=token)
+        self.db.expire_all()
+        self.assertEqual(len(json.loads(self.db.get(models.FeedbackAtendimento, original['id']).respostas_json)), 1)
+        for i in range(4):
+            status, _, _ = self._request('POST', '/api/feedbacks', {**dados, 'assunto': f'Sugestão número {i}'}, token=token)
+            self.assertEqual(status, 201)
+        status, _, _ = self._request('POST', '/api/feedbacks', {**dados, 'assunto': 'Mais uma sugestão'}, token=token)
+        self.assertEqual(status, 429)
+
+    def test_perfil_persiste_instituicao_interesse_e_mostra_data_real(self):
+        from routes.paginas import atualizar_perfil
+        leitor = self._usuario()
+        atualizar_perfil(nome='Leitor atualizado', faculdade='Universidade de teste', interesse='Direito Civil', foto=None, db=self.db, usuario=leitor)
+        self.db.refresh(leitor)
+        self.assertEqual(leitor.universidade, 'Universidade de teste')
+        self.assertEqual(leitor.especialidade_juridica, 'Direito Civil')
+        status, _, corpo = self._request('GET', '/perfil', token=criar_access_token(leitor))
+        self.assertEqual(status, 200)
+        self.assertIn(b'Universidade de teste', corpo)
+        self.assertNotIn(b'17/12/2025', corpo)
+
+    def test_em_alta_conta_leitor_uma_vez_por_dia_e_nao_conta_admin(self):
+        categoria = models.Categoria(nome='Direito Civil')
+        autor = self._usuario(TipoUsuario.ADMINISTRADOR)
+        self.db.add(categoria)
+        self.db.flush()
+        materia = models.Conteudo(titulo='Artigo de teste', resumo_home='Resumo de teste.', corpo_texto='Conteúdo de teste.', categoria_id=categoria.uuid,
+                                  autor_id=autor.uuid, tipo_fonte=models.TipoFonte.DOUTRINA, status=models.StatusConteudo.APROVADO)
+        self.db.add(materia)
+        self.db.commit()
+        token_admin = criar_access_token(autor)
+        self._request('GET', '/materia/'+materia.uuid, token=token_admin)
+        leitor = self._usuario()
+        token = criar_access_token(leitor)
+        for _ in range(2):
+            status, _, _ = self._request('GET', '/materia/'+materia.uuid, token=token)
+            self.assertEqual(status, 200)
+        status, _, corpo = self._request('GET', '/api/conteudos/em-alta', token=token)
+        self.assertEqual(status, 200)
+        lista = json.loads(corpo)
+        self.assertEqual(lista[0]['leituras'], 1)
+        self.assertNotIn('usuario_id', lista[0])
+        status, _, corpo = self._request('GET', '/conhecimento', token=token)
+        self.assertEqual(status, 200)
+        self.assertNotIn(b'href="/admin/auditoria"', corpo)
+
+    def test_juridle_duas_abas_nao_criam_rodadas_ou_pontos_duplicados(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from tempfile import TemporaryDirectory
+        from threading import Barrier
+        from pathlib import Path
+        from services import juridle
+        with TemporaryDirectory() as pasta:
+            engine = create_engine('sqlite:///' + (Path(pasta) / 'concorrencia.db').as_posix(), connect_args={'check_same_thread': False})
+            try:
+                Base.metadata.create_all(engine)
+                fabrica = sessionmaker(bind=engine)
+                with fabrica() as db:
+                    u = Usuario(nome='Jogador', email='jogador@example.test', tipo_usuario=TipoUsuario.ESTUDANTE)
+                    db.add(u)
+                    db.commit()
+                    usuario_id = u.uuid
+                barreira = Barrier(2)
+                def iniciar():
+                    with fabrica() as db:
+                        barreira.wait(timeout=10)
+                        return juridle.iniciar(db, usuario_id).uuid
+                with ThreadPoolExecutor(max_workers=2) as executor:
+                    ids = list(executor.map(lambda _: iniciar(), range(2)))
+                self.assertEqual(ids[0], ids[1])
+                with fabrica() as db:
+                    rodada = db.get(models.JuridleRodada, ids[0])
+                    correta = json.loads(rodada.perguntas_json)[0]['correta']
+                barreira = Barrier(2)
+                def responder():
+                    with fabrica() as db:
+                        barreira.wait(timeout=10)
+                        return juridle.responder(db, usuario_id, ids[0], 0, correta)[0].respondidas
+                with ThreadPoolExecutor(max_workers=2) as executor:
+                    contagens = list(executor.map(lambda _: responder(), range(2)))
+                self.assertEqual(contagens, [1, 1])
+                with fabrica() as db:
+                    self.assertEqual(juridle.progresso(db, usuario_id)['acertos'], 1)
+            finally:
+                engine.dispose()
+
+    def test_juridle_frequencia_dias_consecutivos_e_nivel_sem_ranking(self):
+        from services import juridle
+        jogador = self._usuario()
+        hoje = datetime.now(juridle.FUSO).date()
+        for dias in (3, 1, 0):
+            data = datetime.combine(hoje - timedelta(days=dias), datetime.min.time()).replace(hour=12, tzinfo=juridle.FUSO).astimezone(timezone.utc).replace(tzinfo=None)
+            self.db.add(models.JuridleRodada(usuario_id=jogador.uuid, perguntas_json='[]', respostas_json=json.dumps([{'acertou': True}]*5),
+                                           respondidas=5, criada_em=data, expira_em=data+timedelta(days=1), concluida_em=data))
+        self.db.commit()
+        progresso = juridle.progresso(self.db, jogador.uuid)
+        self.assertEqual(progresso['frequencia'], 2)
+        self.assertEqual(progresso['nivel'], 2)
+        self.assertEqual(progresso['coroas'], 3)
+        self.assertEqual(progresso['acertos'], 15)
+
+    def test_manutencao_admin_exclusiva_root_e_conta_principal_protegida(self):
+        root = self._usuario(TipoUsuario.ADMINISTRADOR)
+        root.e_root_admin = True
+        alvo = self._usuario(TipoUsuario.ADMINISTRADOR)
+        leitor = self._usuario()
+        self.db.commit()
+        token_root = criar_access_token(root)
+        caminho = '/api/admin/administradores/' + alvo.uuid
+        for pessoa in (alvo, leitor):
+            token = criar_access_token(pessoa)
+            for metodo in ('GET', 'PUT', 'DELETE'):
+                status, _, _ = self._request(metodo, caminho, {} if metodo != 'GET' else None, token=token)
+                self.assertEqual(status, 403)
+            status, _, _ = self._request('GET', '/admin/administradores/'+alvo.uuid, token=token)
+            self.assertEqual(status, 404)
+        status, _, _ = self._request('GET', '/api/admin/administradores/'+root.uuid, token=token_root)
+        self.assertEqual(status, 403)
+        status, _, _ = self._request('DELETE', '/api/admin/administradores/'+root.uuid, {'nome_confirmacao': root.nome}, token=token_root)
+        self.assertEqual(status, 403)
+        status, _, _ = self._request('GET', '/api/admin/administradores/'+leitor.uuid, token=token_root)
+        self.assertEqual(status, 404)
+        status, headers, corpo = self._request('GET', caminho, token=token_root)
+        self.assertEqual(status, 200)
+        self.assertIn('no-store', headers['cache-control'])
+        self.assertNotIn('senha_hash', json.loads(corpo))
+        self.assertNotIn('totp_secret', json.loads(corpo))
+        status, _, corpo = self._request('GET', '/admin/administradores/'+alvo.uuid, token=token_root)
+        self.assertEqual(status, 200)
+        self.assertIn(b'admin-perfil-form', corpo)
+
+    def test_editar_admin_preserva_seguranca_e_revoga_sessoes_quando_solicitado(self):
+        root = self._usuario(TipoUsuario.ADMINISTRADOR)
+        root.e_root_admin = True
+        alvo = self._usuario(TipoUsuario.ADMINISTRADOR)
+        self.db.commit()
+        token_root, token_alvo = criar_access_token(root), criar_access_token(alvo)
+        caminho = '/api/admin/administradores/'+alvo.uuid
+        _, _, corpo = self._request('GET', caminho, token=token_root)
+        atual = json.loads(corpo)
+        antiga_senha, antigo_totp = alvo.senha_hash, alvo.totp_secret
+        dados = {'nome': 'Nome atualizado', 'email': alvo.email, 'versao': atual['versao']}
+        status, _, corpo = self._request('PUT', caminho, dados, token=token_root)
+        self.assertEqual(status, 200)
+        self.db.expire_all()
+        self.assertEqual(alvo.senha_hash, antiga_senha)
+        self.assertEqual(alvo.totp_secret, antigo_totp)
+        status, _, _ = self._request('PUT', caminho, dados, token=token_root)
+        self.assertEqual(status, 409)
+        novo = json.loads(corpo)['administrador']
+        dados.update(versao=novo['versao'], email='NOVO_ADMIN@example.test', nova_senha='NovaSenhaSegura123', resetar_2fa=True)
+        status, _, corpo = self._request('PUT', caminho, dados, token=token_root)
+        self.assertEqual(status, 200)
+        self.db.expire_all()
+        self.assertEqual(alvo.email, 'novo_admin@example.test')
+        self.assertTrue(verificar_senha('NovaSenhaSegura123', alvo.senha_hash))
+        self.assertIsNone(alvo.totp_secret)
+        self.assertFalse(alvo.is_2fa_enabled)
+        self.assertEqual(json.loads(corpo)['administrador']['sessoesAtivas'], 0)
+        status, _, _ = self._request('GET', '/api/usuarios/me', token=token_alvo)
+        self.assertEqual(status, 401)
+        status, _, _ = self._request('GET', '/api/usuarios/me', token=token_root)
+        self.assertEqual(status, 200)
+        logs = self.db.query(models.LogAuditoria).filter_by(acao='administrador_atualizado').all()
+        self.assertEqual(len(logs), 2)
+        self.assertNotIn('NovaSenhaSegura123', ''.join(l.detalhes_json for l in logs))
+
+    def test_manutencao_admin_rejeita_email_duplicado_e_elevacao_de_permissao(self):
+        root = self._usuario(TipoUsuario.ADMINISTRADOR)
+        root.e_root_admin = True
+        alvo = self._usuario(TipoUsuario.ADMINISTRADOR)
+        self.db.commit()
+        token = criar_access_token(root)
+        caminho = '/api/admin/administradores/'+alvo.uuid
+        _, _, corpo = self._request('GET', caminho, token=token)
+        dados = {'nome': alvo.nome, 'email': root.email, 'versao': json.loads(corpo)['versao']}
+        status, _, _ = self._request('PUT', caminho, dados, token=token)
+        self.assertEqual(status, 409)
+        status, _, _ = self._request('PUT', caminho, {**dados, 'email': alvo.email, 'e_root_admin': True}, token=token)
+        self.assertEqual(status, 422)
+        status, _, _ = self._request('PUT', caminho, {**dados, 'email': alvo.email, 'nova_senha': '12345678'}, token=token)
+        self.assertEqual(status, 422)
+        self.db.refresh(alvo)
+        self.assertFalse(alvo.e_root_admin)
+
+    def test_excluir_admin_exige_nome_e_preserva_materias_sem_acesso(self):
+        root = self._usuario(TipoUsuario.ADMINISTRADOR)
+        root.e_root_admin = True
+        alvo = self._usuario(TipoUsuario.ADMINISTRADOR)
+        alvo.nome = 'JOAO VINICIOS'
+        categoria = models.Categoria(nome='Direito Civil')
+        self.db.add(categoria)
+        self.db.flush()
+        materia = models.Conteudo(titulo='Matéria preservada', resumo_home='Resumo preservado', corpo_texto='Texto preservado',
+                                  categoria_id=categoria.uuid, autor_id=alvo.uuid, tipo_fonte=models.TipoFonte.DOUTRINA,
+                                  status=models.StatusConteudo.APROVADO)
+        self.db.add(materia)
+        self.db.commit()
+        alvo_id, materia_id = alvo.uuid, materia.uuid
+        token_root, token_alvo = criar_access_token(root), criar_access_token(alvo)
+        caminho = '/api/admin/administradores/'+alvo.uuid
+        status, _, _ = self._request('DELETE', caminho, {'nome_confirmacao': 'joao vinicios'}, token=token_root)
+        self.assertEqual(status, 422)
+        self.assertIsNone(self.db.get(models.AdministradorExcluido, alvo_id))
+        status, _, _ = self._request('DELETE', caminho, {'nome_confirmacao': 'JOAO VINICIOS'}, token=token_root)
+        self.assertEqual(status, 200)
+        self.db.expire_all()
+        self.assertIsNotNone(self.db.get(models.AdministradorExcluido, alvo_id))
+        removido = self.db.get(Usuario, alvo_id)
+        self.assertIsNone(removido.senha_hash)
+        self.assertIsNone(removido.totp_secret)
+        self.assertEqual(self.db.get(models.Conteudo, materia_id).autor_id, alvo_id)
+        status, _, corpo = self._request('GET', '/api/admin/usuarios', token=token_root)
+        self.assertNotIn(alvo_id, [u['uuid'] for u in json.loads(corpo)])
+        status, _, _ = self._request('GET', '/api/usuarios/me', token=token_alvo)
+        self.assertEqual(status, 401)
+        status, _, _ = self._request('GET', caminho, token=token_root)
+        self.assertEqual(status, 404)
+        log = self.db.query(models.LogAuditoria).filter_by(acao='administrador_excluido').one()
+        self.assertEqual(log.usuario_id, root.uuid)
+        self.assertEqual(log.recurso_id, alvo_id)
+
+    def test_acesso_root_bloqueado_se_banco_legado_contiver_duplicidade(self):
+        from sqlalchemy import text
+        self.db.execute(text('DROP INDEX uq_usuarios_root_unico'))
+        self.db.commit()
+        primeiro = self._usuario(TipoUsuario.ADMINISTRADOR)
+        segundo = self._usuario(TipoUsuario.ADMINISTRADOR)
+        primeiro.e_root_admin = segundo.e_root_admin = True
+        self.db.commit()
+        status, _, _ = self._request('GET', '/api/usuarios/me', token=criar_access_token(primeiro))
+        self.assertEqual(status, 403)
+
+    def test_erros_html_explica_codigos_e_nao_expoe_detalhes(self):
+        status, headers, corpo = self._request('GET', '/endereco-que-nao-existe')
+        self.assertEqual(status, 404)
+        self.assertIn('text/html', headers['content-type'])
+        self.assertIn('no-store', headers['cache-control'])
+        self.assertIn('Não encontramos esta página', corpo.decode())
+        for codigo in (400, 404, 405, 422, 429, 500, 502, 503, 504, 505):
+            status, headers, corpo = self._request('GET', f'/erro/{codigo}')
+            self.assertEqual(status, codigo)
+            self.assertIn('O que você pode fazer', corpo.decode())
+            self.assertNotIn(b'Traceback', corpo)
+        status, _, _ = self._request('GET', '/erro/200')
+        self.assertEqual(status, 404)
+        status, headers, corpo = self._request('GET', '/api/endereco-inexistente')
+        self.assertEqual(status, 404)
+        self.assertIn('application/json', headers['content-type'])
+        self.assertIn('detail', json.loads(corpo))
+
+    def test_falha_inesperada_recebe_pagina_500_ou_json_sem_vazar_erro(self):
+        from fastapi import APIRouter
+        roteador = APIRouter()
+        @roteador.get('/_teste-falha-interna')
+        @roteador.get('/api/_teste-falha-interna')
+        def falhar():
+            raise RuntimeError('senha=SEGREDO_DO_TESTE SQL SELECT interno')
+        self.app.include_router(roteador)
+        try:
+            for caminho in ('/_teste-falha-interna', '/api/_teste-falha-interna'):
+                status, headers, corpo = self._request('GET', caminho, suprimir_erro_interno=True)
+                self.assertEqual(status, 500)
+                self.assertIn('no-store', headers['cache-control'])
+                self.assertNotIn(b'SEGREDO_DO_TESTE', corpo)
+                self.assertNotIn(b'SELECT', corpo)
+                self.assertNotIn(b'RuntimeError', corpo)
+                self.assertIn('x-correlation-id', headers)
+                if caminho.startswith('/api/'):
+                    self.assertIn('application/json', headers['content-type'])
+                    self.assertIn('referencia', json.loads(corpo))
+                else:
+                    self.assertIn('text/html', headers['content-type'])
+                    self.assertIn(b'error-title', corpo)
+        finally:
+            self.app.router.routes[:] = [r for r in self.app.router.routes if getattr(r, 'path', '') not in {'/_teste-falha-interna', '/api/_teste-falha-interna'}]
+
+    def test_editor_etapas_persiste_formatacao_creditos_e_titulo_home(self):
+        from io import BytesIO
+        from PIL import Image
+        admin = self._usuario(TipoUsuario.ADMINISTRADOR)
+        token = criar_access_token(admin)
+        categoria = models.Categoria(nome='Direito Civil')
+        self.db.add(categoria)
+        self.db.commit()
+        arquivo = BytesIO()
+        Image.new('RGB', (8, 8), 'blue').save(arquivo, 'PNG')
+        imagem = 'data:image/png;base64,' + base64.b64encode(arquivo.getvalue()).decode()
+        fonte_longa = 'https://www.exemplo.test/imagens/' + 'caminho-'*30 + '?origem=arquivo'
+        dados = {'titulo': 'Título de leitura', 'corpo_texto': '## Uma seção\nTexto **importante** e _explicação_.\n> Uma citação\n- Um item\n<script>alert(1)</script>',
+                 'categoria_id': categoria.uuid, 'tipo_fonte': 'doutrina', 'imagem_miniatura': imagem,
+                 'imagem_corpo': imagem, 'fonte_imagem': fonte_longa,
+                 'editorial': {'titulo_home': 'Chamada na Home', 'formatado': True, 'alinhamento': 'justificado',
+                               'capa_legenda': 'Legenda da capa', 'imagens': [{'fonte': fonte_longa, 'legenda': 'Imagem de apoio',
+                                'alt': 'Uma ilustração de teste', 'apos_bloco': 2, 'largura': 'normal'}]}}
+        status, _, preview = self._request('POST', '/api/admin/materias/preview', dados, token=token)
+        self.assertEqual(status, 200)
+        self.assertIn(b'<strong>importante</strong>', preview)
+        self.assertIn(b'&lt;script&gt;', preview)
+        self.assertNotIn(b'<script>alert', preview)
+        self.assertEqual(self.db.query(models.Conteudo).count(), 0)
+        for aceite in ({}, {'aceite_editorial': False, 'versao_termos': '2026-10-30'}, {'aceite_editorial': True, 'versao_termos': 'antiga'}, {'aceite_editorial': 'true', 'versao_termos': '2026-10-30'}):
+            status, _, _ = self._request('POST', '/criar-materia', {**dados, **aceite}, token=token)
+            self.assertEqual(status, 422)
+        self.assertEqual(self.db.query(models.Conteudo).count(), 0)
+        dados.update(aceite_editorial=True, versao_termos='2026-10-30')
+        status, _, _ = self._request('POST', '/criar-materia', dados, token=token)
+        self.assertEqual(status, 200)
+        registro = self.db.query(models.LogAuditoria).filter_by(acao='aceite_editorial').one()
+        self.assertEqual(registro.usuario_id, admin.uuid)
+        self.assertEqual(json.loads(registro.detalhes_json)['versao_termos'], '2026-10-30')
+        materia = self.db.query(models.Conteudo).filter_by(titulo='Título de leitura').one()
+        self.assertEqual(materia.editorial.titulo_home, 'Chamada na Home')
+        config = json.loads(materia.editorial.configuracao_json)
+        self.assertEqual(config['imagens'][0]['fonte'], fonte_longa)
+        status, _, html = self._request('GET', '/materia/'+materia.uuid, token=token)
+        self.assertEqual(status, 200)
+        self.assertIn(b'Imagem de apoio', html)
+        self.assertIn(b'>exemplo.test', html)
+        self.assertIn(('href="'+fonte_longa+'"').encode(), html)
+        self.assertIn(b'materia-image-normal', html)
+        self.assertIn(b'<blockquote>', html)
+        materia.status = models.StatusConteudo.APROVADO
+        self.db.commit()
+        status, _, corpo = self._request('GET', '/api/conteudos')
+        self.assertEqual(json.loads(corpo)[0]['titulo'], 'Chamada na Home')
+        invalidos = {**dados, 'editorial': {**dados['editorial'], 'imagens': [{'fonte': ''}]}}
+        status, _, _ = self._request('POST', '/criar-materia', invalidos, token=token)
+        self.assertEqual(status, 422)
+
     @classmethod
     def setUpClass(cls):
         cls.engine = create_engine(
@@ -93,7 +561,7 @@ class TestesSeguranca(unittest.TestCase):
         finally:
             sessao.close()
 
-    def _request(self, method, path, data=None, token=None, cookie=None, extra_headers=()):
+    def _request(self, method, path, data=None, token=None, cookie=None, extra_headers=(), suprimir_erro_interno=False):
         overrides_anteriores = self.app.dependency_overrides.copy()
         self.app.dependency_overrides[get_db] = self._banco_teste
         self.app.dependency_overrides[get_feedback_db] = self._banco_teste
@@ -130,7 +598,11 @@ class TestesSeguranca(unittest.TestCase):
             "server": ("testserver", 80),
         }
         try:
-            asyncio.run(self.app(escopo, receber, enviar))
+            try:
+                asyncio.run(self.app(escopo, receber, enviar))
+            except Exception:
+                if not suprimir_erro_interno:
+                    raise
         finally:
             self.app.dependency_overrides.clear()
             self.app.dependency_overrides.update(overrides_anteriores)
@@ -156,8 +628,8 @@ class TestesSeguranca(unittest.TestCase):
         ):
             with self.subTest(caminho=caminho):
                 status, headers, _ = self._request("GET", caminho)
-                self.assertEqual(303, status)
-                self.assertEqual("/?sessao=expirada", headers["location"])
+                self.assertEqual(404, status)
+                self.assertIn(b'error-title', self._request('GET', caminho)[2])
 
         for caminho in ("/api/admin/auditoria", "/api/admin/feedbacks"):
             with self.subTest(caminho=caminho):
@@ -202,7 +674,7 @@ class TestesSeguranca(unittest.TestCase):
         for dados, esperado in ((b"<script>alert(1)</script>", 422), (b"x" * (2 * 1024 * 1024 + 1), 413)):
             with self.subTest(esperado=esperado):
                 with self.assertRaises(HTTPException) as contexto:
-                    atualizar_perfil(nome="Nome válido", foto=UploadFile(filename="foto.jpg", file=BytesIO(dados)), db=self.db, usuario=usuario)
+                    atualizar_perfil(nome="Nome válido", faculdade=None, interesse=None, foto=UploadFile(filename="foto.jpg", file=BytesIO(dados)), db=self.db, usuario=usuario)
                 self.assertEqual(esperado, contexto.exception.status_code)
 
     def test_materia_base64_so_aparece_apos_aprovacao_do_root(self):
@@ -218,7 +690,7 @@ class TestesSeguranca(unittest.TestCase):
         Image.new("RGB", (12, 8), "red").save(saida, format="PNG")
         imagem = "data:image/png;base64," + base64.b64encode(saida.getvalue()).decode("ascii")
         status, _, _ = self._request("POST", "/criar-materia", {
-            "titulo": "Matéria Base64", "corpo_texto": "Texto da matéria.",
+            "aceite_editorial": True, "versao_termos": "2026-10-30", "titulo": "Matéria Base64", "corpo_texto": "Texto da matéria.",
             "categoria_id": categoria.uuid, "tipo_fonte": "legislacao",
             "imagem_miniatura": imagem, "imagem_corpo": imagem,
         }, token=token)
@@ -228,7 +700,7 @@ class TestesSeguranca(unittest.TestCase):
         status, _, corpo = self._request("GET", "/api/conteudos")
         self.assertEqual([], json.loads(corpo))
         status, _, _ = self._request("PUT", f"/aprovar-materia/{materia.uuid}", token=token)
-        self.assertEqual(403, status)
+        self.assertEqual(404, status)
         root = self._usuario(TipoUsuario.ADMINISTRADOR)
         root.e_root_admin = True
         self.db.commit()
@@ -393,7 +865,7 @@ class TestesSeguranca(unittest.TestCase):
         consumidor = self.db.query(Categoria).filter_by(nome="Direito do Consumidor").one()
         admin = self._usuario(TipoUsuario.ADMINISTRADOR)
         token = criar_access_token(admin)
-        status, _, _ = self._request("POST", "/criar-materia", {"titulo": "Tags por categoria", "corpo_texto": "Texto da matéria para teste.", "categoria_id": trabalhista.uuid, "tipo_fonte": "legislacao", "tags": "clt, Trabalho, bolsa de estudo"}, token=token)
+        status, _, _ = self._request("POST", "/criar-materia", {"aceite_editorial": True, "versao_termos": "2026-10-30", "titulo": "Tags por categoria", "corpo_texto": "Texto da matéria para teste.", "categoria_id": trabalhista.uuid, "tipo_fonte": "legislacao", "tags": "clt, Trabalho, bolsa de estudo"}, token=token)
         self.assertEqual(200, status)
         self.db.expire_all()
         materia = self.db.query(Conteudo).filter_by(titulo="Tags por categoria").one()
@@ -439,7 +911,7 @@ class TestesSeguranca(unittest.TestCase):
         ):
             with self.subTest(caminho=caminho):
                 status, _, corpo = self._request("GET", caminho, token=token)
-                self.assertEqual(403, status, corpo.decode("utf-8", errors="replace"))
+                self.assertEqual(403 if caminho.startswith("/api/") else 404, status, corpo.decode("utf-8", errors="replace"))
 
     def test_administrador_autenticado_acessa_rotas_admin(self):
         administrador = self._usuario(TipoUsuario.ADMINISTRADOR)

@@ -98,6 +98,15 @@
             </div>
         </div>
 
+        {% if visao == 'categorias' %}
+        <script id="catalogo-categorias" type="application/json">{{ categorias_catalogo | default([]) | tojson }}</script>
+        <section id="apresentacao-categoria" hidden aria-labelledby="titulo-categoria" aria-live="polite" style="padding:24px;margin-bottom:28px;border:1px solid var(--juris-border);border-left:4px solid var(--juris-yellow);border-radius:12px;background:var(--juris-panel)">
+            <p style="color:var(--juris-yellow);font-size:11px;font-weight:700;letter-spacing:.1em;margin-bottom:8px">CONHEÇA ESTA ÁREA</p>
+            <h2 id="titulo-categoria" style="font-size:22px;font-weight:700;margin:0 0 12px;color:var(--juris-text)"></h2>
+            <p id="descricao-categoria" style="font-size:15px;line-height:1.8;color:var(--juris-muted)"></p>
+        </section>
+        {% endif %}
+
         <p id="status-listagem" class="text-amber-500 font-semibold flex items-center gap-2 mb-6" role="status" aria-live="polite">
             <i class="fa-solid fa-circle-notch fa-spin"></i> Carregando matérias...
         </p>
@@ -162,6 +171,20 @@
             const seletorCategoria = document.getElementById("categoria-materias");
 
             let acervoCompleto = [];
+            const catalogoCategorias = JSON.parse(document.getElementById('catalogo-categorias')?.textContent || '[]');
+            function apresentarCategoria() {
+                const painel = document.getElementById('apresentacao-categoria');
+                if (!painel) return;
+                const nome = seletorCategoria?.value || '';
+                painel.hidden = !nome;
+                document.getElementById('titulo-categoria').textContent = nome;
+                document.getElementById('descricao-categoria').textContent = catalogoCategorias.find(c => c.nome === nome)?.descricao || 'Esta área reúne matérias e conceitos relacionados ao tema selecionado. Explore as publicações abaixo para conhecer seus principais assuntos.';
+                const url = new URL(location.href);
+                if (nome) url.searchParams.set('categoria', nome);
+                else url.searchParams.delete('categoria');
+                history.replaceState(null, '', url);
+            }
+            if (visao === 'categorias' && seletorCategoria) preencherFiltroCategorias();
 
             async function carregarDados() {
                 try {
@@ -183,7 +206,9 @@
 
             function preencherFiltroCategorias() {
                 // Pega categorias únicas que não sejam vazias
-                const categoriasUnicas = [...new Set(acervoCompleto.map(m => m.categoria).filter(c => c))].sort();
+                const selecionada = seletorCategoria.value || new URLSearchParams(location.search).get('categoria');
+                seletorCategoria.replaceChildren(new Option('Todas as categorias', ''));
+                const categoriasUnicas = [...new Set([...catalogoCategorias.map(c => c.nome), ...acervoCompleto.map(m => m.categoria)].filter(Boolean))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
                 
                 categoriasUnicas.forEach(cat => {
                     const option = document.createElement("option");
@@ -191,9 +216,21 @@
                     option.textContent = cat;
                     seletorCategoria.appendChild(option);
                 });
+                const solicitada = selecionada;
+                if (solicitada) {
+                    if (!categoriasUnicas.includes(solicitada)) {
+                        const option = document.createElement('option');
+                        option.value = solicitada;
+                        option.textContent = solicitada;
+                        seletorCategoria.appendChild(option);
+                    }
+                    seletorCategoria.value = solicitada;
+                }
+                apresentarCategoria();
             }
 
             function processarERenderizar() {
+                apresentarCategoria();
                 let resultados = [...acervoCompleto];
 
                 // Filtra por Categoria (se estiver na página categorias)

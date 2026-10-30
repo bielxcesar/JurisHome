@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow"><title>{{ codigo }} · {{ titulo }} | JurisHome</title>
+<link rel="icon" href="/static/images/micrologo.png.png"><link rel="stylesheet" href="/static/css/erro.css?v=20261030">
+<script>(()=>{try{document.documentElement.dataset.theme=localStorage.getItem('tema_juris')==='claro'?'light':'dark';}catch(_){}})();</script>
+<script src="/static/js/erro.js?v=20261030" defer></script></head>
+<body class="error-page"><header><a href="{{ inicio }}" aria-label="Voltar ao início do JurisHome">Juris<span>Home</span></a><span>Vamos encontrar outro caminho</span></header>
+<main id="conteudo"><div class="error-art" aria-hidden="true"><span class="error-orbit orbit-one"></span><span class="error-orbit orbit-two"></span><span class="error-number">{{ codigo }}</span><span class="error-spark">✦</span></div>
+<section class="error-content" aria-labelledby="error-title"><p class="error-kicker">{{ 'ENDEREÇO NÃO ENCONTRADO' if codigo == 404 else 'UMA PAUSA NA NAVEGAÇÃO' }}</p><h1 id="error-title">{{ titulo }}</h1><p class="error-description">{{ explicacao }}</p>
+<div class="error-guidance"><span aria-hidden="true">i</span><div><h2>O que você pode fazer</h2><p>{{ orientacao }}</p></div></div>
+<div class="error-actions"><a class="error-primary" href="{{ inicio }}">Voltar ao início <span aria-hidden="true">→</span></a>{% if pode_tentar %}<button id="error-retry" type="button" hidden>Tentar novamente</button>{% endif %}</div>
+<p class="error-reference">Se precisar de ajuda, informe esta referência à equipe:<br><code>{{ referencia }}</code></p></section></main>
+<footer><span>JurisHome · Aprender também é encontrar novos caminhos.</span><nav aria-label="Documentos legais"><a href="/termos-de-aceite">Termos de uso</a><a href="/politica-de-privacidade">Privacidade</a></nav></footer></body></html>

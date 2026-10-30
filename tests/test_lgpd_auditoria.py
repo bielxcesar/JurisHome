@@ -135,14 +135,18 @@ class LgpdAuditoriaTests(unittest.TestCase):
     def test_navegacao_dos_perfis_nao_aponta_para_paginas_inexistentes(self):
         telas = {
             "home_Admin.html": ("/home_admin", "/configuracao", "/admin-feedbacks", "/admin/auditoria"),
-            "home_Usuario.html": ("/home_usuario", "/configuracoes-usuario", "/glossario?origem=usuario"),
+            "home_Usuario.html": ("/home_usuario", "/configuracoes-usuario", "/glossario"),
             "feedback-suporte.html": ("/home_usuario", "/configuracoes-usuario#feedback"),
             "materia.html": ("/exibir-mais", "/categorias"),
             "pesquisa.html": ("/exibir-mais", "/categorias"),
         }
 
         for arquivo, destinos in telas.items():
-            conteudo = (self.raiz / "templates" / arquivo).read_text(encoding="utf-8")
+            if arquivo.startswith('home_'):
+                from jinja2 import Environment, FileSystemLoader, select_autoescape
+                conteudo = Environment(loader=FileSystemLoader(self.raiz / 'templates'), autoescape=select_autoescape()).get_template(arquivo).render()
+            else:
+                conteudo = (self.raiz / "templates" / arquivo).read_text(encoding="utf-8")
             with self.subTest(arquivo=arquivo):
                 self.assertNotIn("/static/pages/", conteudo)
                 self.assertNotIn('href="#"', conteudo)
@@ -150,8 +154,10 @@ class LgpdAuditoriaTests(unittest.TestCase):
                     self.assertIn(f'href="{destino}"', conteudo)
 
     def test_home_aponta_para_telas_de_listagem_do_figma(self):
-        usuario = (self.raiz / "templates" / "home_Usuario.html").read_text(encoding="utf-8")
-        administrador = (self.raiz / "templates" / "home_Admin.html").read_text(encoding="utf-8")
+        from jinja2 import Environment, FileSystemLoader, select_autoescape
+        ambiente = Environment(loader=FileSystemLoader(self.raiz / "templates"), autoescape=select_autoescape())
+        usuario = ambiente.get_template("home_Usuario.html").render()
+        administrador = ambiente.get_template("home_Admin.html").render()
         for conteudo in (usuario, administrador):
             self.assertIn('href="/exibir-mais"', conteudo)
             self.assertIn('href="/categorias"', conteudo)

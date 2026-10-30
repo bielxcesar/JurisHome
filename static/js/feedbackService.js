@@ -73,6 +73,12 @@
         return requisitar("/api/feedbacks/me");
     }
 
+    async function complementar(id, mensagem) {
+        return requisitar(`/api/feedbacks/${encodeURIComponent(id)}/mensagens`, {
+            method: 'POST', body: JSON.stringify({mensagem}),
+        });
+    }
+
     async function alterarStatus(id, status) {
         const feedback = await requisitar(`/api/admin/feedbacks/${encodeURIComponent(id)}/status`, {
             method: "PATCH",
@@ -127,6 +133,7 @@
         buscarPorId,
         criar,
         listarMeus,
+        complementar,
         alterarStatus,
         alterarPrioridade,
         responder,

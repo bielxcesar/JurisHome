@@ -436,13 +436,13 @@ class AutenticacaoTests(unittest.TestCase):
         import pyotp
 
         codigo, headers, _ = self.requisicao_http("GET", "/home_usuario")
-        self.assertEqual(303, codigo)
-        self.assertIn(("location", "/?sessao=expirada"), headers)
+        self.assertEqual(404, codigo)
+        self.assertNotIn(("location", "/?sessao=expirada"), headers)
         for rota in ("/exibir-mais", "/categorias"):
             with self.subTest(rota=rota):
                 codigo, headers, _ = self.requisicao_http("GET", rota)
-                self.assertEqual(303, codigo)
-                self.assertIn(("location", "/?sessao=expirada"), headers)
+                self.assertEqual(404, codigo)
+                self.assertNotIn(("location", "/?sessao=expirada"), headers)
 
         codigo, headers, corpo = self.requisicao_http(
             "POST", "/api/auth/cadastro",
@@ -457,7 +457,7 @@ class AutenticacaoTests(unittest.TestCase):
         codigo, _, _ = self.requisicao_http("GET", "/api/usuarios/me", token=cadastro["configuracao_token"])
         self.assertEqual(401, codigo)
         codigo, _, _ = self.requisicao_http("GET", "/home_usuario")
-        self.assertEqual(303, codigo)
+        self.assertEqual(404, codigo)
 
         codigo_invalido = "000000" if pyotp.TOTP(cadastro["segredo"]).now() != "000000" else "999999"
         codigo, _, _ = self.requisicao_http(
@@ -488,7 +488,7 @@ class AutenticacaoTests(unittest.TestCase):
         codigo, _, _ = self.requisicao_http("POST", "/api/auth/logout", cookie=cookie)
         self.assertEqual(204, codigo)
         codigo, _, _ = self.requisicao_http("GET", "/home_usuario")
-        self.assertEqual(303, codigo)
+        self.assertEqual(404, codigo)
 
         codigo, headers, corpo = self.requisicao_http(
             "POST", "/api/auth/login", {"email": "completo@example.com", "senha": "SenhaSegura123"},

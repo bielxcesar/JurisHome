@@ -14,39 +14,19 @@
         (function() {
             const temaSalvo = localStorage.getItem("tema_juris");
             if (temaSalvo === "claro") {
-                document.documentElement.classList.remove("dark");
+                document.documentElement.classList.remove("dark");document.documentElement.dataset.theme="light";
             } else {
-                document.documentElement.classList.add("dark");
+                document.documentElement.classList.add("dark");document.documentElement.dataset.theme="dark";
             }
         })();
     </script>
+<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261030"><link rel="stylesheet" href="/static/css/home.css?v=20261030"><script src="/static/js/session.js" defer></script><script src="/static/js/curiosidades.js?v=20261030" defer></script>
 </head>
-<body class="bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
+<body class="juris-ui home-shell bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
 
-    <header class="bg-[#25262a] border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between sticky top-0 z-50">
-        <div class="text-gray-400 text-sm hidden md:block font-mono" id="data-atual">--/--/----</div>
-        
-        <nav class="flex flex-1 md:justify-center gap-4 md:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide text-sm md:text-base">
-            <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-house text-amber-500"></i> Início</a>
-            <a href="/exibir-mais" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-square-plus text-amber-500"></i> Exibir mais</a>
-            <a href="/categorias" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-newspaper text-amber-500"></i> Categorias</a>
-            <a href="/pesquisa" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-magnifying-glass text-amber-500"></i> Pesquisa</a>
-            <a href="/glossario" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-book-open text-amber-500"></i> Glossário</a>
-        </nav>
+{% include "_juris_nav.html" %}
 
-        <div class="relative ml-4">
-            <button id="btn-perfil" class="w-10 h-10 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500 bg-[#1e1e1e] transition cursor-pointer">
-                <i class="fa-solid fa-user-group"></i>
-            </button>
-
-            <div id="dropdown-perfil" class="hidden absolute right-0 top-14 w-56 bg-[#25262a] border border-gray-700 rounded-lg shadow-2xl flex-col gap-1 p-2 z-[100]">
-                <a href="/perfil" class="text-white bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Perfil <i class="fa-solid fa-user text-amber-500"></i></a>
-                <a href="/configuracoes-usuario" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Configurações <i class="fa-solid fa-gear text-gray-400"></i></a>
-                <a href="/" class="btn-desconectar mt-2 text-white bg-red-600 hover:bg-red-700 px-3 py-2 rounded flex justify-between items-center transition font-semibold">Sair <i class="fa-solid fa-power-off text-white"></i></a>
-            </div>
-        </div>
-    </header>
-
+    <p id="home-aviso" role="status" hidden></p>
     <main class="w-full max-w-4xl mx-auto px-4 py-12 flex-1">
         
         <div class="flex items-center gap-4 mb-6">
@@ -76,7 +56,7 @@
                     <label for="upload-foto" class="absolute bottom-0 right-0 w-8 h-8 bg-[#25262a] border border-gray-500 hover:border-amber-500 hover:text-amber-500 rounded-full flex items-center justify-center cursor-pointer transition shadow-md">
                         <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </label>
-                    <input type="file" id="upload-foto" accept="image/*" class="hidden">
+                    <input type="file" id="upload-foto" accept="image/jpeg,image/png,image/webp" class="hidden">
                 </div>
 
                 <div class="text-center md:text-left">
@@ -85,10 +65,10 @@
                     
                     <div class="flex flex-wrap items-center justify-center md:justify-start gap-3">
                         <span class="border border-amber-500 text-amber-500 px-3 py-1 rounded-full text-xs font-semibold tracking-wide bg-amber-500/10">
-                            {{ usuario.cargo | default('Estudante') }}
+                            {{ 'Administrador' if tipo_usuario == 'administrador' else 'Leitor' }}
                         </span>
                         <span class="border border-amber-500 text-amber-500 px-3 py-1 rounded-full text-xs font-semibold tracking-wide bg-amber-500/10">
-                            Conta desde {{ usuario.data_criacao | default('17/12/2025') }}
+                            Conta desde {{ usuario.criado_em.strftime('%d/%m/%Y') if usuario.criado_em else 'Data não disponível' }}
                         </span>
                     </div>
                 </div>
@@ -99,12 +79,12 @@
                     
                     <div class="flex flex-col gap-2">
                         <label for="nome" class="text-gray-300 font-medium text-lg">Nome:</label>
-                        <input type="text" id="nome" name="nome" value="{{ usuario.nome | default('Gabriel') }}" class="bg-transparent border border-amber-500 rounded-xl px-4 py-3 text-white focus:outline-none focus:bg-[#1e1e1e] transition">
+                        <input type="text" id="nome" name="nome" minlength="3" maxlength="100" required value="{{ usuario.nome | default('Gabriel') }}" class="bg-transparent border border-amber-500 rounded-xl px-4 py-3 text-white focus:outline-none focus:bg-[#1e1e1e] transition">
                     </div>
 
                     <div class="flex flex-col gap-2">
                         <label for="faculdade" class="text-gray-300 font-medium text-lg">Faculdade:</label>
-                        <input type="text" id="faculdade" name="faculdade" value="{{ usuario.faculdade | default('') }}" placeholder="Nome da instituição" class="bg-transparent border border-amber-500 rounded-xl px-4 py-3 text-white focus:outline-none focus:bg-[#1e1e1e] transition placeholder-gray-600">
+                        <input type="text" id="faculdade" name="faculdade" maxlength="255" value="{{ usuario.universidade or '' }}" placeholder="Nome da instituição" class="bg-transparent border border-amber-500 rounded-xl px-4 py-3 text-white focus:outline-none focus:bg-[#1e1e1e] transition placeholder-gray-600">
                     </div>
 
                     <div class="flex flex-col gap-2">
@@ -113,22 +93,7 @@
                         <small class="text-gray-500 text-xs">O e-mail não pode ser alterado por aqui.</small>
                     </div>
 
-                    <div class="flex flex-col gap-2 relative">
-                        <label class="text-gray-300 font-medium text-lg">Matéria de interesse:</label>
-                        
-                        <div id="sanfona-toggle" class="bg-transparent border border-amber-500 rounded-xl px-4 py-3 text-white flex justify-between items-center cursor-pointer select-none hover:bg-[#1e1e1e] transition">
-                            <span id="sanfona-selecionado">{{ usuario.interesse | default('Selecione uma matéria') }}</span>
-                            <i class="fa-solid fa-chevron-down text-amber-500 transition-transform duration-300" id="sanfona-icone"></i>
-                        </div>
-                        <input type="hidden" id="interesse" name="interesse" value="{{ usuario.interesse | default('') }}">
-
-                        <div id="sanfona-opcoes" class="hidden absolute top-full left-0 right-0 mt-2 bg-[#1e1e1e] border border-amber-500 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col">
-                            <div class="px-4 py-3 hover:bg-amber-500 hover:text-black cursor-pointer transition border-b border-gray-800 text-sm font-medium" data-value="Direito Trabalhista">Direito Trabalhista</div>
-                            <div class="px-4 py-3 hover:bg-amber-500 hover:text-black cursor-pointer transition border-b border-gray-800 text-sm font-medium" data-value="Direito Civil">Direito Civil</div>
-                            <div class="px-4 py-3 hover:bg-amber-500 hover:text-black cursor-pointer transition text-sm font-medium" data-value="Direito do Consumidor">Direito do Consumidor</div>
-                        </div>
-                    </div>
-
+                    <div class="flex flex-col gap-2"><label for="interesse" class="text-gray-300 font-medium text-lg">Área de interesse</label><select id="interesse" name="interesse" class="bg-[#25262a] border border-amber-500 rounded-xl px-4 py-3 text-white"><option value="">Selecione uma área</option>{% for area in categorias_perfil %}<option value="{{ area }}" {% if usuario.especialidade_juridica == area %}selected{% endif %}>{{ area }}</option>{% endfor %}</select></div>
                 </div>
 
                 <div class="flex justify-end pt-4">
@@ -172,55 +137,6 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            // Dropdown do Menu Perfil Superior
-            const botaoPerfil = document.getElementById("btn-perfil");
-            const menuPerfil = document.getElementById("dropdown-perfil");
-            
-            if (botaoPerfil && menuPerfil) {
-                botaoPerfil.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    menuPerfil.classList.toggle("hidden");
-                    menuPerfil.classList.toggle("flex");
-                });
-                document.addEventListener("click", (e) => {
-                    if (!menuPerfil.contains(e.target) && !botaoPerfil.contains(e.target)) {
-                        menuPerfil.classList.add("hidden");
-                        menuPerfil.classList.remove("flex");
-                    }
-                });
-            }
-
-            const elData = document.getElementById("data-atual");
-            if(elData) elData.textContent = new Intl.DateTimeFormat("pt-BR").format(new Date());
-
-            // Lógica da Sanfona de Matéria de Interesse
-            const sanfonaToggle = document.getElementById("sanfona-toggle");
-            const sanfonaOpcoes = document.getElementById("sanfona-opcoes");
-            const sanfonaIcone = document.getElementById("sanfona-icone");
-            const sanfonaSelecionado = document.getElementById("sanfona-selecionado");
-            const inputInteresse = document.getElementById("interesse");
-
-            sanfonaToggle.addEventListener("click", (e) => {
-                e.stopPropagation();
-                sanfonaOpcoes.classList.toggle("hidden");
-                sanfonaIcone.classList.toggle("rotate-180");
-            });
-
-            document.querySelectorAll("#sanfona-opcoes div").forEach(opcao => {
-                opcao.addEventListener("click", () => {
-                    const valor = opcao.getAttribute("data-value");
-                    sanfonaSelecionado.textContent = valor;
-                    inputInteresse.value = valor;
-                    sanfonaOpcoes.classList.add("hidden");
-                    sanfonaIcone.classList.remove("rotate-180");
-                });
-            });
-
-            document.addEventListener("click", () => {
-                sanfonaOpcoes.classList.add("hidden");
-                sanfonaIcone.classList.remove("rotate-180");
-            });
-
             // Preview da Nova Foto de Perfil
             const inputFoto = document.getElementById("upload-foto");
             const imgPreview = document.getElementById("avatar-preview");
@@ -229,6 +145,7 @@
             inputFoto.addEventListener("change", function(event) {
                 const file = event.target.files[0];
                 if (file) {
+                    if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024) { alert('Escolha uma imagem JPEG, PNG ou WebP de até 2 MB.'); inputFoto.value=''; return; }
                     const reader = new FileReader();
                     reader.onload = function(e) {
                         imgPreview.src = e.target.result;
@@ -247,6 +164,7 @@
                 e.preventDefault();
                 
                 const formData = new FormData(formPerfil);
+                if (inputFoto.files[0]) formData.append('foto', inputFoto.files[0]);
 
                 try {
                     const resposta = await fetch("/api/perfil/atualizar", {
@@ -263,7 +181,8 @@
                             window.location.reload();
                         }, 1500);
                     } else {
-                        alert("Erro ao atualizar o perfil.");
+                        const erro = await resposta.json().catch(()=>({}));
+                        alert(typeof erro.detail === 'string' ? erro.detail : 'Confira os campos do perfil.');
                     }
                 } catch (erro) {
                     console.error("Erro na requisição:", erro);

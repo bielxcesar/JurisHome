@@ -28,7 +28,7 @@ from auth.security import (
 )
 from database import get_db
 from feedback_database import get_feedback_db
-from model.models import TipoUsuario, Usuario
+from model.models import TipoUsuario, Usuario, JuridleRodada, ConteudoLeitura
 from services.auditoria import registrar_auditoria
 from services.direitos_titular import (anonimizar_feedbacks_atendimento,anonimizar_feedbacks_legados,anonimizar_usuario,)
 from services.lgpd import TERMOS_VERSAO
@@ -869,6 +869,8 @@ def anonimizar_meus_dados(
     try:
         feedbacks_atendimento = anonimizar_feedbacks_atendimento(banco_feedback, usuario_id)
         feedbacks_legados = anonimizar_feedbacks_legados(db, usuario_id)
+        db.query(JuridleRodada).filter_by(usuario_id=usuario_id).delete(synchronize_session=False)
+        db.query(ConteudoLeitura).filter_by(usuario_id=usuario_id).delete(synchronize_session=False)
 
         if banco_feedback is not db:
             banco_feedback.commit()

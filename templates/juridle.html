@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Painel inicial do JurisHome com matérias organizadas por categoria">
+    <title>Juridle | JurisHome</title>
+    <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
+    <!-- Tailwind via CDN para padronização -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261030">
+<link rel="stylesheet" href="/static/css/home.css?v=20261030">
+<script>(()=>{let claro=false;try{claro=localStorage.getItem('tema_juris')==='claro';}catch(_){}document.documentElement.dataset.theme=claro?'light':'dark';document.documentElement.classList.toggle('dark',!claro);})();</script>
+<script src="/static/js/session.js" defer></script><script src="/static/js/curiosidades.js?v=20261030" defer></script>
+<script src="/static/js/juridle.js?v=20261030" defer></script>
+</head>
+<body class="juris-ui home-shell bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Barra de Navegação -->
+    <a class="home-skip" href="#conteudo-principal">Pular para o conteúdo</a>
+{% include "_juris_nav.html" %}
+
+<main class="home-main juridle-page" id="conteudo-principal">
+<p id="home-aviso" role="status" hidden></p>
+<div class="juridle-stats" aria-label="Seu progresso de estudo"><div class="juridle-stat"><i class="fa-solid fa-crown" aria-hidden="true"></i><div><span>Seu nível</span><strong id="j-nivel">—</strong></div></div><div class="juridle-stat"><i class="fa-solid fa-fire-flame-curved" aria-hidden="true"></i><div><span>Dias seguidos de prática</span><strong id="j-frequencia">—</strong></div></div></div>
+<header class="juridle-heading"><span class="home-eyebrow"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> CANTO RECREATIVO</span><h1>Juridle</h1><p>Uma pergunta por vez. Quatro alternativas. Um novo conceito para aprender.</p></header>
+<div class="juridle-mini-stats"><span>Sequência: <strong id="j-sequencia">0</strong> acertos</span><span>Melhor sequência: <strong id="j-recorde">0</strong></span><span>Coroas: <strong id="j-coroas">0</strong></span></div>
+<section class="juridle-panel" aria-labelledby="juridle-sobre"><h2 id="juridle-sobre">Como funciona?</h2><p>Cada rodada tem cinco perguntas sobre termos do glossário jurídico, com quatro alternativas e uma resposta correta. Escolha sua resposta e confira uma explicação antes de continuar.</p><p>A cada dez acertos você avança um nível. Complete uma rodada para registrar seu dia de prática. Acerte as cinco perguntas da rodada para conquistar uma coroa. Um erro encerra a sequência de acertos, mas você pode seguir aprendendo.</p><button type="button" class="juridle-play" id="j-play" disabled><i class="fa-solid fa-play" aria-hidden="true"></i> Carregando…</button><p class="juridle-notice">Prática individual, sem limite de tempo por pergunta. Uma rodada pode ser retomada por até 24 horas. Frequência calculada pelo horário de Brasília.</p></section>
+<section class="juridle-panel" id="j-jogo" hidden tabindex="-1" aria-labelledby="j-pergunta-titulo">
+<p class="home-eyebrow" id="j-andamento"></p><h2 id="j-pergunta-titulo"></h2><p id="j-definicao"></p>
+<div class="juridle-options" id="j-opcoes" role="group" aria-label="Escolha uma resposta"></div>
+<div id="j-retorno" role="status" hidden><h3 id="j-resultado"></h3><p id="j-explicacao"></p><p id="j-exemplo"></p><a id="j-fonte" target="_blank" rel="noopener noreferrer">Consultar fonte oficial ↗</a></div>
+<button class="juridle-play" type="button" id="j-proxima" hidden>Próxima pergunta →</button>
+</section>
+<section class="juridle-panel" id="j-final" hidden tabindex="-1" aria-labelledby="j-final-titulo"><h2 id="j-final-titulo">Rodada concluída</h2><p id="j-final-texto"></p><button class="juridle-play" id="j-nova" type="button">Jogar outra rodada</button></section>
+<section class="juridle-panel"><h2>Suas últimas rodadas</h2><ul id="j-historico"><li>Carregando histórico…</li></ul></section>
+<div class="juridle-bottom"><a href="{{ '/home_admin' if tipo_usuario == 'administrador' else '/home_usuario' }}">← Voltar para a Home</a><a href="/glossario">Estudar pelo glossário →</a><a href="/conhecimento">Explorar conhecimento →</a></div>
+</main>{% include "_legal_links.html" %}</body></html>

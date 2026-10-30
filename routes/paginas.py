@@ -11,15 +11,44 @@ from fastapi import UploadFile, File, Form
 
 from database import get_db
 from auth.security import get_current_user
-from model.models import Conteudo, Usuario, TipoUsuario, StatusConteudo
+from model.models import Categoria, Conteudo, Usuario, TipoUsuario, StatusConteudo, ConteudoLeitura
+from auth.sessions import garantir_transacao
+from sqlalchemy.exc import IntegrityError
+from datetime import datetime
+from model.models import fuso_br
 from services.lgpd import POLITICA_PRIVACIDADE_VERSAO, TERMOS_VERSAO
 from services.imagens import url_fonte_segura, url_imagem_segura
-from services.categorias import combinar_tags
+from services.categorias import combinar_tags, descricao_categoria, CATALOGO
+from services.editorial import montar_editorial
 from urllib.parse import quote
 import math
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+
+
+@router.get("/conhecimento", response_class=HTMLResponse)
+def pagina_conhecimento(request: Request, usuario: Usuario = Depends(get_current_user)):
+    return templates.TemplateResponse(request=request, name="conhecimento.html", context={
+        "tipo_usuario": usuario.tipo_usuario.value,
+    })
+
+
+@router.get("/juridle", response_class=HTMLResponse)
+def pagina_juridle(request: Request, usuario: Usuario = Depends(get_current_user)):
+    return templates.TemplateResponse(request=request, name="juridle.html", context={
+        "tipo_usuario": usuario.tipo_usuario.value,
+    })
+
+
+@router.get("/curiosidades", response_class=HTMLResponse)
+def pagina_curiosidades(request: Request, usuario: Usuario = Depends(get_current_user)):
+    from services.glossario import consultar_glossario
+    selecionados = {"acordao", "habeas-corpus", "jurisprudencia", "onus-da-prova", "conciliacao", "mediacao"}
+    itens = [item for item in consultar_glossario()["itens"] if item["id"] in selecionados]
+    return templates.TemplateResponse(request=request, name="curiosidades.html", context={
+        "tipo_usuario": usuario.tipo_usuario.value, "itens": itens,
+    })
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -37,8 +66,10 @@ def pagina_2fatores(request: Request):
 
 @router.get("/renovar-sessao", response_class=HTMLResponse)
 def pagina_renovar_sessao(request: Request, destino: str = "/home_usuario"):
-    permitidos = {"/home_usuario", "/home_admin", "/perfil", "/pesquisa", "/categorias", "/exibir-mais", "/configuracoes-usuario", "/configuracao", "/admin-feedbacks", "/admin/auditoria", "/feedback"}
-    if destino not in permitidos and not (destino.startswith("/materia/") and destino.removeprefix("/materia/").replace("-", "").isalnum()):
+    permitidos = {"/home_usuario", "/home_admin", "/perfil", "/pesquisa", "/categorias", "/exibir-mais", "/configuracoes-usuario", "/configuracao", "/admin-feedbacks", "/admin/auditoria", "/feedback", "/juridle", "/curiosidades", "/conhecimento", "/admin/tabela-noticias"}
+    destino_dinamico = any(destino.startswith(prefixo) and destino.removeprefix(prefixo).replace("-", "").isalnum()
+                           for prefixo in ("/materia/", "/admin/administradores/"))
+    if destino not in permitidos and not destino_dinamico:
         destino = "/home_usuario"
     return templates.TemplateResponse(request=request, name="renovar_sessao.html", context={"destino": destino})
 
@@ -88,9 +119,10 @@ def atualizar_perfil(
     nome = nome.strip()
     if not 3 <= len(nome) <= 100:
         raise HTTPException(status_code=422, detail="O nome deve ter entre 3 e 100 caracteres.")
-    # Se tiver esses campos no model, descomente:
-    # usuario.faculdade = faculdade
-    # usuario.interesse = interesse
+    if faculdade is not None and len(faculdade.strip()) > 255:
+        raise HTTPException(status_code=422, detail="A instituição deve ter no máximo 255 caracteres.")
+    if interesse is not None and len(interesse.strip()) > 100:
+        raise HTTPException(status_code=422, detail="O interesse deve ter no máximo 100 caracteres.")
 
     if foto and foto.filename:
         limite = 2 * 1024 * 1024
@@ -113,6 +145,10 @@ def atualizar_perfil(
         usuario.foto_perfil = f"/static/uploads/{nome_arquivo}"
 
     usuario.nome = nome
+    if faculdade is not None:
+        usuario.universidade = faculdade.strip() or None
+    if interesse is not None:
+        usuario.especialidade_juridica = interesse.strip() or None
     db.commit()
     db.refresh(usuario)
     return {"status": "sucesso", "mensagem": "Perfil atualizado com sucesso!"}
@@ -123,6 +159,8 @@ def pagina_configuracoes_usuario(
     request: Request,
     usuario: Usuario = Depends(get_current_user),
 ):
+    if usuario.tipo_usuario == TipoUsuario.ADMINISTRADOR:
+        raise HTTPException(404, "Página não encontrada.")
     return templates.TemplateResponse(
         request=request,
         name="confUsuario.html", 
@@ -141,6 +179,8 @@ def pagina_configuracoes_usuario(
 
 @router.get("/feedback", response_class=HTMLResponse)
 def pagina_feedback(request: Request, usuario: Usuario = Depends(get_current_user)):
+    if usuario.tipo_usuario == TipoUsuario.ADMINISTRADOR:
+        raise HTTPException(404, "Página não encontrada.")
     return templates.TemplateResponse(request=request, name="feedback-suporte.html")
 
 
@@ -151,6 +191,8 @@ async def get_home_usuario(
     request: Request,
     usuario: Usuario = Depends(get_current_user),
 ):
+    if usuario.tipo_usuario == TipoUsuario.ADMINISTRADOR:
+        raise HTTPException(404, "Página não encontrada.")
     return templates.TemplateResponse(
         request=request, 
         name="home_Usuario.html"
@@ -166,6 +208,7 @@ def pagina_perfil(
         name="perfil.html",
         context={
             "usuario": usuario,
+            "categorias_perfil": list(CATALOGO),
             "tipo_usuario": usuario.tipo_usuario.value if hasattr(usuario, "tipo_usuario") and hasattr(usuario.tipo_usuario, "value") else "usuario",
         },
     )
@@ -198,11 +241,14 @@ def pagina_exibir_mais(
 def pagina_categorias(
     request: Request,
     usuario: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     return templates.TemplateResponse(
         request=request,
         name="listagem_conteudos.html",
-        context={"tipo_usuario": usuario.tipo_usuario.value, "visao": "categorias"},
+        context={"tipo_usuario": usuario.tipo_usuario.value, "visao": "categorias",
+                 "categorias_catalogo": [{"nome": c.nome, "descricao": descricao_categoria(c.nome)}
+                                         for c in db.query(Categoria).order_by(Categoria.nome).all()]},
     )
 
 @router.get("/materia/{conteudo_id}", response_class=HTMLResponse)
@@ -219,6 +265,18 @@ def pagina_materia(
         and usuario.tipo_usuario != TipoUsuario.ADMINISTRADOR
     ):
         raise HTTPException(status_code=404, detail="Conteúdo não encontrado")
+
+    if usuario.tipo_usuario == TipoUsuario.ESTUDANTE:
+        garantir_transacao(db)
+        chave = {"usuario_id": usuario.uuid, "conteudo_id": conteudo.uuid,
+                 "dia": datetime.now(fuso_br).date().isoformat()}
+        try:
+            with db.begin_nested():
+                db.add(ConteudoLeitura(**chave))
+                db.flush()
+        except IntegrityError:
+            pass  # Recarregar a matéria no mesmo dia não gera outra leitura.
+        db.commit()
     
     tags_lista = combinar_tags(conteudo.categoria.nome if conteudo.categoria else "", conteudo.tags)
     paragrafos = [linha.strip() for linha in (conteudo.corpo_texto or "").splitlines() if linha.strip()]
@@ -237,6 +295,7 @@ def pagina_materia(
         name="materia.html",
         context={
             "materia": conteudo,
+            **montar_editorial(conteudo),
             "tags": tags_lista,
             "tipo_usuario": usuario.tipo_usuario.value,
             "blocos_materia": blocos,

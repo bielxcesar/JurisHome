@@ -276,6 +276,11 @@ def get_current_user(
     if usuario is None or not usuario.is_2fa_enabled or not usuario.totp_secret:
         raise credenciais_invalidas
 
+    if usuario.e_root_admin:
+        roots = db.query(Usuario.uuid).filter(Usuario.e_root_admin != False).limit(2).all()
+        if usuario.tipo_usuario != TipoUsuario.ADMINISTRADOR or len(roots) != 1 or roots[0].uuid != usuario.uuid:
+            raise HTTPException(status_code=403, detail="Configuração de administrador principal inconsistente. Acesso root bloqueado até correção.")
+
     agora_utc = datetime.now(timezone.utc)
     sessao = db.get(SessaoAutenticada, payload.get("sid")) if isinstance(payload.get("sid"), str) else None
     if (not sessao or sessao.usuario_id != usuario.uuid or sessao.revogada
@@ -301,6 +306,7 @@ def get_current_user(
             raise credenciais_invalidas
 
     definir_ator_auditoria(usuario)
+    request.state.tipo_usuario = usuario.tipo_usuario.value
     return usuario
 
 

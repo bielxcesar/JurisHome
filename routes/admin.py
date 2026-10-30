@@ -2,12 +2,21 @@ from typing import Optional
 from fastapi import APIRouter, Request, Depends, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
+from services.editorial import ConfiguracaoEditorial, montar_editorial, estilos_previa
+from model.models import ConteudoEditorial
+from types import SimpleNamespace
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
+from services.auditoria import registrar_auditoria
+from services.administradores import exigir_root, buscar_admin, revogar_sessoes, serializar_admin
+from model.models import AdministradorExcluido
+from routes.auth import CadastroUsuario, Credenciais
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 
 from database import get_db
-from model.models import Categoria, Conteudo, LogAuditoria, StatusConteudo, gerar_uuid, Usuario, TipoUsuario, TipoFonte, FeedbackAtendimento
+from model.models import Categoria, Conteudo, LogAuditoria, StatusConteudo, gerar_uuid, Usuario, TipoUsuario, TipoFonte, FeedbackAtendimento, ConteudoLeitura
 from services.imagens import normalizar_imagem, LIMITE_IMAGEM_BYTES
 from services.categorias import tags_padrao, combinar_tags, normalizar
 from auth.security import get_current_user, hash_senha
@@ -15,6 +24,150 @@ import base64
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+
+
+class CadastroAdministrador(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=False)
+    nome: str = Field(min_length=3, max_length=100)
+    email: str = Field(max_length=150)
+    senha: str = Field(min_length=8, max_length=72)
+
+    @field_validator("nome")
+    @classmethod
+    def validar_nome(cls, valor):
+        valor = valor.strip()
+        if len(valor) < 3:
+            raise ValueError("Informe um nome com pelo menos 3 caracteres.")
+        return valor
+
+    @field_validator("email")
+    @classmethod
+    def validar_email(cls, valor):
+        return Credenciais.limpar_email(valor)
+
+    @field_validator("senha")
+    @classmethod
+    def validar_senha(cls, valor):
+        return CadastroUsuario.validar_senha(valor)
+
+
+class ManutencaoAdministrador(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    nome: str = Field(min_length=3, max_length=100)
+    email: str = Field(max_length=150)
+    versao: str = Field(min_length=10, max_length=50)
+    nova_senha: Optional[str] = Field(default=None, min_length=8, max_length=72)
+    encerrar_sessoes: bool = Field(default=False, strict=True)
+    resetar_2fa: bool = Field(default=False, strict=True)
+
+    @field_validator("nome")
+    @classmethod
+    def validar_nome(cls, valor):
+        return CadastroAdministrador.validar_nome(valor)
+
+    @field_validator("email")
+    @classmethod
+    def validar_email(cls, valor):
+        return Credenciais.limpar_email(valor)
+
+    @field_validator("nova_senha")
+    @classmethod
+    def validar_senha(cls, valor):
+        return CadastroUsuario.validar_senha(valor) if valor is not None else None
+
+
+class ExclusaoAdministrador(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    nome_confirmacao: str = Field(min_length=3, max_length=100)
+
+
+@router.get("/admin/administradores/{usuario_id}", response_class=HTMLResponse)
+def pagina_manutencao_admin(usuario_id: str, request: Request, db: Session = Depends(get_db),
+                           root: Usuario = Depends(exigir_root)):
+    alvo = buscar_admin(db, usuario_id, root)
+    return templates.TemplateResponse(request=request, name="admin-perfil.html", context={
+        "tipo_usuario": root.tipo_usuario.value, "administrador": serializar_admin(db, alvo),
+    })
+
+
+@router.get("/api/admin/administradores/{usuario_id}")
+def consultar_administrador(usuario_id: str, db: Session = Depends(get_db), root: Usuario = Depends(exigir_root)):
+    return serializar_admin(db, buscar_admin(db, usuario_id, root))
+
+
+@router.put("/api/admin/administradores/{usuario_id}")
+def manter_administrador(usuario_id: str, dados: ManutencaoAdministrador,
+                        db: Session = Depends(get_db), root: Usuario = Depends(exigir_root)):
+    alvo = buscar_admin(db, usuario_id, root, bloquear=True)
+    if dados.versao != alvo.atualizado_em.isoformat():
+        raise HTTPException(409, "Esta conta mudou desde que a página foi aberta. Recarregue antes de salvar.")
+    duplicado = db.query(Usuario.uuid).filter(func.lower(Usuario.email) == dados.email, Usuario.uuid != alvo.uuid).first()
+    if duplicado:
+        raise HTTPException(409, "Este e-mail já está cadastrado.")
+    revogar = dados.encerrar_sessoes or dados.resetar_2fa or dados.nova_senha is not None or dados.email != alvo.email
+    alvo.nome, alvo.email = dados.nome, dados.email
+    if dados.nova_senha is not None:
+        alvo.senha_hash = hash_senha(dados.nova_senha)
+    if dados.resetar_2fa:
+        alvo.totp_secret = None
+        alvo.is_2fa_enabled = False
+    if revogar:
+        revogar_sessoes(db, alvo)
+    registrar_auditoria(db, acao="administrador_atualizado", recurso_tipo="usuario", recurso_id=alvo.uuid,
+                        resultado="sucesso", usuario=root,
+                        detalhes={"sessoes_revogadas": revogar, "reset_2fa": dados.resetar_2fa,
+                                  "senha_redefinida": dados.nova_senha is not None})
+    try:
+        db.commit()
+    except IntegrityError as erro:
+        db.rollback()
+        raise HTTPException(409, "Não foi possível salvar. Confira se o e-mail já foi usado.") from erro
+    db.refresh(alvo)
+    return {"mensagem": "Administrador atualizado com sucesso.", "administrador": serializar_admin(db, alvo)}
+
+
+@router.delete("/api/admin/administradores/{usuario_id}")
+def excluir_administrador(usuario_id: str, dados: ExclusaoAdministrador,
+                         db: Session = Depends(get_db), root: Usuario = Depends(exigir_root)):
+    alvo = buscar_admin(db, usuario_id, root, bloquear=True)
+    if dados.nome_confirmacao.strip() != alvo.nome:
+        raise HTTPException(422, "Digite o nome completo exatamente como aparece na confirmação.")
+    revogar_sessoes(db, alvo)
+    alvo.nome = "Administrador removido"
+    alvo.email = f"removido-{alvo.uuid}@invalid.local"
+    alvo.senha_hash = None
+    alvo.totp_secret = None
+    alvo.is_2fa_enabled = False
+    alvo.foto_perfil = None
+    alvo.universidade = None
+    alvo.especialidade_juridica = None
+    db.add(AdministradorExcluido(usuario_id=alvo.uuid, excluido_por=root.uuid,
+                               excluido_em=datetime.now(timezone.utc).replace(tzinfo=None)))
+    registrar_auditoria(db, acao="administrador_excluido", recurso_tipo="usuario", recurso_id=alvo.uuid,
+                        resultado="sucesso", usuario=root, detalhes={"vinculos_editoriais_preservados": True})
+    db.commit()
+    return {"mensagem": "Administrador excluído. O acesso foi encerrado; matérias e histórico foram preservados."}
+
+
+@router.post("/api/admin/criar-admin", status_code=201)
+def criar_administrador(dados: CadastroAdministrador, db: Session = Depends(get_db),
+                        usuario: Usuario = Depends(get_current_user)):
+    if usuario.tipo_usuario != TipoUsuario.ADMINISTRADOR or not usuario.e_root_admin:
+        raise HTTPException(status_code=403, detail="Apenas o administrador principal pode cadastrar administradores.")
+    if db.query(Usuario.uuid).filter(func.lower(Usuario.email) == dados.email).first():
+        raise HTTPException(status_code=409, detail="Este e-mail já está cadastrado.")
+    novo = Usuario(nome=dados.nome, email=dados.email, senha_hash=hash_senha(dados.senha),
+                   tipo_usuario=TipoUsuario.ADMINISTRADOR, e_root_admin=False, is_2fa_enabled=False)
+    db.add(novo)
+    try:
+        db.flush()
+        registrar_auditoria(db, acao="administrador_cadastrado", recurso_tipo="usuario",
+                            recurso_id=novo.uuid, resultado="sucesso", usuario=usuario)
+        db.commit()
+    except IntegrityError as erro:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Este e-mail já está cadastrado.") from erro
+    return {"mensagem": "Administrador cadastrado. O primeiro acesso exige a configuração do 2FA.", "uuid": novo.uuid}
 
 class MateriaUpdateSchema(BaseModel):
     titulo: Optional[str] = None
@@ -31,7 +184,7 @@ class MateriaCreate(BaseModel):
     titulo: Optional[str] = None
     sub_titulo: Optional[str] = None
     resumo_home: Optional[str] = None
-    corpo_texto: str
+    corpo_texto: str = Field(min_length=1, max_length=50000)
     categoria_id: str
     tipo_fonte: TipoFonte
     
@@ -53,11 +206,39 @@ class MateriaCreate(BaseModel):
     fonte_original: Optional[str] = None
     fonte_imagem: Optional[str] = None
     tags: Optional[str] = None
+    editorial: ConfiguracaoEditorial | None = None
+    aceite_editorial: bool = Field(default=False, strict=True)
+    versao_termos: str | None = None
+
+    @model_validator(mode="after")
+    def validar_creditos_editoriais(self):
+        if self.editorial:
+            capa = self.imagem_miniatura or self.miniatura or self.imagem_principal
+            if capa and not (self.fonte_imagem or '').strip():
+                raise ValueError("Informe o crédito da imagem de capa.")
+            for i, imagem in enumerate((self.imagem_corpo or self.corpo_1, self.imagem_extra_2 or self.corpo_2, self.imagem_extra_3 or self.corpo_3)):
+                if imagem and (i >= len(self.editorial.imagens) or not self.editorial.imagens[i].fonte.strip()):
+                    raise ValueError(f"Informe o crédito da imagem interna {i+1}.")
+        return self
 
     @field_validator("imagem_miniatura", "miniatura", "imagem_principal", "imagem_corpo", "corpo_1", "imagem_extra_2", "corpo_2", "imagem_extra_3", "corpo_3")
     @classmethod
     def validar_imagem(cls, valor):
         return normalizar_imagem(valor)
+
+
+@router.post("/api/admin/materias/preview", response_class=HTMLResponse)
+def preview_editorial(dados: MateriaCreate, request: Request, usuario: Usuario = Depends(get_current_user)):
+    if usuario.tipo_usuario != TipoUsuario.ADMINISTRADOR:
+        raise HTTPException(403, "Acesso restrito.")
+    materia = SimpleNamespace(titulo=dados.titulo or "Sem título", corpo_texto=dados.corpo_texto,
+        fonte_imagem=dados.fonte_imagem, imagem_corpo=dados.imagem_corpo or dados.corpo_1,
+        imagem_extra_2=dados.imagem_extra_2 or dados.corpo_2, imagem_extra_3=dados.imagem_extra_3 or dados.corpo_3)
+    return templates.TemplateResponse(request=request, name="materia-preview-editor.html", context={
+        **montar_editorial(materia, dados.editorial), "titulo": materia.titulo, "subtitulo": dados.sub_titulo,
+        "preview_css": estilos_previa(),
+        "capa_materia": dados.imagem_miniatura or dados.miniatura or dados.imagem_principal,
+    })
 
 @router.post("/upload-imagem")
 async def upload_imagem(
@@ -144,7 +325,9 @@ def listar_usuarios_filtro(
     if usuario_logado.tipo_usuario != TipoUsuario.ADMINISTRADOR:
         raise HTTPException(status_code=403, detail="Acesso negado.")
 
-    query = db.query(Usuario)
+    query = db.query(Usuario).outerjoin(AdministradorExcluido, AdministradorExcluido.usuario_id == Usuario.uuid).filter(
+        AdministradorExcluido.usuario_id.is_(None),
+    )
     
     if tipo == "admins":
         query = query.filter(Usuario.tipo_usuario == TipoUsuario.ADMINISTRADOR)
@@ -242,6 +425,7 @@ def deletar_materia(
     if not materia:
         raise HTTPException(status_code=404, detail="Matéria não encontrada.")
 
+    db.query(ConteudoLeitura).filter_by(conteudo_id=materia.uuid).delete(synchronize_session=False)
     db.delete(materia)
     db.commit()
     return {"mensagem": "Matéria descartada com sucesso."}
@@ -255,6 +439,9 @@ def criar_materia(
 ):
     if usuario_logado.tipo_usuario != TipoUsuario.ADMINISTRADOR:
         raise HTTPException(status_code=403, detail="Apenas administradores podem criar conteúdo.")
+
+    if not dados_tela.aceite_editorial or dados_tela.versao_termos != "2026-10-30":
+        raise HTTPException(422, "Leia e aceite as regras editoriais vigentes antes de enviar a matéria.")
 
     categoria = db.get(Categoria, dados_tela.categoria_id)
     if categoria is None:
@@ -288,6 +475,12 @@ def criar_materia(
     )
     
     db.add(nova_materia)
+    if dados_tela.editorial:
+        nova_materia.editorial = ConteudoEditorial(titulo_home=dados_tela.editorial.titulo_home,
+            configuracao_json=dados_tela.editorial.model_dump_json())
+    db.flush()
+    registrar_auditoria(db, acao="aceite_editorial", recurso_tipo="conteudo", recurso_id=nova_materia.uuid,
+        usuario=usuario_logado, resultado="sucesso", detalhes={"versao_termos": dados_tela.versao_termos})
     db.commit()
     return {"mensagem": "Matéria enviada com sucesso e aguardando aprovação!"}
 

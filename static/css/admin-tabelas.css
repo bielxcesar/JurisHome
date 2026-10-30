@@ -70,3 +70,13 @@ html[data-theme="light"] .admin-tabelas .danger { color:#b91c1c; }
 .admin-tabelas [role="dialog"] button { margin-top:18px; }
 @media(max-width:1000px) { .admin-tabelas .summary { grid-template-columns:repeat(2,minmax(0,1fr)); } .admin-top { flex-wrap:wrap; } }
 @media(max-width:640px) { .admin-tabelas main { width:calc(100% - 24px); } .admin-tabelas .admin-top { gap:14px; padding:12px; } .admin-top nav { order:3; flex-basis:100%; } .admin-top nav a { padding:8px 0; } .admin-tabelas .intro { align-items:flex-start; flex-direction:column; } .admin-tabelas .panel { padding:14px; } .admin-tabelas .summary { gap:10px; } .summary article { padding:14px; } .admin-tabelas h1 { font-size:26px; } .admin-tabelas .search { width:100%; } .admin-tabelas .toolbar { width:100%; } .admin-tabelas .filters { overflow:auto; max-width:100%; } .admin-tabelas .pagination { flex-wrap:wrap; } }
+
+.admin-tabelas #excluir-admin-dialog {width:min(520px,calc(100% - 32px));max-height:90vh;overflow:auto;margin:auto;padding:26px;border:1px solid var(--juris-border);border-radius:12px;background:var(--juris-panel);color:var(--juris-text);}
+.admin-tabelas #excluir-admin-dialog:not([open]) {display:none;}
+.admin-tabelas #excluir-admin-dialog::backdrop {background:#000b;}
+#excluir-admin-dialog h2 {margin-bottom:16px;}
+#excluir-admin-dialog p {font-size:14px;line-height:1.7;margin:12px 0;}
+#excluir-admin-dialog label {display:block;font-size:14px;margin-top:20px;}
+#excluir-admin-esperado {display:block;overflow-wrap:anywhere;margin:8px 0;color:var(--juris-yellow);}
+#excluir-admin-dialog .delete-admin-actions {display:flex;justify-content:flex-end;gap:10px;margin-top:20px;flex-wrap:wrap;}
+#excluir-admin-dialog #excluir-admin-erro {color:#f87171;}

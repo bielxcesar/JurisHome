@@ -25,3 +25,9 @@
 .feedback-admin-simple .feedback-admin-page { padding-bottom: 1rem; }
 .feedback-settings .legal-footer { position: relative; inset: auto; width: fit-content; max-width: calc(100% - 2rem); margin: 1rem 1rem 1rem auto; }
 @media (max-width: 600px) { .feedback-history-heading { align-items: flex-start; flex-direction: column; } .feedback-navbar { flex-wrap: wrap; } .feedback-navbar .nav-menu { order: 3; flex-basis: 100%; justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto; padding-bottom: .25rem; } .feedback-navbar .nav-perfil { margin-left: auto; } }
+
+.feedback-followup {display:grid;gap:10px;margin-top:18px;padding-top:18px;border-top:1px solid #6b728044;}
+.feedback-followup label {font-size:14px;font-weight:600;}
+.feedback-followup textarea {width:100%;padding:12px;border:1px solid #6b728066;border-radius:8px;background:transparent;color:inherit;font:inherit;resize:vertical;}
+.feedback-followup button {justify-self:start;}
+.feedback-followup p {font-size:13px;}

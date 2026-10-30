@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Painel inicial do JurisHome com matérias organizadas por categoria">
+    <title>Curiosidades jurídicas | JurisHome</title>
+    <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
+    <!-- Tailwind via CDN para padronização -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261030">
+<link rel="stylesheet" href="/static/css/home.css?v=20261030">
+<script>(()=>{let claro=false;try{claro=localStorage.getItem('tema_juris')==='claro';}catch(_){}document.documentElement.dataset.theme=claro?'light':'dark';document.documentElement.classList.toggle('dark',!claro);})();</script>
+<script src="/static/js/session.js" defer></script><script src="/static/js/curiosidades.js?v=20261030" defer></script>
+</head>
+<body class="juris-ui home-shell bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Barra de Navegação -->
+    <a class="home-skip" href="#conteudo-principal">Pular para o conteúdo</a>
+{% include "_juris_nav.html" %}
+
+<main class="home-main" id="conteudo-principal">
+<p id="home-aviso" role="status" hidden></p>
+<div class="curiosity-heading"><span class="home-eyebrow"><i class="fa-regular fa-lightbulb" aria-hidden="true"></i> UM CONCEITO, UMA DESCOBERTA</span><h1>Curiosidades jurídicas</h1><p>Explore palavras e ideias que aparecem nas primeiras leituras do Direito.</p><a href="/glossario">Explorar o glossário completo →</a></div>
+<div class="curiosity-grid">{% for item in itens %}<article class="curiosity-card"><span class="home-eyebrow">{{ item.area }}</span><h2>{{ item.termo }}</h2><p>{{ item.definicao }}</p><details><summary>Entenda com um exemplo</summary><p>{{ item.exemplo }}</p></details><div class="curiosity-links"><a href="/glossario#{{ item.id }}">Ver no glossário →</a><a href="{{ item.fonte.url }}" target="_blank" rel="noopener noreferrer">Fonte oficial ↗</a></div></article>{% endfor %}</div>
+</main>{% include "_legal_links.html" %}</body></html>

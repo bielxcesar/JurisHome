@@ -233,6 +233,31 @@
                     espera.textContent = 'Aguardando resposta da equipe.';
                     detalhes.append(espera);
                 }
+                if (!feedback.arquivado) {
+                    const form = document.createElement('form');
+                    form.className = 'feedback-followup';
+                    const label = document.createElement('label');
+                    const id = 'continuar-' + feedback.id;
+                    label.htmlFor = id;
+                    label.textContent = 'Complementar este atendimento';
+                    const campo = document.createElement('textarea');
+                    campo.id = id; campo.required = true; campo.maxLength = 2000; campo.rows = 3;
+                    campo.placeholder = 'Envie mais informações ou responda à equipe.';
+                    const enviar = document.createElement('button');
+                    enviar.type = 'submit'; enviar.className = 'feedback-secondary-button';
+                    enviar.textContent = 'Enviar mensagem';
+                    const retorno = document.createElement('p'); retorno.setAttribute('role', 'status');
+                    form.append(label, campo, enviar, retorno);
+                    form.addEventListener('submit', async evento => {
+                        evento.preventDefault(); if (enviar.disabled) return;
+                        if (!campo.value.trim()) { retorno.textContent = 'Digite uma mensagem.'; return; }
+                        enviar.disabled = true;
+                        try { await service.complementar(feedback.id, campo.value.trim()); campo.value = ''; retorno.textContent = 'Mensagem enviada. A equipe receberá sua atualização.'; await carregarHistorico(); }
+                        catch (erro) { retorno.textContent = erro.message; }
+                        finally { enviar.disabled = false; }
+                    });
+                    detalhes.append(form);
+                }
                 lista.append(detalhes);
             });
             estado.textContent = registros.length ? `${registros.length} atendimento(s). Abra um protocolo para ver as respostas.` : 'Você ainda não enviou nenhum feedback.';

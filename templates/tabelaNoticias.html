@@ -3,8 +3,8 @@
 <title>Painel administrativo | JurisHome</title>
 <link rel="icon" href="/static/images/micrologo.png.png">
 <link rel="stylesheet" href="/static/css/juris-ui.css?v=20261028">
-<link rel="stylesheet" href="/static/css/admin-tabelas.css?v=20261028">
-<script src="/static/js/session.js" defer></script><script src="/static/js/admin-tabelas.js?v=20261028" defer></script>
+<link rel="stylesheet" href="/static/css/admin-tabelas.css?v=20261030-4">
+<script src="/static/js/session.js" defer></script><script src="/static/js/admin-tabelas.js?v=20261030-4" defer></script>
 <script>(()=>{try{document.documentElement.dataset.theme=localStorage.getItem('tema_juris')==='claro'?'light':'dark';}catch(_){}})();</script>
 </head><body class="juris-ui admin-tabelas" data-root="{{ 'true' if usuario.e_root_admin else 'false' }}">
 <a class="skip" href="#painel">Pular para o conteúdo</a>
@@ -61,4 +61,12 @@
         </div>
     </div>
 
+<dialog id="excluir-admin-dialog" aria-labelledby="excluir-admin-titulo" aria-describedby="excluir-admin-aviso">
+<form id="excluir-admin-form"><h2 id="excluir-admin-titulo">Excluir administrador</h2>
+<p id="excluir-admin-pergunta"></p><p id="excluir-admin-aviso">A conta perderá o acesso e sairá da lista de administradores. As matérias e o histórico serão preservados.</p>
+<label for="excluir-admin-nome">Digite o nome completo para confirmar</label><strong id="excluir-admin-esperado"></strong>
+<input id="excluir-admin-nome" type="text" autocomplete="off" spellcheck="false" maxlength="100" required>
+<p id="excluir-admin-erro" role="alert" hidden></p>
+<div class="delete-admin-actions"><button id="excluir-admin-cancelar" type="button">Cancelar</button><button id="excluir-admin-confirmar" class="danger" type="submit" disabled>Excluir administrador</button></div>
+</form></dialog>
 </body></html>

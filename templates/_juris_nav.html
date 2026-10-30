@@ -1,0 +1,33 @@
+<header data-juris-navbar class="bg-[#25262a] border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between sticky top-0 z-50">
+        <div class="text-gray-400 text-sm hidden md:block font-mono" id="data-atual">--/--/----</div>
+        
+        <nav aria-label="Navegação principal" class="flex flex-1 md:justify-center gap-4 md:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide text-sm md:text-base">
+            <a href="{{ '/home_admin' if tipo_usuario == 'administrador' else '/home_usuario' }}" {% if home_ativa %}aria-current="page"{% endif %} class="flex items-center gap-2"><i class="fa-solid fa-house text-amber-500"></i> Home</a>
+            <a href="/exibir-mais" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-square-plus text-amber-500"></i> Exibir mais</a>
+{% if tipo_usuario == 'administrador' %}            <a href="/admin-feedbacks" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-inbox text-amber-500"></i> Feedbacks</a>
+            <a href="/admin/auditoria" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-list-check text-amber-500"></i> Auditoria</a>
+{% else %}<a href="/configuracoes-usuario#feedback"><i class="fa-solid fa-headset" aria-hidden="true"></i> Suporte</a>{% endif %}
+            <span class="text-gray-600 cursor-not-allowed pb-1 flex items-center gap-2" title="Página indisponível"><i class="fa-solid fa-user-group text-gray-600"></i> Sobre nós</span>
+            <a href="/categorias" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-newspaper text-amber-500"></i> Categorias</a>
+            <a href="/pesquisa" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-magnifying-glass text-amber-500"></i> Pesquisa</a>
+            <a href="/glossario" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-book-open text-amber-500"></i> Glossário</a>
+        </nav>
+
+        <div class="relative ml-4">
+            <button type="button" aria-label="Abrir menu do perfil" aria-expanded="false" aria-controls="dropdown-perfil" id="btn-perfil" class="w-10 h-10 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500 hover:bg-amber-500 hover:text-black transition cursor-pointer">
+                <i class="fa-solid fa-user-group"></i>
+            </button>
+
+            <div id="dropdown-perfil" class="hidden">
+                <a href="{{ '/configuracao' if tipo_usuario == 'administrador' else '/configuracoes-usuario' }}">Configurações <i class="fa-solid fa-gear" aria-hidden="true"></i></a>
+                {% if tipo_usuario == 'administrador' %}
+                <a href="/admin/tabela-noticias">Tabelas / Notícias <i class="fa-solid fa-table" aria-hidden="true"></i></a>
+                <a href="/admin-feedbacks">Feedbacks <i class="fa-solid fa-inbox" aria-hidden="true"></i></a>
+                <a href="/admin/auditoria">Auditoria <i class="fa-solid fa-list-check" aria-hidden="true"></i></a>
+                {% endif %}
+                <a href="/perfil">Meu perfil <i class="fa-solid fa-user" aria-hidden="true"></i></a>
+                <a href="/conhecimento">Conhecimento <i class="fa-solid fa-compass" aria-hidden="true"></i></a>
+                <a href="/" class="btn-desconectar">{{ 'Desconectar' if tipo_usuario == 'administrador' else 'Sair' }} <i class="fa-solid fa-power-off" aria-hidden="true"></i></a>
+            </div>
+        </div>
+    </header>

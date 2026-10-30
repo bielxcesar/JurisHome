@@ -39,6 +39,12 @@ function usuarios() {
   tr.append(criar('td',u.solicitou_ajuda?'Recuperação 2FA solicitada':'Sem solicitação'));
   const acoes=criar('td');
   if(u.e_root_admin)acoes.textContent='Conta protegida';
+  else if(root && u.tipo === 'administrador') {
+   const grupo=criar('div',undefined,'actions');
+   const editar=criar('a','Editar','button');editar.href='/admin/administradores/'+encodeURIComponent(u.uuid);editar.setAttribute('aria-label','Editar administrador '+u.nome);
+   const excluir=criar('button','Excluir','danger');excluir.type='button';excluir.setAttribute('aria-label','Excluir administrador '+u.nome);excluir.addEventListener('click',()=>abrirExclusaoAdmin(u));
+   grupo.append(editar,excluir);acoes.append(grupo);
+  }
   else if(!root && (u.is_2fa_enabled || u.solicitou_ajuda)) { const b=criar('button','Resetar 2FA','danger');b.addEventListener('click',()=>executar(b,async()=>{if(!confirm('O autenticador atual será revogado. Continuar?'))return;await requisitar('/api/admin/resetar-2fa/'+encodeURIComponent(u.uuid),'POST');aviso('Autenticador revogado. O usuário deverá configurar o 2FA novamente.');await carregar();}));acoes.append(b); }
   else acoes.textContent='Somente leitura';
   tr.append(acoes);body.append(tr);
@@ -49,7 +55,7 @@ function usuarios() {
 async function requisitar(url,method='GET',dados) {
  const resposta=await fetch(url,{method,credentials:'same-origin',...(dados?{headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)}:{})});
  const data=await resposta.json().catch(()=>({}));
- if(!resposta.ok)throw new Error(typeof data.detail==='string'?data.detail:resposta.status===401?'Sua sessão expirou. Entre novamente.':'Não foi possível concluir a operação.');
+ if(!resposta.ok)throw new Error(typeof data.detail==='string'?data.detail:Array.isArray(data.detail)?data.detail.map(item=>item.msg.replace(/^Value error, /,'')).join(' '):resposta.status===401?'Sua sessão expirou. Entre novamente.':'Não foi possível concluir a operação.');
  return data;
 }
 async function executar(botao,acao) { if(botao.disabled)return;botao.disabled=true;try{await acao();}catch(e){aviso(e.message);if(modal)alert(e.message);}finally{botao.disabled=false;} }
@@ -85,5 +91,25 @@ $('busca-usuarios').addEventListener('input',()=>{estado.paginaUsuario=1;usuario
 $('painel-data').textContent=new Intl.DateTimeFormat('pt-BR',{dateStyle:'long'}).format(new Date());
 // Labels are connected to the existing modal inputs for keyboard and screen reader use.
 document.querySelectorAll('[role="dialog"] label').forEach(label=>{const input=label.parentElement.querySelector('input');if(input)label.htmlFor=input.id;});
+let alvoExclusao=null, excluindo=false;
+const dialogExclusao=$('excluir-admin-dialog');
+function abrirExclusaoAdmin(usuario) {
+ if(!root || usuario.e_root_admin || usuario.tipo!=='administrador')return;
+ alvoExclusao=usuario;
+ $('excluir-admin-pergunta').textContent='Você deseja excluir o administrador '+usuario.nome+'?';
+ $('excluir-admin-esperado').textContent=usuario.nome;
+ $('excluir-admin-nome').value='';$('excluir-admin-confirmar').disabled=true;$('excluir-admin-erro').hidden=true;
+ dialogExclusao.showModal();$('excluir-admin-nome').focus();
+}
+$('excluir-admin-nome').addEventListener('input',()=>{$('excluir-admin-confirmar').disabled=excluindo || $('excluir-admin-nome').value.trim()!==alvoExclusao?.nome;});
+$('excluir-admin-cancelar').addEventListener('click',()=>{if(!excluindo)dialogExclusao.close();});
+dialogExclusao.addEventListener('cancel',evento=>{if(excluindo)evento.preventDefault();});
+$('excluir-admin-form').addEventListener('submit',async evento=>{
+ evento.preventDefault();if(excluindo||!alvoExclusao||$('excluir-admin-nome').value.trim()!==alvoExclusao.nome)return;
+ excluindo=true;$('excluir-admin-confirmar').disabled=true;$('excluir-admin-cancelar').disabled=true;$('excluir-admin-erro').hidden=true;
+ try{const resposta=await requisitar('/api/admin/administradores/'+encodeURIComponent(alvoExclusao.uuid),'DELETE',{nome_confirmacao:$('excluir-admin-nome').value.trim()});dialogExclusao.close();aviso(resposta.mensagem);await carregar();$('atualizar-usuarios').focus();}
+ catch(erro){$('excluir-admin-erro').textContent=erro.message;$('excluir-admin-erro').hidden=false;}
+ finally{excluindo=false;$('excluir-admin-cancelar').disabled=false;$('excluir-admin-confirmar').disabled=$('excluir-admin-nome').value.trim()!==alvoExclusao?.nome;}
+});
 materias();carregar();
 })();

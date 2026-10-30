@@ -5,7 +5,7 @@ from dateutil import tz
 
 from sqlalchemy import (
     Column, Integer, String, Text, DateTime, Enum, ForeignKey, Boolean,
-    CheckConstraint, UniqueConstraint
+    CheckConstraint, UniqueConstraint, Index, case
 )
 from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import relationship
@@ -90,6 +90,10 @@ class Usuario(Base):
 
     __table_args__ = (
         CheckConstraint("tentativas_login_falhas >= 0", name="ck_usuarios_tentativas_nao_negativas"),
+        CheckConstraint("NOT e_root_admin OR tipo_usuario = 'administrador'", name="ck_root_deve_ser_administrador"),
+        # Roots produzem a mesma chave 1; as outras contas produzem NULL.
+        # Um índice único aceita vários NULLs, mas nunca dois roots.
+        Index("uq_usuarios_root_unico", case((e_root_admin, 1), else_=None), unique=True).ddl_if(dialect=("sqlite", "postgresql")),
     )
 
 
@@ -98,6 +102,14 @@ class DesafioConsumido(Base):
     digest = Column(String(64), primary_key=True)
     usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), nullable=False, index=True)
     expira_em = Column(DateTime, nullable=False, index=True)
+
+
+class AdministradorExcluido(Base):
+    """Preserva vínculos editoriais sem manter uma conta de acesso ativa."""
+    __tablename__ = "administradores_excluidos"
+    usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), primary_key=True)
+    excluido_por = Column(CHAR(36), ForeignKey("usuarios.uuid"), nullable=False)
+    excluido_em = Column(DateTime, nullable=False)
 
 
 class CodigoTotpConsumido(Base):
@@ -132,6 +144,27 @@ class Categoria(Base):
 
     subcategorias = relationship("Subcategoria", back_populates="categoria", cascade="all, delete-orphan")
     conteudos = relationship("Conteudo", back_populates="categoria")
+
+
+class JuridleRodada(Base):
+    __tablename__ = "juridle_rodadas"
+    uuid = Column(String(36), primary_key=True, default=gerar_uuid)
+    usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), nullable=False, index=True)
+    # Apenas uma rodada ativa por pessoa; NULL permite manter o histórico concluído.
+    ativa_chave = Column(String(36), unique=True, nullable=True)
+    perguntas_json = Column(Text, nullable=False)
+    respostas_json = Column(Text, nullable=False, default="[]")
+    respondidas = Column(Integer, nullable=False, default=0)
+    criada_em = Column(DateTime, nullable=False)
+    expira_em = Column(DateTime, nullable=False)
+    concluida_em = Column(DateTime, nullable=True)
+
+
+class ConteudoLeitura(Base):
+    __tablename__ = "conteudo_leituras"
+    usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), primary_key=True)
+    conteudo_id = Column(String, ForeignKey("conteudos.uuid", ondelete="CASCADE"), primary_key=True)
+    dia = Column(String(10), primary_key=True)
 
 
 class Subcategoria(Base):
@@ -190,6 +223,15 @@ class Conteudo(Base):
     autor = relationship("Usuario", back_populates="conteudos_criados")
     feedbacks = relationship("Feedback", back_populates="conteudo", cascade="all, delete-orphan")
     tags = Column(String, nullable=True)
+    editorial = relationship("ConteudoEditorial", back_populates="conteudo", uselist=False, cascade="all, delete-orphan")
+
+
+class ConteudoEditorial(Base):
+    __tablename__ = "conteudo_editorial"
+    conteudo_id = Column(String, ForeignKey("conteudos.uuid", ondelete="CASCADE"), primary_key=True)
+    titulo_home = Column(String(180), nullable=True)
+    configuracao_json = Column(Text, nullable=False, default="{}")
+    conteudo = relationship("Conteudo", back_populates="editorial")
     
 class Feedback(Base):
     __tablename__ = "feedbacks"

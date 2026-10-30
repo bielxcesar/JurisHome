@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
     <link rel="stylesheet" href="/static/css/juris-ui.css?v=20261028-1">
-    <link rel="stylesheet" href="/static/css/materia.css?v=20261028-4">
+    <link rel="stylesheet" href="/static/css/materia.css?v=20261030-5-4">
     <script defer src="/static/js/materia.js?v=20261028-4"></script>
 </head>
 <body class="juris-ui materia-shell">
@@ -58,13 +58,7 @@
         </header>
         <div class="materia-layout">
             <div class="materia-column">
-                {% if capa_materia %}<figure class="materia-cover"><img src="{{ capa_materia }}" alt="Imagem de apoio da matéria: {{ materia.titulo }}" decoding="async">{% if materia.fonte_imagem %}<figcaption>Fonte da imagem: {{ materia.fonte_imagem }}</figcaption>{% endif %}</figure>{% endif %}
-                <article id="conteudo-materia" class="materia-content" aria-label="Texto da matéria" tabindex="-1">
-                    {% for bloco in blocos_materia %}
-                        {% if bloco.tipo == 'texto' %}<p>{{ bloco.texto }}</p>
-                        {% else %}<figure><img src="{{ bloco.url }}" alt="{{ bloco.alt }}" loading="lazy" decoding="async"></figure>{% endif %}
-                    {% else %}<p>O texto desta matéria ainda não foi disponibilizado.</p>{% endfor %}
-                </article>
+                {% include "_materia_editorial.html" %}
                 <section class="materia-share" id="compartilhar" aria-labelledby="titulo-compartilhar">
                     <div><h2 id="titulo-compartilhar">Compartilhe com seu grupo de estudos</h2><p>Envie o link para que outras pessoas consultem a matéria.</p></div>
                     <div class="materia-share-actions">

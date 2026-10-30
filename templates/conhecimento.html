@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Painel inicial do JurisHome com matérias organizadas por categoria">
+    <title>Espaço de conhecimento | JurisHome</title>
+    <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
+    <!-- Tailwind via CDN para padronização -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261030">
+<link rel="stylesheet" href="/static/css/home.css?v=20261030">
+<script>(()=>{let claro=false;try{claro=localStorage.getItem('tema_juris')==='claro';}catch(_){}document.documentElement.dataset.theme=claro?'light':'dark';document.documentElement.classList.toggle('dark',!claro);})();</script>
+<script src="/static/js/session.js" defer></script><script src="/static/js/curiosidades.js?v=20261030" defer></script>
+</head>
+<body class="juris-ui home-shell bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Barra de Navegação -->
+    <a class="home-skip" href="#conteudo-principal">Pular para o conteúdo</a>
+{% include "_juris_nav.html" %}
+
+<main class="home-main juridle-page" id="conteudo-principal"><p id="home-aviso" role="status" hidden></p><header class="juridle-heading"><span class="home-eyebrow">EXPLORE · COMPREENDA · PRATIQUE</span><h1>Espaço de conhecimento</h1><p>Uma trilha simples para organizar seus primeiros passos no estudo do Direito. Escolha uma etapa e siga no seu ritmo.</p></header><div class="knowledge-path">
+<a href="/glossario" class="knowledge-step"><span>01</span><div><h2>Entenda as palavras</h2><p>Comece pelas definições e exemplos do glossário jurídico.</p></div><i class="fa-solid fa-book-open" aria-hidden="true"></i></a>
+<a href="/categorias" class="knowledge-step"><span>02</span><div><h2>Encontre sua área</h2><p>Conheça cada categoria e leia matérias sobre seus principais assuntos.</p></div><i class="fa-solid fa-scale-balanced" aria-hidden="true"></i></a>
+<a href="/curiosidades" class="knowledge-step"><span>03</span><div><h2>Faça novas descobertas</h2><p>Explore conceitos, exemplos e fontes para ampliar suas leituras.</p></div><i class="fa-regular fa-lightbulb" aria-hidden="true"></i></a>
+<a href="/juridle" class="knowledge-step"><span>04</span><div><h2>Pratique com o Juridle</h2><p>Responda cinco perguntas, confira as explicações e acompanhe sua evolução.</p></div><i class="fa-solid fa-gamepad" aria-hidden="true"></i></a>
+</div><div class="juridle-panel"><h2>Uma sugestão de rotina</h2><p>Escolha um termo novo, leia uma matéria da área que desperta seu interesse e finalize com uma rodada do Juridle. Se surgir uma dúvida, retorne ao glossário ou envie uma mensagem ao suporte.</p></div></main>{% include "_legal_links.html" %}</body></html>

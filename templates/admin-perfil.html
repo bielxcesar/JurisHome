@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Painel inicial do JurisHome com matérias organizadas por categoria">
+    <title>Manutenção de administrador | JurisHome</title>
+    <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
+    <!-- Tailwind via CDN para padronização -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261030">
+<link rel="stylesheet" href="/static/css/home.css?v=20261030">
+<script>(()=>{let claro=false;try{claro=localStorage.getItem('tema_juris')==='claro';}catch(_){}document.documentElement.dataset.theme=claro?'light':'dark';document.documentElement.classList.toggle('dark',!claro);})();</script>
+<script src="/static/js/session.js" defer></script><script src="/static/js/curiosidades.js?v=20261030" defer></script>
+<link rel="stylesheet" href="/static/css/admin-perfil.css?v=20261030-4"><script src="/static/js/admin-perfil.js?v=20261030-4" defer></script>
+</head>
+<body class="juris-ui home-shell bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Barra de Navegação -->
+    <a class="home-skip" href="#conteudo-principal">Pular para o conteúdo</a>
+{% include "_juris_nav.html" %}
+
+<main class="home-main admin-profile" id="conteudo-principal">
+<p id="home-aviso" role="status" hidden></p><a class="admin-profile-back" href="/admin/tabela-noticias#usuarios">← Voltar para a tabela de usuários</a>
+<header class="admin-profile-heading"><span class="home-eyebrow">ADMINISTRAÇÃO · MANUTENÇÃO DE CONTA</span><h1>Perfil do administrador</h1><p>Atualize informações e gerencie a segurança desta conta de suporte.</p></header>
+<script type="application/json" id="admin-perfil-dados">{{ administrador | tojson }}</script>
+<section class="admin-profile-card"><div class="admin-profile-identity"><div class="admin-profile-avatar" aria-hidden="true">{% if administrador.foto %}<img src="{{ administrador.foto }}" alt="">{% else %}{{ administrador.nome[:1] | upper }}{% endif %}</div><div><h2 id="admin-nome-resumo">{{ administrador.nome }}</h2><p id="admin-email-resumo">{{ administrador.email }}</p><span class="admin-profile-role">Administrador de suporte</span>{% if administrador.criadoEm %}<p class="admin-profile-hint">Conta criada em {{ administrador.criadoEm[8:10] }}/{{ administrador.criadoEm[5:7] }}/{{ administrador.criadoEm[:4] }}.</p>{% endif %}</div></div>
+<div class="admin-profile-stats"><div><span>Autenticação 2FA</span><strong id="admin-2fa-status">{{ 'Ativa' if administrador.is_2fa_enabled else 'Configuração pendente' }}</strong></div><div><span>Sessões ativas</span><strong id="admin-sessoes">{{ administrador.sessoesAtivas }}</strong></div><div><span>Matérias vinculadas</span><strong>{{ administrador.totalMaterias }}</strong></div></div>
+<form id="admin-perfil-form"><fieldset><legend>Informações da conta</legend><div class="admin-profile-fields"><div><label for="admin-nome">Nome completo</label><input id="admin-nome" name="nome" type="text" minlength="3" maxlength="100" required value="{{ administrador.nome }}" autocomplete="off"></div><div><label for="admin-email">E-mail de acesso</label><input id="admin-email" name="email" type="email" maxlength="150" required value="{{ administrador.email }}" autocomplete="off"></div></div><p class="admin-profile-hint">Alterar o e-mail encerra as sessões da conta. O administrador precisará entrar novamente.</p></fieldset>
+<fieldset><legend>Segurança e acesso</legend><div><label for="admin-nova-senha">Nova senha (opcional)</label><input id="admin-nova-senha" type="password" minlength="8" maxlength="72" autocomplete="new-password" aria-describedby="admin-senha-dica"><p id="admin-senha-dica" class="admin-profile-hint">Deixe em branco para manter a senha atual. Para alterar, use pelo menos oito caracteres com letras e números. Definir uma senha encerra as sessões.</p></div>
+<label class="admin-check"><input type="checkbox" id="admin-encerrar"><span><strong>Encerrar todas as sessões</strong><small>Exige um novo login nos dispositivos conectados.</small></span></label>
+<label class="admin-check"><input type="checkbox" id="admin-reset-2fa"><span><strong>Exigir nova configuração do autenticador</strong><small>Revoga o 2FA atual e encerra as sessões. O administrador configurará outro autenticador no próximo acesso.</small></span></label></fieldset>
+<p id="admin-perfil-retorno" role="status" tabindex="-1" hidden></p><div class="admin-profile-actions"><a href="/admin/tabela-noticias#usuarios">Voltar sem salvar</a><button id="admin-perfil-salvar" type="submit">Salvar alterações</button></div>
+</form></section><p class="admin-profile-hint">Ações registradas na auditoria. A conta principal permanece protegida e as permissões desta conta não são alteradas por esta tela.</p>
+</main>{% include "_legal_links.html" %}</body></html>

@@ -20,6 +20,24 @@ CATALOGO = {
 }
 
 
+DESCRICOES = {
+    "Direito do Consumidor": "Estuda a proteção de quem compra produtos ou contrata serviços e as responsabilidades dos fornecedores. Abrange temas como publicidade, qualidade dos produtos, atendimento e relações de consumo.",
+    "Direito Trabalhista": "Trata das relações de trabalho, especialmente entre empregados e empregadores. Explora temas como contratação, jornada, remuneração, condições de trabalho e direitos e deveres das partes.",
+    "Direito Penal": "Estuda os crimes, as penas e os limites do poder de punir do Estado. Reúne temas sobre responsabilidade penal, proteção de bens jurídicos e garantias das pessoas envolvidas.",
+    "Direito Civil": "Trata das relações da vida privada entre pessoas e organizações. Inclui assuntos como contratos, família, propriedade, sucessões e responsabilidade por danos.",
+    "Direito Constitucional": "Estuda a Constituição, a organização do Estado e os direitos fundamentais. Ajuda a compreender a cidadania, a divisão dos poderes e as bases do sistema jurídico.",
+    "Direito Tributário": "Examina os tributos e as relações entre o poder público e os contribuintes. Aborda impostos, taxas, contribuições e os limites da tributação.",
+    "Direito Administrativo": "Trata da organização e da atuação da administração pública. Abrange serviços públicos, agentes públicos, licitações e o controle das atividades do Estado.",
+    "Direito Previdenciário": "Estuda a proteção previdenciária e as relações entre segurados, dependentes e os regimes de previdência. Inclui temas como contribuições, aposentadorias e outros benefícios.",
+    "Direito Empresarial": "Estuda a atividade econômica organizada e as relações jurídicas das empresas. Explora sociedades, contratos empresariais, títulos de crédito e situações de crise empresarial.",
+    "Direito Ambiental": "Trata da proteção do meio ambiente e da relação entre atividades humanas e recursos naturais. Abrange prevenção de danos, licenciamento, conservação e responsabilidade ambiental.",
+}
+
+
+def descricao_categoria(nome):
+    return DESCRICOES.get(categoria_canonica(nome), "Esta área reúne matérias e conceitos relacionados ao tema selecionado. Explore as publicações abaixo para conhecer seus principais assuntos.")
+
+
 def normalizar(valor):
     return " ".join("".join(c for c in unicodedata.normalize("NFD", valor.casefold()) if not unicodedata.combining(c)).split())
 
