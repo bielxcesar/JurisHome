@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends, Request
+from services.validacao import nome_pessoa, linha, area_interesse, ModeloSeguro
+from fastapi import APIRouter, HTTPException, Depends, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from pydantic import BaseModel, Field, field_validator
 
 import uuid
 from io import BytesIO
@@ -19,12 +21,26 @@ from model.models import fuso_br
 from services.lgpd import POLITICA_PRIVACIDADE_VERSAO, TERMOS_VERSAO
 from services.imagens import url_fonte_segura, url_imagem_segura
 from services.categorias import combinar_tags, descricao_categoria, CATALOGO
+from services.conteudo_pedagogico import conteudo_categoria
 from services.editorial import montar_editorial
+from services.dashboard_usuario import obter_dashboard_estudos, registrar_acesso_categoria
 from urllib.parse import quote
 import math
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+
+
+class RegistroAcessoCategoria(ModeloSeguro):
+    categoria: str = Field(min_length=1, max_length=100)
+
+    @field_validator("categoria")
+    @classmethod
+    def limpar_categoria(cls, valor: str) -> str:
+        valor = valor.strip()
+        if not valor:
+            raise ValueError("Selecione uma categoria válida.")
+        return valor
 
 
 @router.get("/conhecimento", response_class=HTMLResponse)
@@ -66,7 +82,7 @@ def pagina_2fatores(request: Request):
 
 @router.get("/renovar-sessao", response_class=HTMLResponse)
 def pagina_renovar_sessao(request: Request, destino: str = "/home_usuario"):
-    permitidos = {"/home_usuario", "/home_admin", "/perfil", "/pesquisa", "/categorias", "/exibir-mais", "/configuracoes-usuario", "/configuracao", "/admin-feedbacks", "/admin/auditoria", "/feedback", "/juridle", "/curiosidades", "/conhecimento", "/admin/tabela-noticias"}
+    permitidos = {"/home_usuario", "/home_admin", "/perfil", "/pesquisa", "/categorias", "/exibir-mais", "/configuracoes-usuario", "/configuracao", "/admin-feedbacks", "/admin/auditoria", "/feedback", "/juridle", "/juridle/ampliar", "/curiosidades", "/conhecimento", "/admin/tabela-noticias"}
     destino_dinamico = any(destino.startswith(prefixo) and destino.removeprefix(prefixo).replace("-", "").isalnum()
                            for prefixo in ("/materia/", "/admin/administradores/"))
     if destino not in permitidos and not destino_dinamico:
@@ -107,7 +123,14 @@ def pagina_politica_de_privacidade(request: Request):
     )
 from fastapi import Form
 
-@router.post("/api/perfil/atualizar")
+async def validar_campos_perfil(request: Request):
+    formulario = await request.form()
+    pares = list(formulario.multi_items())
+    if any(chave not in {'nome','faculdade','interesse','foto'} for chave, _ in pares) or len({chave for chave, _ in pares}) != len(pares):
+        raise HTTPException(422, 'Envie apenas os campos previstos do perfil, sem repetições.')
+
+
+@router.post("/api/perfil/atualizar", dependencies=[Depends(validar_campos_perfil)])
 def atualizar_perfil(
     nome: str = Form(...),
     faculdade: str = Form(None),
@@ -116,13 +139,14 @@ def atualizar_perfil(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
-    nome = nome.strip()
-    if not 3 <= len(nome) <= 100:
-        raise HTTPException(status_code=422, detail="O nome deve ter entre 3 e 100 caracteres.")
-    if faculdade is not None and len(faculdade.strip()) > 255:
-        raise HTTPException(status_code=422, detail="A instituição deve ter no máximo 255 caracteres.")
-    if interesse is not None and len(interesse.strip()) > 100:
-        raise HTTPException(status_code=422, detail="O interesse deve ter no máximo 100 caracteres.")
+    try:
+        nome = nome_pessoa(nome)
+        if faculdade is not None:
+            faculdade = linha(faculdade, 150)
+        if interesse:
+            interesse = area_interesse(interesse)
+    except ValueError as erro:
+        raise HTTPException(422, str(erro)) from None
 
     if foto and foto.filename:
         limite = 2 * 1024 * 1024
@@ -210,8 +234,44 @@ def pagina_perfil(
             "usuario": usuario,
             "categorias_perfil": list(CATALOGO),
             "tipo_usuario": usuario.tipo_usuario.value if hasattr(usuario, "tipo_usuario") and hasattr(usuario.tipo_usuario, "value") else "usuario",
+            "mostrar_dashboard": usuario.tipo_usuario == TipoUsuario.ESTUDANTE,
         },
     )
+
+
+@router.get("/api/perfil/dashboard")
+def api_dashboard_perfil(
+    response: Response,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    if usuario.tipo_usuario != TipoUsuario.ESTUDANTE:
+        raise HTTPException(status_code=404, detail="Página não encontrada.")
+
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return obter_dashboard_estudos(db, str(usuario.uuid))
+
+
+@router.post("/api/perfil/categoria-acesso")
+def api_registrar_acesso_categoria(
+    dados: RegistroAcessoCategoria,
+    response: Response,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    if usuario.tipo_usuario != TipoUsuario.ESTUDANTE:
+        raise HTTPException(status_code=404, detail="Página não encontrada.")
+
+    categoria = db.query(Categoria).filter(Categoria.nome == dados.categoria).first()
+    if not categoria:
+        raise HTTPException(status_code=404, detail="Categoria não encontrada.")
+
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    registrado = registrar_acesso_categoria(db, str(usuario.uuid), str(categoria.uuid))
+    return {"registrado": registrado}
+
 
 @router.get("/pesquisa", response_class=HTMLResponse)
 def pagina_pesquisa(
@@ -247,7 +307,7 @@ def pagina_categorias(
         request=request,
         name="listagem_conteudos.html",
         context={"tipo_usuario": usuario.tipo_usuario.value, "visao": "categorias",
-                 "categorias_catalogo": [{"nome": c.nome, "descricao": descricao_categoria(c.nome)}
+                 "categorias_catalogo": [{"nome": c.nome, **conteudo_categoria(c.nome)}
                                          for c in db.query(Categoria).order_by(Categoria.nome).all()]},
     )
 
@@ -310,7 +370,7 @@ def pagina_materia(
 
 @router.get("/cadastro", response_class=HTMLResponse)
 def pagina_cadastro(request: Request):
-    return templates.TemplateResponse(request=request, name="cadastro.html")
+    return templates.TemplateResponse(request=request, name="cadastro.html", context={"areas_interesse": list(CATALOGO)})
 
 @router.get("/preview-materia", response_class=HTMLResponse)
 def pagina_preview_materia(request: Request):

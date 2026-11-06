@@ -1,3 +1,4 @@
+from services.validacao import ModeloSeguro, linha
 """Formatação editorial limitada: texto escapado, sem aceitar HTML do usuário."""
 import json
 import re
@@ -7,7 +8,7 @@ from urllib.parse import urlsplit
 from pathlib import Path
 
 from markupsafe import Markup
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from services.imagens import url_fonte_segura, url_imagem_segura
 
@@ -18,23 +19,33 @@ def estilos_previa():
     return Markup('\n'.join((pasta / nome).read_text(encoding='utf-8') for nome in ('juris-ui.css', 'materia.css')))
 
 
-class ImagemEditorial(BaseModel):
+class ImagemEditorial(ModeloSeguro):
     model_config = ConfigDict(extra='forbid')
     fonte: str = Field(default='', max_length=2000)
     legenda: str = Field(default='', max_length=240)
     alt: str = Field(default='', max_length=200)
     apos_bloco: int = Field(default=1, ge=0, le=1000)
+    @field_validator('fonte', 'legenda', 'alt')
+    @classmethod
+    def validar_linha(cls, valor, info):
+        return linha(valor, {'fonte':2000,'legenda':240,'alt':200}[info.field_name])
+
     largura: Literal['normal', 'ampla'] = 'ampla'
 
 
-class ConfiguracaoEditorial(BaseModel):
+class ConfiguracaoEditorial(ModeloSeguro):
     model_config = ConfigDict(extra='forbid')
     titulo_home: str | None = Field(default=None, max_length=180)
-    formatado: bool = True
+    formatado: bool = Field(default=True, strict=True)
     alinhamento: Literal['esquerda', 'justificado'] = 'esquerda'
     capa_legenda: str = Field(default='', max_length=240)
     capa_alt: str = Field(default='', max_length=200)
     imagens: list[ImagemEditorial] = Field(default_factory=list, max_length=3)
+
+    @field_validator('titulo_home', 'capa_legenda', 'capa_alt')
+    @classmethod
+    def validar_linha(cls, valor, info):
+        return linha(valor, {'titulo_home':180, 'capa_legenda':240, 'capa_alt':200}[info.field_name]) if valor is not None else None
 
 
 def credito(valor):

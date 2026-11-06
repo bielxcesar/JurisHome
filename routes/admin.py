@@ -1,8 +1,9 @@
-from typing import Optional
+from typing import Optional, Literal
 from fastapi import APIRouter, Request, Depends, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
+from services.validacao import ModeloSeguro, nome_pessoa, linha, fonte_http
 from services.editorial import ConfiguracaoEditorial, montar_editorial, estilos_previa
 from model.models import ConteudoEditorial
 from types import SimpleNamespace
@@ -26,19 +27,16 @@ router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 
-class CadastroAdministrador(BaseModel):
+class CadastroAdministrador(ModeloSeguro):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=False)
     nome: str = Field(min_length=3, max_length=100)
     email: str = Field(max_length=150)
-    senha: str = Field(min_length=8, max_length=72)
+    senha: str = Field(min_length=8, max_length=25)
 
     @field_validator("nome")
     @classmethod
     def validar_nome(cls, valor):
-        valor = valor.strip()
-        if len(valor) < 3:
-            raise ValueError("Informe um nome com pelo menos 3 caracteres.")
-        return valor
+        return nome_pessoa(valor)
 
     @field_validator("email")
     @classmethod
@@ -51,12 +49,12 @@ class CadastroAdministrador(BaseModel):
         return CadastroUsuario.validar_senha(valor)
 
 
-class ManutencaoAdministrador(BaseModel):
+class ManutencaoAdministrador(ModeloSeguro):
     model_config = ConfigDict(extra="forbid")
     nome: str = Field(min_length=3, max_length=100)
     email: str = Field(max_length=150)
     versao: str = Field(min_length=10, max_length=50)
-    nova_senha: Optional[str] = Field(default=None, min_length=8, max_length=72)
+    nova_senha: Optional[str] = Field(default=None, min_length=8, max_length=25)
     encerrar_sessoes: bool = Field(default=False, strict=True)
     resetar_2fa: bool = Field(default=False, strict=True)
 
@@ -76,7 +74,7 @@ class ManutencaoAdministrador(BaseModel):
         return CadastroUsuario.validar_senha(valor) if valor is not None else None
 
 
-class ExclusaoAdministrador(BaseModel):
+class ExclusaoAdministrador(ModeloSeguro):
     model_config = ConfigDict(extra="forbid")
     nome_confirmacao: str = Field(min_length=3, max_length=100)
 
@@ -169,23 +167,35 @@ def criar_administrador(dados: CadastroAdministrador, db: Session = Depends(get_
         raise HTTPException(status_code=409, detail="Este e-mail já está cadastrado.") from erro
     return {"mensagem": "Administrador cadastrado. O primeiro acesso exige a configuração do 2FA.", "uuid": novo.uuid}
 
-class MateriaUpdateSchema(BaseModel):
-    titulo: Optional[str] = None
-    sub_titulo: Optional[str] = None
-    resumo_home: Optional[str] = None
-    corpo_texto: Optional[str] = None
-    categoria_id: Optional[str] = None
-    fonte_original: Optional[str] = None
-    fonte_imagem: Optional[str] = None
-    tags: Optional[str] = None
+class MateriaUpdateSchema(ModeloSeguro):
+    titulo: Optional[str] = Field(default=None, max_length=180)
+    sub_titulo: Optional[str] = Field(default=None, max_length=500)
+    resumo_home: Optional[str] = Field(default=None, max_length=500)
+    corpo_texto: Optional[str] = Field(default=None, min_length=1, max_length=50000)
+    categoria_id: Optional[str] = Field(default=None, max_length=36)
+    fonte_original: Optional[str] = Field(default=None, max_length=2000)
+    fonte_imagem: Optional[str] = Field(default=None, max_length=2000)
+    tags: Optional[str] = Field(default=None, max_length=500)
+
+
+    @field_validator('titulo', 'sub_titulo', 'resumo_home', 'fonte_imagem', 'tags')
+    @classmethod
+    def validar_linha(cls, valor, info):
+        limites = {'titulo':180, 'sub_titulo':500, 'resumo_home':500, 'fonte_imagem':2000, 'tags':500}
+        return linha(valor, limites[info.field_name]) if valor is not None else None
+
+    @field_validator('fonte_original')
+    @classmethod
+    def validar_fonte(cls, valor):
+        return fonte_http(valor)
 
 # MOLDES DE DADOS ATUALIZADOS (Compatível com novaMateriaEX.html)
-class MateriaCreate(BaseModel):
-    titulo: Optional[str] = None
-    sub_titulo: Optional[str] = None
-    resumo_home: Optional[str] = None
+class MateriaCreate(ModeloSeguro):
+    titulo: Optional[str] = Field(default=None, max_length=180)
+    sub_titulo: Optional[str] = Field(default=None, max_length=500)
+    resumo_home: Optional[str] = Field(default=None, max_length=500)
     corpo_texto: str = Field(min_length=1, max_length=50000)
-    categoria_id: str
+    categoria_id: str = Field(min_length=1, max_length=36)
     tipo_fonte: TipoFonte
     
     # Capa (Aceita ambos os nomes)
@@ -203,12 +213,24 @@ class MateriaCreate(BaseModel):
     imagem_extra_3: Optional[str] = None
     corpo_3: Optional[str] = None
     
-    fonte_original: Optional[str] = None
-    fonte_imagem: Optional[str] = None
-    tags: Optional[str] = None
+    fonte_original: Optional[str] = Field(default=None, max_length=2000)
+    fonte_imagem: Optional[str] = Field(default=None, max_length=2000)
+    tags: Optional[str] = Field(default=None, max_length=500)
     editorial: ConfiguracaoEditorial | None = None
     aceite_editorial: bool = Field(default=False, strict=True)
     versao_termos: str | None = None
+
+
+    @field_validator('titulo', 'sub_titulo', 'resumo_home', 'fonte_imagem', 'tags')
+    @classmethod
+    def validar_linha(cls, valor, info):
+        limites = {'titulo':180, 'sub_titulo':500, 'resumo_home':500, 'fonte_imagem':2000, 'tags':500}
+        return linha(valor, limites[info.field_name]) if valor is not None else None
+
+    @field_validator('fonte_original')
+    @classmethod
+    def validar_fonte(cls, valor):
+        return fonte_http(valor)
 
     @model_validator(mode="after")
     def validar_creditos_editoriais(self):
@@ -318,7 +340,7 @@ def pagina_feedbacks_administrativos(request: Request):
 
 @router.get("/api/admin/usuarios", response_class=JSONResponse)
 def listar_usuarios_filtro(
-    tipo: Optional[str] = None,
+    tipo: Optional[Literal["admins", "leitores", "administrador", "estudante"]] = None,
     db: Session = Depends(get_db),
     usuario_logado: Usuario = Depends(get_current_user)
 ):

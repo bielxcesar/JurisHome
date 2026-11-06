@@ -1,3 +1,4 @@
+from services.validacao import ModeloSeguro
 import json
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -30,11 +31,11 @@ STATUS = ("Recebido", "Em análise", "Respondido", "Resolvido", "Arquivado")
 PRIORIDADES = ("Baixa", "Normal", "Alta", "Urgente")
 
 
-class FeedbackCriacao(BaseModel):
+class FeedbackCriacao(ModeloSeguro):
     tipo: str
     assunto: str = Field(min_length=5, max_length=120)
     mensagem: str = Field(min_length=10, max_length=2000)
-    avaliacao: int | None = Field(default=None, ge=1, le=5)
+    avaliacao: int | None = Field(default=None, ge=1, le=5, strict=True)
 
     @field_validator("tipo")
     @classmethod
@@ -60,7 +61,7 @@ class FeedbackCriacao(BaseModel):
         return valor
 
 
-class AlteracaoStatus(BaseModel):
+class AlteracaoStatus(ModeloSeguro):
     status: str
 
     @field_validator("status")
@@ -71,7 +72,7 @@ class AlteracaoStatus(BaseModel):
         return valor
 
 
-class AlteracaoPrioridade(BaseModel):
+class AlteracaoPrioridade(ModeloSeguro):
     prioridade: str
 
     @field_validator("prioridade")
@@ -82,7 +83,7 @@ class AlteracaoPrioridade(BaseModel):
         return valor
 
 
-class MensagemAdministrativa(BaseModel):
+class MensagemAdministrativa(ModeloSeguro):
     mensagem: str = Field(min_length=1, max_length=2000)
 
     @field_validator("mensagem")

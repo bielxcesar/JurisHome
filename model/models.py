@@ -167,6 +167,13 @@ class ConteudoLeitura(Base):
     dia = Column(String(10), primary_key=True)
 
 
+class CategoriaAcesso(Base):
+    __tablename__ = "categoria_acessos"
+    usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), primary_key=True)
+    categoria_id = Column(CHAR(36), ForeignKey("categorias.uuid"), primary_key=True)
+    dia = Column(String(10), primary_key=True)
+
+
 class Subcategoria(Base):
     __tablename__ = "subcategorias"
 
@@ -293,3 +300,59 @@ class LogAuditoria(Base):
     detalhes_json = Column(Text, nullable=False, default="{}")
     
     criado_em = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+
+
+class JuridleQuestao(Base):
+    __tablename__ = 'juridle_questoes'
+    uuid = Column(String(36), primary_key=True, default=gerar_uuid)
+    chave_origem = Column(String(120), unique=True, nullable=True)
+    enunciado = Column(Text, nullable=False)
+    definicao = Column(Text, nullable=True)
+    area = Column(String(100), nullable=False)
+    opcoes_json = Column(Text, nullable=False)
+    correta = Column(Integer, nullable=False)
+    explicacao = Column(Text, nullable=False)
+    exemplo = Column(Text, nullable=True)
+    fonte_url = Column(Text, nullable=False)
+    referencia = Column(String(200), nullable=True)
+    imagem = Column(Text, nullable=True)
+    imagem_alt = Column(String(200), nullable=True)
+    imagem_credito = Column(Text, nullable=True)
+    status = Column(String(15), nullable=False, default='pendente', index=True)
+    origem = Column(String(20), nullable=False, default='administrador')
+    autor_id = Column(CHAR(36), ForeignKey('usuarios.uuid'), nullable=True, index=True)
+    revisor_id = Column(CHAR(36), ForeignKey('usuarios.uuid'), nullable=True)
+    motivo_revisao = Column(String(500), nullable=True)
+    versao = Column(Integer, nullable=False, default=1)
+    criada_em = Column(DateTime, nullable=False)
+    atualizada_em = Column(DateTime, nullable=False)
+    revisada_em = Column(DateTime, nullable=True)
+    __table_args__ = (CheckConstraint('correta >= 0 AND correta <= 3', name='ck_juridle_gabarito'),
+        CheckConstraint("status IN ('pendente','aprovada','rejeitada','arquivada')", name='ck_juridle_status'),)
+
+
+class JuridleDia(Base):
+    __tablename__ = 'juridle_dias'
+    usuario_id = Column(CHAR(36), ForeignKey('usuarios.uuid'), primary_key=True)
+    dia = Column(String(10), primary_key=True)
+    rodada_id = Column(String(36), ForeignKey('juridle_rodadas.uuid'), nullable=False, unique=True)
+
+
+class JuridleQuestaoUso(Base):
+    __tablename__ = 'juridle_questao_usos'
+    rodada_id = Column(String(36), ForeignKey('juridle_rodadas.uuid'), primary_key=True)
+    questao_id = Column(String(36), ForeignKey('juridle_questoes.uuid'), primary_key=True)
+    usuario_id = Column(CHAR(36), ForeignKey('usuarios.uuid'), nullable=False)
+    dia = Column(String(10), nullable=False)
+    __table_args__ = (Index('ix_juridle_uso_pessoa_dia', 'usuario_id', 'dia'),)
+
+
+
+class LimiteAutenticacao(Base):
+    __tablename__ = 'auth_limites_tentativas'
+    chave = Column(String(64), primary_key=True)
+    tipo = Column(String(16), nullable=False)
+    falhas = Column(Integer, nullable=False, default=0)
+    ultima_em = Column(DateTime, nullable=False, index=True)
+    bloqueado_ate = Column(DateTime, nullable=True)
+    __table_args__ = (CheckConstraint('falhas >= 0', name='ck_auth_limite_falhas'),)

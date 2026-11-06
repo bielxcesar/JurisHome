@@ -1,3 +1,4 @@
+from services.validacao import nome_pessoa, email_valido, nova_senha
 """Cria o primeiro administrador como root e os seguintes como suporte.
 
 Defina JURISHOME_ADMIN_EMAIL, JURISHOME_ADMIN_SENHA e JURISHOME_ADMIN_NOME 
@@ -37,13 +38,10 @@ def main() -> int:
         # Agora exige o nome interativamente se a variável de ambiente não estiver preenchida
         nome = obrigatorio("JURISHOME_ADMIN_NOME", "Nome do administrador (publicador): ")
         
-        if len(nome) < 3:
-            raise ValueError("O nome deve ter ao menos 3 caracteres.")
-        if len(senha) < 8:
-            raise ValueError("A senha deve ter ao menos 8 caracteres.")
-        if len(senha.encode('utf-8')) > 72 or not re.search(r'[A-Za-z]', senha) or not re.search(r'\d', senha):
-            raise ValueError("A senha deve ter letras e números e no máximo 72 bytes.")
-            
+        nome = nome_pessoa(nome)
+        email = email_valido(email)
+        nova_senha(senha)
+
     except (EOFError, ValueError) as erro:
         print(f"Erro: {erro}", file=sys.stderr)
         return 2

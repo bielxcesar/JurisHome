@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from database import engine, SessionLocal
 from services.categorias import garantir_categorias, corrigir_vinculos_legados
 from services.root_unico import garantir_root_unico
+from services.entrada_http import EntradaSeguraMiddleware
 from services.erros import eh_pagina, resposta_erro
 from feedback_database import criar_tabela_feedback
 from model.models import Base, Usuario, Conteudo, Categoria, StatusConteudo
@@ -26,9 +27,14 @@ garantir_root_unico(engine)
 with SessionLocal() as db_catalogo:
     garantir_categorias(db_catalogo)
     corrigir_vinculos_legados(db_catalogo)
+    from services.juridle import garantir_banco_inicial
+    garantir_banco_inicial(db_catalogo)
+    from services.tentativas_auth import limpar_antigos
+    limpar_antigos(db_catalogo)
 criar_tabela_feedback()
 
 app = FastAPI(title="JurisHome")
+app.add_middleware(EntradaSeguraMiddleware)
 
 
 @app.middleware("http")
@@ -76,7 +82,7 @@ async def adicionar_cabecalhos_seguranca(request: Request, call_next):
         "camera=(), geolocation=(), microphone=()",
     )
 
-    if request.url.path.startswith(("/api/auth/", "/api/usuarios/me", "/api/admin/", "/api/juridle/", "/api/feedbacks", "/api/conteudos/em-alta", "/admin/auditoria", "/admin/tabela-noticias", "/admin/administradores/")) or request.url.path in {"/home_admin", "/home_usuario", "/home_Usuario.html", "/templates/home_Usuario.html", "/perfil", "/juridle", "/conhecimento", "/curiosidades", "/configuracoes-usuario", "/templates/confUsuario.html", "/configuracao", "/admin-feedbacks", "/feedback"} or request.url.path.startswith("/materia/"):
+    if request.url.path.startswith(("/api/auth/", "/api/usuarios/me", "/api/admin/", "/api/juridle/", "/api/perfil/", "/api/feedbacks", "/api/conteudos/em-alta", "/api/conteudos/interesse", "/admin/auditoria", "/admin/tabela-noticias", "/admin/administradores/")) or request.url.path in {"/home_admin", "/home_usuario", "/home_Usuario.html", "/templates/home_Usuario.html", "/perfil", "/juridle", "/juridle/ampliar", "/conhecimento", "/curiosidades", "/configuracoes-usuario", "/templates/confUsuario.html", "/configuracao", "/admin-feedbacks", "/feedback"} or request.url.path.startswith("/materia/"):
         response.headers["Cache-Control"] = "no-store, max-age=0"
         response.headers["Pragma"] = "no-cache"
     return response
@@ -89,7 +95,7 @@ async def tratar_erro_http(request: Request, erro: StarletteHTTPException):
         "/configuracoes-usuario", "/templates/confUsuario.html",
         "/home_admin", "/configuracao", "/admin-feedbacks", "/admin/auditoria",
         "/exibir-mais", "/categorias",
-        "/perfil", "/pesquisa", "/feedback", "/juridle", "/curiosidades", "/conhecimento", "/admin/tabela-noticias",
+        "/perfil", "/pesquisa", "/feedback", "/juridle", "/juridle/ampliar", "/curiosidades", "/conhecimento", "/admin/tabela-noticias",
     }
     if erro.status_code == 401 and (
         request.url.path in paginas_protegidas or request.url.path.startswith(("/materia/", "/admin/administradores/"))
@@ -118,7 +124,10 @@ async def tratar_erro_http(request: Request, erro: StarletteHTTPException):
 async def tratar_dados_invalidos(request: Request, erro: RequestValidationError):
     if eh_pagina(request):
         return resposta_erro(request, 422)
-    return await request_validation_exception_handler(request, erro)
+    return JSONResponse(status_code=422, content={'detail': [
+        {'loc': list(e['loc']), 'msg': str(e['msg']), 'type': e['type']}
+        for e in erro.errors()
+    ]}, headers={'Cache-Control':'no-store'})
 
 
 @app.exception_handler(Exception)

@@ -23,7 +23,7 @@
     </script>
 <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
 <link rel="stylesheet" href="/static/css/juris-ui.css?v=20261028">
-<link rel="stylesheet" href="/static/css/glossario.css?v=20261028">
+<link rel="stylesheet" href="/static/css/glossario.css?v=20261106-6">
 </head>
 <body class="juris-ui glossario-shell bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
     
@@ -91,7 +91,7 @@
                 <div class="flex flex-col sm:flex-row gap-4 relative">
                     <div class="relative flex-1">
                         <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-amber-500"></i>
-                        <input type="search" id="busca-termo" name="q" value="{{ q }}" maxlength="120" placeholder="Ex.: acórdão, citação, réu..." aria-describedby="dica-busca" class="w-full bg-[#1e1e1e] border border-gray-700 rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-amber-500 transition">
+                        <input type="search" id="busca-termo" name="q" value="{{ q }}" placeholder="Ex.: acórdão, citação, réu..." aria-describedby="dica-busca" class="w-full bg-[#1e1e1e] border border-gray-700 rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-amber-500 transition" maxlength="80">
                     </div>
                     {% if letra %}<input type="hidden" name="letra" value="{{ letra }}">{% endif %}
                     <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-black font-bold py-3 px-8 rounded-xl transition flex items-center justify-center gap-2 whitespace-nowrap">
@@ -114,6 +114,16 @@
             </nav>
         </section>
 
+        {% macro navegacao_paginas() %}
+        <nav class="glossario-pagination" aria-label="Páginas de termos">
+            <p>Exibindo {{ primeiro }}–{{ ultimo }} de {{ total }} termos · Página {{ pagina }} de {{ total_paginas }}</p>
+            {% if total_paginas > 1 %}<div>
+                {% if pagina_anterior %}<a href="{{ pagina_anterior }}" rel="prev">← Anterior</a>{% else %}<span aria-disabled="true">← Anterior</span>{% endif %}
+                {% for item in paginas %}{% if item.numero %}<a href="{{ item.url }}" aria-label="Página {{ item.numero }}" {% if item.numero == pagina %}aria-current="page"{% endif %}>{{ item.numero }}</a>{% else %}<span class="glossario-ellipsis" aria-hidden="true">…</span>{% endif %}{% endfor %}
+                {% if pagina_proxima %}<a href="{{ pagina_proxima }}" rel="next">Próxima →</a>{% else %}<span aria-disabled="true">Próxima →</span>{% endif %}
+            </div>{% endif %}
+        </nav>
+        {% endmacro %}
         <!-- Resultados -->
         <section aria-labelledby="titulo-resultados">
             <div class="flex flex-wrap justify-between items-end border-b border-gray-800 pb-4 mb-8 gap-4">
@@ -129,6 +139,7 @@
                 {% endif %}
             </div>
 
+            {{ navegacao_paginas() }}
             {% if itens %}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {% for item in itens %}
@@ -164,6 +175,7 @@
                 </a>
             </div>
             {% endif %}
+            {% if total_paginas > 1 %}{{ navegacao_paginas() }}{% endif %}
         </section>
 
         <footer class="mt-16 text-center border-t border-gray-800 pt-8">

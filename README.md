@@ -186,3 +186,40 @@ O editor oferece negrito (`**texto**`), itálico (`_texto_`), destaque (`==texto
 O cadastro novo mantém a etapa de análise e a aprovação pelo principal. Matérias antigas sem configuração editorial continuam sendo lidas como texto simples. A tabela adicional é criada na inicialização; não é necessário apagar ou recriar matérias existentes.
 
 O envio exige o aceite explícito das regras editoriais (versão 2026-10-30): veracidade, imparcialidade, linguagem formal, privacidade, direitos de uso e revisão. A API recusa aceite ausente, falso ou com versão desatualizada, inclusive em chamadas diretas. O aceite é registrado na auditoria junto da conta, da matéria, da data e da versão, na mesma transação da criação. A prévia dispensa aceite e não grava conteúdo.
+
+
+### Juridle diário e banco de questões (06/11/2026)
+
+- `/juridle`: cinco perguntas por conta por dia, inclusive para administradores. O desafio é reservado ao iniciar e pode ser retomado até a meia-noite de Brasília. Respostas repetidas não duplicam pontos. Abrir outra aba ou terminar a rodada não libera novo sorteio.
+- Tabelas aditivas `juridle_questoes`, `juridle_dias` (chave única pessoa/dia) e `juridle_questao_usos`. Não há remoção de rodadas antigas; jogos legados do dia também bloqueiam novo sorteio.
+- Questões aprovadas e alternativas são sorteadas no servidor. Cada pessoa fica 30 dias sem repetir uma questão sorteada; abandonar não libera os itens. No 31º dia, os itens do primeiro dia podem voltar. A resposta correta e a fonte explicativa só são entregues após responder.
+- Inicialização idempotente aproveita os 25 termos do glossário já publicado como questões aprovadas de origem `glossario`. Não cria 150 questões artificiais: o painel mostra a meta de 150 aprovadas (30 dias de 5 questões). Se houver menos de cinco inéditas para a conta, o sistema avisa e aguarda o banco crescer.
+- `/juridle/ampliar`: administradores criam perguntas com uma alternativa certa, três erradas distintas, explicação e fonte. Imagem opcional em JPEG/PNG/WebP (mesma compactação/validação das matérias), com crédito e descrição acessível.
+- Toda contribuição administrativa, inclusive do root, nasce pendente. Apenas o root aprova, rejeita ou arquiva, com controle de versão e auditoria. Administradores comuns só consultam suas contribuições. Rodadas em andamento preservam o enunciado/gabarito sorteados mesmo se uma questão for arquivada.
+- O histórico legado pode exibir várias rodadas antigas no mesmo dia. Elas são preservadas; a nova regra impede rodadas adicionais.
+- Reinicie o servidor para criar as tabelas e importar os termos, depois atualize o navegador com Ctrl+F5. Não é necessário apagar o banco.
+
+
+### Validação de entradas e novo cadastro (06/11/2026)
+
+- Cadastro: nome de 2–40 e sobrenome de 2–50 letras (acentos e espaços); e-mail até 150 caracteres com sintaxe usual; interesse obrigatório em uma das dez áreas. Nome completo continua armazenado em `usuarios.nome`; interesse usa `especialidade_juridica`, sem recriar o banco. O perfil permite mudar a preferência; a Home mostra até quatro matérias aprovadas dessa área, ou um aviso/atalho quando não há conteúdo.
+- Senhas novas e alteradas: 8–25 caracteres, maiúscula, número e símbolo; limite adicional de 72 bytes do bcrypt. Senhas não são normalizadas nem aparadas. Login e confirmação da senha atual continuam aceitando as senhas legadas; não é feita alteração forçada.
+- Removidos a consulta e-MEC do cadastro, o código de consulta no navegador e a rota HTTP pública. Rotinas legadas de consulta permanecem isoladas para compatibilidade interna; a escolha de interesse não depende de serviço externo.
+- `services/validacao.py`: modelos recusam campos JSON extras, objetos/listas/números em campos de texto, caracteres de controle e tamanhos excessivos. Campos curtos não aceitam HTML. Matérias continuam aceitando pontuação e texto livre no corpo, escapado ao exibir; a formatação editorial permitida é aplicada depois do escape.
+- Títulos: 180; subtítulo/resumo: 500; corpo: 50.000; tags: 500; links de fontes: 2.000; buscas: 80 caracteres. Links HTTP/HTTPS sem credenciais. Nomes não aceitam comandos, HTML, números ou símbolos; e-mails conservam ponto, hífen, sublinhado e `+`, necessários em endereços usuais.
+- `EntradaSeguraMiddleware`: JSON máximo 8 MB (cobre quatro imagens), demais envios 3 MB, query 4 KB/30 parâmetros, sem chaves JSON ou parâmetros repetidos, JSON não padrão ou profundidade maior que 12. O formulário de perfil também recusa campos extras/repetidos.
+- Consultas usam parâmetros vinculados pelo SQLAlchemy; `%` e `_` da busca são tratados literalmente, não como curingas. Não é usada lista de palavras SQL proibidas: uma frase sobre SQL em uma matéria continua sendo texto, nunca um comando. A pesquisa monta cartões com `createElement`/`textContent`, eliminando a interpolação de dados em `innerHTML`. Erros 422 não devolvem os valores enviados nem senhas.
+- Referências: https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html e https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html.
+- Reinicie o servidor e use Ctrl+F5 para carregar os formulários atualizados.
+
+
+### Tentativas de autenticação e “Manter conectado” (06/11/2026)
+
+- Seis falhas seguidas em uma janela de oito minutos por origem OU identificador levam a oito minutos de espera. Os limites são independentes: trocar de e-mail não contorna o limite por IP; trocar de IP não contorna o limite da conta. Falhas de senha e MFA compartilham o orçamento. A verificação de senha para solicitar reset de 2FA também participa. Senha correta sem concluir MFA não zera erros; MFA completo reinicia a sequência. O bloqueio não se prolonga quando alguém tenta novamente durante a espera.
+- A tabela aditiva `auth_limites_tentativas` guarda contadores e prazos, com transações/bloqueios de linha para não perder falhas concorrentes. Identificadores são HMACs, sem IP ou e-mail em claro nessa tabela. Contadores antigos há mais de 24 horas são limpos na inicialização. Rodar múltiplos processos usa o mesmo banco/limite, sem depender de memória do servidor ou armazenamento do navegador.
+- Resposta HTTP 429 com `Retry-After`; `/api/auth/limite` informa apenas o estado da origem da própria requisição. A tela mostra mm:ss e desabilita o envio. Atualizar, trocar de navegador ou apagar armazenamento não remove o bloqueio. O contador usa relógio monotônico no navegador; a decisão é sempre do servidor. Após espera na tela de MFA, o fluxo volta ao login porque desafios expiram em 5–10 minutos.
+- IP é o `request.client.host` reconhecido pelo servidor ASGI, sem aceitar `X-Forwarded-For` diretamente da requisição na aplicação. Atrás de proxy, configure somente os endereços dos proxies reais em `--forwarded-allow-ips`; nunca confie indiscriminadamente em `*`. IP identifica uma conexão/rede, não garante identidade física de um aparelho; redes compartilhadas podem compartilhar a espera.
+- Sem marcar “Manter conectado”: cookie de sessão HttpOnly, sem Max-Age/Expires no cookie de acesso, acesso e sessão de até 30 minutos, sem refresh persistente. Navegadores com restauração de sessão podem restaurar cookies de sessão; o limite de 30 minutos do servidor permanece.
+- Marcando: cookie de acesso por 30 minutos; refresh aleatório HttpOnly/SameSite Strict por até 14 dias, guardado somente como hash no banco e rotacionado a cada uso. A renovação preserva o prazo original, sem estender indefinidamente os 14 dias. Reutilizar um refresh revoga a sessão. Logout, mudança de senha e revogação do administrador continuam invalidando o acesso. Cookies Secure exigem `COOKIE_SECURE=true` com HTTPS em produção; ambiente HTTP local conserva a configuração de desenvolvimento.
+- O carregamento repetido de session.js é idempotente; a renovação usa Web Locks quando disponível para coordenar abas. A proteção de origem continua ativa na renovação.
+- Referências: https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html e https://fastapi.tiangolo.com/advanced/behind-a-proxy/.

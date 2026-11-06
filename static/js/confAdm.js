@@ -11,6 +11,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const atalhosSecao = Array.from(document.querySelectorAll("[data-config-section]"));
     const paineisSecao = Array.from(document.querySelectorAll("[data-config-panel]"));
 
+    function ocultarAvisoPrivacidade(aviso) {
+        aviso.hidden = true;
+        aviso.classList.add("hidden");
+    }
+
+    function mostrarAvisoPrivacidade(aviso, mensagem) {
+        aviso.textContent = mensagem;
+        aviso.hidden = false;
+        aviso.classList.remove("hidden");
+    }
+
     function exibirSecao(nome, atualizarEndereco = true) {
         const painelSelecionado = paineisSecao.find((painel) => painel.dataset.configPanel === nome);
         if (!painelSelecionado) return;
@@ -133,14 +144,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (formAnonimizacao) {
         formAnonimizacao.addEventListener("submit", async (evento) => {
             evento.preventDefault();
-            privacySuccess.hidden = true;
-            privacyError.hidden = true;
+            ocultarAvisoPrivacidade(privacySuccess);
+            ocultarAvisoPrivacidade(privacyError);
 
             const senha = document.getElementById("senha-anonimizacao").value;
             const confirmado = document.getElementById("confirmar-anonimizacao").checked;
             if (!senha || !confirmado) {
-                privacyError.textContent = "Informe sua senha e confirme que entendeu a anonimização.";
-                privacyError.hidden = false;
+                mostrarAvisoPrivacidade(privacyError, "Informe sua senha e confirme que entendeu a anonimização.");
                 return;
             }
 
@@ -162,15 +172,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!resposta.ok) throw new Error(dados.detail || "Não foi possível anonimizar os dados.");
 
                 formAnonimizacao.reset();
-                privacySuccess.textContent = dados.mensagem;
-                privacySuccess.hidden = false;
+                mostrarAvisoPrivacidade(privacySuccess, dados.mensagem);
                 localStorage.removeItem("jurishome_access_token");
-                sessionStorage.removeItem("jurishome_desafio_2fa");
+                [
+                    "jurishome_desafio_2fa",
+                    "jurishome_configuracao_2fa",
+                    "jurishome_lembrar_conectado",
+                    "jurishome_recuperacao_email",
+                    "jurishome_recuperacao_desafio",
+                    "jurishome_redefinicao_token",
+                ].forEach((chave) => sessionStorage.removeItem(chave));
                 window.setTimeout(() => { window.location.href = "/?dados=anonimizados"; }, 1200);
             } catch (erro) {
                 document.getElementById("senha-anonimizacao").value = "";
-                privacyError.textContent = erro.message || "Não foi possível anonimizar os dados.";
-                privacyError.hidden = false;
+                mostrarAvisoPrivacidade(privacyError, erro.message || "Não foi possível anonimizar os dados.");
             } finally {
                 btnAnonimizar.disabled = false;
                 btnAnonimizar.classList.remove("is-loading");

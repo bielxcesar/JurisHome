@@ -2,7 +2,7 @@
     "use strict";
 
     const elementos = {};
-    const LIMITE = 25;
+    const LIMITE = 6;
     let deslocamento = 0;
     let snapshot = null;
     let consultaAplicada = {};

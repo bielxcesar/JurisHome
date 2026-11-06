@@ -1,5 +1,6 @@
 /* O navegador envia apenas cookies HttpOnly; a renovação é serializada entre abas. */
 (() => {
+    if (window.JurisHomeRenovarSessao) return;
     const originalFetch = window.fetch.bind(window);
     let pendente;
     async function renovar() {

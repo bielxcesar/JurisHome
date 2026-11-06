@@ -129,12 +129,12 @@
 
                         <div class="flex flex-col gap-1">
                             <label for="nova-senha" class="text-gray-300 font-medium text-sm">Nova senha:</label>
-                            <input type="password" id="nova-senha" placeholder="Crie uma nova senha" required class="bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition">
+                            <input type="password" id="nova-senha" minlength="8" maxlength="25" placeholder="8–25: maiúscula, número e símbolo" required class="bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition">
                         </div>
 
                         <div class="flex flex-col gap-1">
                             <label for="confirma-senha" class="text-gray-300 font-medium text-sm">Confirmar senha:</label>
-                            <input type="password" id="confirma-senha" placeholder="Repita a nova senha" required class="bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition">
+                            <input type="password" id="confirma-senha" minlength="8" maxlength="25" placeholder="Repita a nova senha" required class="bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition">
                         </div>
 
                         <button type="submit" class="mt-4 bg-amber-500 hover:bg-amber-400 text-black font-bold py-3 px-6 rounded-lg transition w-full md:w-auto">Salvar Alteração</button>
@@ -256,7 +256,7 @@
 
     {% include "_legal_links.html" %}
     
-    <script src="/static/js/confAdm.js?v=20260925-1"></script>
+    <script src="/static/js/confAdm.js?v=20261101-1"></script>
     {% if feedback_interno|default(false) %}
     <script src="/static/js/feedbackService.js?v=20261030-3"></script>
     <script src="/static/js/feedbackUsuario.js?v=20261030-3"></script>

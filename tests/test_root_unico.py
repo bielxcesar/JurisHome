@@ -85,7 +85,7 @@ class RootUnicoTests(unittest.TestCase):
     def test_script_inicial_nao_cria_outro_root(self):
         import criar_admin
         self.usuario('principal@example.test', True)
-        with patch.object(criar_admin, 'engine', self.engine), patch.object(criar_admin, 'SessionLocal', self.Session), patch.object(criar_admin, 'obrigatorio', side_effect=['novo@example.test', 'SenhaSegura123', 'Novo root']):
+        with patch.object(criar_admin, 'engine', self.engine), patch.object(criar_admin, 'SessionLocal', self.Session), patch.object(criar_admin, 'obrigatorio', side_effect=['novo@example.test', 'SenhaSegura123!', 'Novo root']):
             self.assertEqual(criar_admin.main(), 0)
         self.assertEqual(self.db.query(Usuario).count(), 2)
         self.assertFalse(self.db.query(Usuario).filter_by(email='novo@example.test').one().e_root_admin)
@@ -93,12 +93,12 @@ class RootUnicoTests(unittest.TestCase):
 
     def test_primeiro_admin_do_script_e_root_e_repetir_nao_altera_conta(self):
         import criar_admin
-        with patch.object(criar_admin, 'engine', self.engine), patch.object(criar_admin, 'SessionLocal', self.Session), patch.object(criar_admin, 'obrigatorio', side_effect=['primeiro@example.test', 'SenhaSegura123', 'Primeiro admin']):
+        with patch.object(criar_admin, 'engine', self.engine), patch.object(criar_admin, 'SessionLocal', self.Session), patch.object(criar_admin, 'obrigatorio', side_effect=['primeiro@example.test', 'SenhaSegura123!', 'Primeiro admin']):
             self.assertEqual(criar_admin.main(), 0)
         root = self.db.query(Usuario).one()
         self.assertTrue(root.e_root_admin)
         senha_original = root.senha_hash
-        with patch.object(criar_admin, 'engine', self.engine), patch.object(criar_admin, 'SessionLocal', self.Session), patch.object(criar_admin, 'obrigatorio', side_effect=['primeiro@example.test', 'OutraSenha456', 'Outro nome']):
+        with patch.object(criar_admin, 'engine', self.engine), patch.object(criar_admin, 'SessionLocal', self.Session), patch.object(criar_admin, 'obrigatorio', side_effect=['primeiro@example.test', 'OutraSenha456!', 'Outro nome']):
             self.assertEqual(criar_admin.main(), 0)
         self.db.refresh(root)
         self.assertEqual(root.nome, 'Primeiro admin')

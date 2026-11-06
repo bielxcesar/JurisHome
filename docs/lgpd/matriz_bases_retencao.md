@@ -4,6 +4,7 @@
 |---|---|---|---|---|
 | Conta e autenticação | entregar acesso solicitado | art. 7º, V | titular e backend; admin somente conforme função | vida da conta; anonimização imediata a pedido |
 | Pesquisa no acervo | localizar matérias conforme o termo e os filtros enviados | art. 7º, V | pessoa que consulta e serviço de hospedagem, conforme seus próprios logs | a aplicação não mantém histórico de pesquisa; logs de infraestrutura dependem do provedor |
+| Categorias acessadas na dashboard | apresentar ao estudante as categorias que escolheu durante o mês | art. 7º, V | o próprio estudante; a API não permite consultar dados de outra conta | uma linha por usuário, categoria e dia; mantém apenas o mês corrente e elimina meses anteriores na próxima consulta à dashboard ou escolha de categoria; também é removido na anonimização da conta |
 | Feedback e suporte | atender solicitação | art. 7º, V | pessoa que envia e administradores | resolução/arquivo + 180 dias; depois anonimiza conteúdo |
 | Segurança e auditoria | prevenir abuso e investigar falhas | art. 7º, IX, com minimização | administradores | 12 meses; depois elimina vínculos e detalhes |
 | Prova de aceite | demonstrar versão e momento | art. 7º, VI | administradores responsáveis | 5 anos após anonimização; depois descarta |

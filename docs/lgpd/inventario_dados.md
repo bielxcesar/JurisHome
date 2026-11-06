@@ -17,5 +17,10 @@ O cadastro inclui uma declaração de que a pessoa tem pelo menos 18 anos, mas o
 
 O sistema não solicita CPF, RG, endereço, telefone, data de nascimento ou dados bancários.
 
+## Registros de atividade do usuário
+
+| Origem | Dados | Armazenamento | Uso | Saída/terceiro |
+|---|---|---|---|---|
 | Progresso do Juridle | UUID do usuário, rodadas, perguntas sorteadas, respostas e datas | `juridle_rodadas` | prática individual, nível, sequência, frequência e coroas | somente o próprio jogador pela API; removido na anonimização da conta |
 | Leituras do acervo | UUID do estudante, UUID da matéria e dia no horário de Brasília | `conteudo_leituras` | contagem agregada das matérias em alta nos últimos sete dias | API retorna somente totais agregados; removido na anonimização da conta |
+| Categorias acessadas | UUID do estudante, UUID da categoria e dia no horário de Brasília | `categoria_acessos` | mostrar no perfil as categorias escolhidas explicitamente no mês; cada estudante conta uma vez por categoria por dia | dashboard retorna somente totais por categoria ao próprio estudante; registros de meses anteriores são eliminados na próxima consulta ou escolha de categoria do usuário |

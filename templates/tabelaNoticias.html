@@ -12,9 +12,9 @@
 <main id="painel"><p class="breadcrumb">Administração / Visão geral</p><div class="intro"><div><h1>Painel administrativo</h1><p>Gerencie usuários, conteúdos e permissões em um só lugar.</p></div><time id="painel-data"></time></div>
 <div class="summary"><article><span>Total de usuários</span><strong id="total-usuarios">—</strong><small>Cadastros na plataforma</small></article><article><span>Administradores</span><strong id="total-admins">—</strong><small>Com acesso administrativo</small></article><article><span>Matérias publicadas</span><strong>{{ materias | selectattr('status.value', 'equalto', 'aprovado') | list | length }}</strong><small>Conteúdos disponíveis no site</small></article><article><span>Aguardando revisão</span><strong>{{ materias | rejectattr('status.value', 'equalto', 'aprovado') | list | length }}</strong><small>Matérias pendentes de análise</small></article></div>
 <p id="painel-aviso" role="status" hidden></p>
-<section id="usuarios" class="panel"><div class="section-head"><div><h2>Gestão de usuários</h2><p>Controle de acesso e segurança da plataforma.</p></div><div class="toolbar"><div class="filters" role="group" aria-label="Filtrar usuários"><button data-user-filter="" aria-pressed="true">Todos</button><button data-user-filter="administrador" aria-pressed="false">Administradores</button><button data-user-filter="estudante" aria-pressed="false">Leitores</button></div><label class="search"><span class="sr-only">Buscar usuário por nome ou e-mail</span><input id="busca-usuarios" type="search" placeholder="Buscar por nome ou e-mail"></label><button id="atualizar-usuarios">Atualizar</button>{% if usuario.e_root_admin %}<button class="primary" id="novo-admin">+ Novo administrador</button>{% endif %}</div></div>
+<section id="usuarios" class="panel"><div class="section-head"><div><h2>Gestão de usuários</h2><p>Controle de acesso e segurança da plataforma.</p></div><div class="toolbar"><div class="filters" role="group" aria-label="Filtrar usuários"><button data-user-filter="" aria-pressed="true">Todos</button><button data-user-filter="administrador" aria-pressed="false">Administradores</button><button data-user-filter="estudante" aria-pressed="false">Leitores</button></div><label class="search"><span class="sr-only">Buscar usuário por nome ou e-mail</span><input id="busca-usuarios" type="search" placeholder="Buscar por nome ou e-mail" maxlength="80"></label><button id="atualizar-usuarios">Atualizar</button>{% if usuario.e_root_admin %}<button class="primary" id="novo-admin">+ Novo administrador</button>{% endif %}</div></div>
 <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela de usuários"><table><caption class="sr-only">Usuários cadastrados e autenticação de dois fatores</caption><thead><tr><th scope="col">Usuário</th><th scope="col">Perfil</th><th scope="col">Autenticação 2FA</th><th scope="col">Atendimento</th><th scope="col">Ações</th></tr></thead><tbody id="lista-usuarios"><tr><td colspan="5">Carregando usuários…</td></tr></tbody></table></div><div class="pagination" id="paginacao-usuarios"></div></section>
-<section id="materias" class="panel"><div class="section-head"><div><h2>Gestão de matérias</h2><p>Organize e publique conteúdos jurídicos para os leitores.</p></div><div class="toolbar"><div class="filters" role="group" aria-label="Filtrar matérias"><button data-materia-filter="" aria-pressed="true">Todas</button><button data-materia-filter="aprovado" aria-pressed="false">Publicadas</button><button data-materia-filter="revisao" aria-pressed="false">Em revisão</button></div><label class="search"><span class="sr-only">Buscar matéria por título ou categoria</span><input type="search" id="busca-materias" placeholder="Buscar matéria ou categoria"></label><a class="button accent" href="/nova-materia">+ Nova matéria</a></div></div>
+<section id="materias" class="panel"><div class="section-head"><div><h2>Gestão de matérias</h2><p>Organize e publique conteúdos jurídicos para os leitores.</p></div><div class="toolbar"><div class="filters" role="group" aria-label="Filtrar matérias"><button data-materia-filter="" aria-pressed="true">Todas</button><button data-materia-filter="aprovado" aria-pressed="false">Publicadas</button><button data-materia-filter="revisao" aria-pressed="false">Em revisão</button></div><label class="search"><span class="sr-only">Buscar matéria por título ou categoria</span><input type="search" id="busca-materias" placeholder="Buscar matéria ou categoria" maxlength="80"></label><a class="button accent" href="/nova-materia">+ Nova matéria</a></div></div>
 <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela de matérias"><table><caption class="sr-only">Matérias, categorias e situação de publicação</caption><thead><tr><th scope="col">Título da matéria</th><th scope="col">Categoria</th><th scope="col">Criação</th><th scope="col">Status</th><th scope="col">Ações</th></tr></thead><tbody id="lista-materias">
 {% for mat in materias %}<tr data-id="{{ mat.uuid }}" data-status="{{ mat.status.value }}"><td><a class="materia-title" href="/materia/{{ mat.uuid }}">{{ mat.titulo }}</a></td><td>{{ mat.categoria.nome if mat.categoria else 'Sem categoria' }}</td><td>{{ mat.criado_em.strftime('%d/%m/%Y %H:%M') if mat.criado_em else 'Não informada' }}</td><td><span class="badge {{ 'success' if mat.status.value == 'aprovado' else 'pending' }}">{{ 'Publicada' if mat.status.value == 'aprovado' else 'Em revisão' }}</span></td><td><div class="actions">{% if usuario.e_root_admin and mat.status.value != 'aprovado' %}<button data-action="aprovar">Aprovar</button>{% endif %}<button data-action="editar">Editar</button><button data-action="descartar" class="danger">Excluir</button></div></td></tr>{% endfor %}
 </tbody></table></div><div id="materias-vazio" hidden>Nenhuma matéria encontrada.</div><div class="pagination" id="paginacao-materias"></div></section></main>
@@ -25,7 +25,7 @@
             <input type="hidden" id="editUuid">
             <div>
                 <label>Título da Matéria</label>
-                <input type="text" id="editTitulo">
+                <input type="text" id="editTitulo" maxlength="180">
             </div>
             <div>
                 <button onclick="fecharEdicao()">Cancelar</button>
@@ -42,15 +42,15 @@
             <div>
                 <div>
                     <label>Nome Completo</label>
-                    <input type="text" id="novoAdminNome">
+                    <input type="text" id="novoAdminNome" maxlength="100">
                 </div>
                 <div>
                     <label>E-mail Corporativo</label>
-                    <input type="email" id="novoAdminEmail">
+                    <input type="email" id="novoAdminEmail" maxlength="150">
                 </div>
                 <div>
                     <label>Senha Temporária</label>
-                    <input type="password" id="novoAdminSenha">
+                    <input type="password" id="novoAdminSenha" minlength="8" maxlength="25" placeholder="8–25: maiúscula, número e símbolo">
                 </div>
             </div>
 

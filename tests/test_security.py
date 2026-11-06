@@ -88,7 +88,7 @@ class TestesSeguranca(unittest.TestCase):
     def test_cadastro_admin_restrito_sem_escalada_ou_senha_na_resposta(self):
         admin = self._usuario(TipoUsuario.ADMINISTRADOR)
         token = criar_access_token(admin)
-        dados = {'nome': 'Suporte de teste', 'email': 'SUPORTE@example.test', 'senha': 'SenhaSegura123'}
+        dados = {'nome': 'Suporte de teste', 'email': 'SUPORTE@example.test', 'senha': 'SenhaSegura123!'}
         status, _, _ = self._request('POST', '/api/admin/criar-admin', dados, token=token)
         self.assertEqual(status, 403)
         admin.e_root_admin = True
@@ -158,7 +158,7 @@ class TestesSeguranca(unittest.TestCase):
             juridle.responder(self.db, jogador.uuid, rodada.uuid, 2, 0)
         self.assertEqual(erro.exception.status_code, 409)
         nova = juridle.iniciar(self.db, jogador.uuid)
-        self.assertNotEqual(nova.uuid, rodada.uuid)
+        self.assertEqual(nova.uuid, rodada.uuid)  # Não libera outra rodada no mesmo dia.
 
     def test_feedback_complemento_pertence_ao_autor_e_reabre_fila(self):
         leitor = self._usuario()
@@ -237,6 +237,8 @@ class TestesSeguranca(unittest.TestCase):
             try:
                 Base.metadata.create_all(engine)
                 fabrica = sessionmaker(bind=engine)
+                with fabrica() as db:
+                    juridle.garantir_banco_inicial(db)
                 with fabrica() as db:
                     u = Usuario(nome='Jogador', email='jogador@example.test', tipo_usuario=TipoUsuario.ESTUDANTE)
                     db.add(u)
@@ -330,12 +332,12 @@ class TestesSeguranca(unittest.TestCase):
         status, _, _ = self._request('PUT', caminho, dados, token=token_root)
         self.assertEqual(status, 409)
         novo = json.loads(corpo)['administrador']
-        dados.update(versao=novo['versao'], email='NOVO_ADMIN@example.test', nova_senha='NovaSenhaSegura123', resetar_2fa=True)
+        dados.update(versao=novo['versao'], email='NOVO_ADMIN@example.test', nova_senha='NovaSenhaSegura123!', resetar_2fa=True)
         status, _, corpo = self._request('PUT', caminho, dados, token=token_root)
         self.assertEqual(status, 200)
         self.db.expire_all()
         self.assertEqual(alvo.email, 'novo_admin@example.test')
-        self.assertTrue(verificar_senha('NovaSenhaSegura123', alvo.senha_hash))
+        self.assertTrue(verificar_senha('NovaSenhaSegura123!', alvo.senha_hash))
         self.assertIsNone(alvo.totp_secret)
         self.assertFalse(alvo.is_2fa_enabled)
         self.assertEqual(json.loads(corpo)['administrador']['sessoesAtivas'], 0)
@@ -345,7 +347,7 @@ class TestesSeguranca(unittest.TestCase):
         self.assertEqual(status, 200)
         logs = self.db.query(models.LogAuditoria).filter_by(acao='administrador_atualizado').all()
         self.assertEqual(len(logs), 2)
-        self.assertNotIn('NovaSenhaSegura123', ''.join(l.detalhes_json for l in logs))
+        self.assertNotIn('NovaSenhaSegura123!', ''.join(l.detalhes_json for l in logs))
 
     def test_manutencao_admin_rejeita_email_duplicado_e_elevacao_de_permissao(self):
         root = self._usuario(TipoUsuario.ADMINISTRADOR)
@@ -510,6 +512,304 @@ class TestesSeguranca(unittest.TestCase):
         status, _, _ = self._request('POST', '/criar-materia', invalidos, token=token)
         self.assertEqual(status, 422)
 
+    def test_juridle_uma_rodada_diaria_inclusive_admin_e_sem_reinicio(self):
+        from services import juridle
+        for papel in (TipoUsuario.ESTUDANTE, TipoUsuario.ADMINISTRADOR):
+            jogador = self._usuario(papel)
+            token = criar_access_token(jogador)
+            status, _, corpo = self._request('POST', '/api/juridle/rodadas', {}, token=token)
+            self.assertEqual(status, 200)
+            rodada = json.loads(corpo)['rodada']
+            registro = self.db.get(models.JuridleRodada, rodada['uuid'])
+            gabarito = json.loads(registro.perguntas_json)
+            for i in range(5):
+                juridle.responder(self.db, jogador.uuid, registro.uuid, i, gabarito[i]['correta'])
+            for _ in range(3):
+                status, _, corpo = self._request('POST', '/api/juridle/rodadas', {}, token=token)
+                self.assertEqual(status, 200)
+                self.assertEqual(json.loads(corpo)['rodada']['uuid'], registro.uuid)
+                self.assertTrue(json.loads(corpo)['rodada']['concluida'])
+            self.assertEqual(self.db.query(models.JuridleRodada).filter_by(usuario_id=jogador.uuid).count(), 1)
+            self.assertEqual(self.db.query(models.JuridleDia).filter_by(usuario_id=jogador.uuid).count(), 1)
+
+    def test_juridle_trinta_dias_150_itens_sem_repetir_e_retorno_no_31(self):
+        from services import juridle
+        for i in range(125):
+            self.db.add(models.JuridleQuestao(enunciado=f'Questão de teste {i}', area='Teste', opcoes_json='["A","B","C","D"]',
+                correta=0, explicacao='Explicação fictícia para teste automatizado.', fonte_url='https://example.test',
+                status='aprovada', criada_em=juridle.agora(), atualizada_em=juridle.agora()))
+        self.db.commit()
+        jogador = self._usuario()
+        inicio = datetime(2026, 10, 1, 12)
+        usados, primeira = set(), set()
+        for dia in range(30):
+            with patch('services.juridle.agora', return_value=inicio + timedelta(days=dia)):
+                rodada = juridle.iniciar(self.db, jogador.uuid)
+                ids = {q['questaoId'] for q in json.loads(rodada.perguntas_json)}
+                self.assertEqual(len(ids), 5)
+                self.assertFalse(ids & usados)
+                usados.update(ids)
+                if dia == 0:
+                    primeira = ids
+        self.assertEqual(len(usados), 150)
+        with patch('services.juridle.agora', return_value=inicio + timedelta(days=30)):
+            rodada = juridle.iniciar(self.db, jogador.uuid)
+            self.assertEqual({q['questaoId'] for q in json.loads(rodada.perguntas_json)}, primeira)
+
+    def test_juridle_brasilia_meia_noite_renova_sem_responder_ontem(self):
+        from services import juridle
+        jogador = self._usuario()
+        with patch('services.juridle.agora', return_value=datetime(2026, 11, 6, 2, 59)):
+            antiga = juridle.iniciar(self.db, jogador.uuid)
+            self.assertEqual(antiga.expira_em, datetime(2026, 11, 6, 3))
+        with patch('services.juridle.agora', return_value=datetime(2026, 11, 6, 3)):
+            nova = juridle.iniciar(self.db, jogador.uuid)
+            self.assertNotEqual(antiga.uuid, nova.uuid)
+            from fastapi import HTTPException
+            with self.assertRaises(HTTPException) as erro:
+                juridle.responder(self.db, jogador.uuid, antiga.uuid, 0, 0)
+            self.assertEqual(erro.exception.status_code, 409)
+
+    def test_juridle_rodada_legada_hoje_nao_libera_novo_sorteio(self):
+        from services import juridle
+        jogador = self._usuario()
+        antiga = models.JuridleRodada(usuario_id=jogador.uuid, perguntas_json='[]', respostas_json='[]',
+            respondidas=5, criada_em=juridle.agora(), expira_em=juridle.agora()+timedelta(days=1), concluida_em=juridle.agora())
+        self.db.add(antiga)
+        self.db.commit()
+        self.assertEqual(juridle.iniciar(self.db, jogador.uuid).uuid, antiga.uuid)
+        self.assertEqual(self.db.query(models.JuridleRodada).count(), 1)
+
+    def test_juridle_falta_questoes_nao_gasta_dia_nem_usa_pendentes(self):
+        from services import juridle
+        from fastapi import HTTPException
+        jogador = self._usuario()
+        self.db.query(models.JuridleQuestao).update({'status': 'pendente'})
+        self.db.commit()
+        with self.assertRaises(HTTPException) as erro:
+            juridle.iniciar(self.db, jogador.uuid)
+        self.assertEqual(erro.exception.status_code, 409)
+        self.assertEqual(self.db.query(models.JuridleDia).count(), 0)
+        self.db.rollback()
+        self.db.query(models.JuridleQuestao).update({'status': 'aprovada'})
+        self.db.commit()
+        self.assertEqual(juridle.iniciar(self.db, jogador.uuid).respondidas, 0)
+
+    def test_juridle_seed_idempotente_nao_reaprova_arquivadas(self):
+        from services import juridle
+        q = self.db.query(models.JuridleQuestao).first()
+        q.status = 'arquivada'
+        self.db.commit()
+        juridle.garantir_banco_inicial(self.db)
+        self.assertEqual(self.db.query(models.JuridleQuestao).count(), 25)
+        self.assertEqual(self.db.get(models.JuridleQuestao, q.uuid).status, 'arquivada')
+
+    def test_juridle_banco_restrito_revisao_root_e_versao(self):
+        leitor, admin, outro, root = self._usuario(), self._usuario(TipoUsuario.ADMINISTRADOR), self._usuario(TipoUsuario.ADMINISTRADOR), self._usuario(TipoUsuario.ADMINISTRADOR)
+        root.e_root_admin = True
+        self.db.commit()
+        dados = {'enunciado': 'Qual alternativa atende ao cenário apresentado?', 'area': 'Teste', 'correta': 'Correta de teste',
+            'erradas': ['Errada um', 'Errada dois', 'Errada três'], 'explicacao': 'Explicação fictícia da questão usada neste teste.', 'fonte_url': 'https://example.test/fonte'}
+        status, _, _ = self._request('POST', '/api/juridle/questoes', dados, token=criar_access_token(leitor))
+        self.assertEqual(status, 404)
+        status, _, _ = self._request('GET', '/juridle/ampliar', token=criar_access_token(leitor))
+        self.assertEqual(status, 404)
+        status, _, corpo = self._request('POST', '/api/juridle/questoes', dados, token=criar_access_token(admin))
+        self.assertEqual(status, 201)
+        q = json.loads(corpo)
+        self.assertEqual(q['status'], 'pendente')
+        caminho = '/api/juridle/questoes/' + q['uuid']
+        status, _, _ = self._request('GET', caminho, token=criar_access_token(outro))
+        self.assertEqual(status, 404)
+        status, _, _ = self._request('POST', caminho+'/revisao', {'decisao': 'aprovar', 'versao': 1}, token=criar_access_token(admin))
+        self.assertEqual(status, 403)
+        status, _, _ = self._request('POST', caminho+'/revisao', {'decisao': 'aprovar', 'versao': 1}, token=criar_access_token(root))
+        self.assertEqual(status, 200)
+        status, _, _ = self._request('POST', caminho+'/revisao', {'decisao': 'rejeitar', 'versao': 1, 'motivo': 'Teste de versão antiga'}, token=criar_access_token(root))
+        self.assertEqual(status, 409)
+        status, _, _ = self._request('POST', caminho+'/revisao', {'decisao': 'arquivar', 'versao': 2, 'motivo': 'Conteúdo em revisão'}, token=criar_access_token(root))
+        self.assertEqual(status, 200)
+        self.assertEqual(self.db.get(models.JuridleQuestao, q['uuid']).status, 'arquivada')
+        self.assertEqual(self.db.query(models.LogAuditoria).filter_by(acao='juridle_questao_revisada').count(), 2)
+        status, _, corpo = self._request('GET', '/api/juridle/questoes', token=criar_access_token(admin))
+        self.assertEqual(json.loads(corpo)['total'], 1)
+
+    def test_juridle_questao_imagem_opcional_validacao_e_gabarito_privado(self):
+        from io import BytesIO
+        from PIL import Image
+        admin = self._usuario(TipoUsuario.ADMINISTRADOR)
+        token = criar_access_token(admin)
+        dados = {'enunciado': '<img src=x onerror=alert(1)> Pergunta de teste', 'correta': 'Alternativa correta',
+            'erradas': ['Alternativa incorreta 1', 'Alternativa incorreta 2', 'Alternativa incorreta 3'],
+            'explicacao': 'Explicação fictícia para testar o cadastro.', 'fonte_url': 'https://example.test/fonte'}
+        for extras in ({'erradas': ['Alternativa correta','B','C']}, {'erradas': ['B',' B ','C']},
+                       {'fonte_url': 'javascript:alert(1)'}, {'status': 'aprovada'}, {'correta': True}, {'imagem': 'data:image/svg+xml;base64,PHN2Zz4='}):
+            status, _, _ = self._request('POST', '/api/juridle/questoes', {**dados, **extras}, token=token)
+            self.assertEqual(status, 422)
+        foto = BytesIO()
+        Image.new('RGB', (10,10), 'blue').save(foto, 'PNG')
+        imagem = 'data:image/png;base64,'+base64.b64encode(foto.getvalue()).decode()
+        status, _, _ = self._request('POST', '/api/juridle/questoes', {**dados,'imagem':imagem}, token=token)
+        self.assertEqual(status, 422)
+        status, _, corpo = self._request('POST', '/api/juridle/questoes', {**dados,'imagem':imagem,'imagem_alt':'Ilustração','imagem_credito':'Acervo de teste'}, token=token)
+        self.assertEqual(status, 201)
+        q = self.db.get(models.JuridleQuestao, json.loads(corpo)['uuid'])
+        self.assertTrue(q.imagem.startswith('data:image/jpeg;base64,'))
+        self.db.query(models.JuridleQuestao).update({'status': 'arquivada'})
+        q.status = 'aprovada'
+        self.db.commit()
+        # Quatro outras questões permitem o sorteio de cinco, incluindo a ilustrada.
+        outras = self.db.query(models.JuridleQuestao).filter(models.JuridleQuestao.uuid != q.uuid).limit(4).all()
+        for outra in outras:
+            outra.status = 'aprovada'
+        self.db.commit()
+        status, _, corpo = self._request('POST', '/api/juridle/rodadas', {}, token=token)
+        self.assertEqual(status, 200)
+        self.assertNotIn('correta', json.loads(corpo)['rodada']['pergunta'])
+        self.assertNotIn('explicacao', json.loads(corpo)['rodada']['pergunta'])
+        rodada = self.db.get(models.JuridleRodada, json.loads(corpo)['rodada']['uuid'])
+        self.assertTrue(any(p.get('imagem') for p in json.loads(rodada.perguntas_json)))
+
+
+    def test_auditoria_limita_seis_logs_e_pagina_sem_repetir(self):
+        admin = self._usuario(TipoUsuario.ADMINISTRADOR)
+        token = criar_access_token(admin)
+        for i in range(13):
+            self.db.add(models.LogAuditoria(acao='teste_seis', recurso_tipo='teste', resultado='sucesso', usuario_tipo='administrador', correlacao_id=str(uuid.uuid4())))
+        self.db.commit()
+        status, _, corpo = self._request('GET', '/api/admin/auditoria?acao=teste_seis', token=token)
+        self.assertEqual(status, 200)
+        primeira = json.loads(corpo)
+        self.assertEqual(primeira['limite'], 6)
+        self.assertEqual(primeira['total'], 13)
+        self.assertEqual(len(primeira['itens']), 6)
+        ids = {i['id'] for i in primeira['itens']}
+        for deslocamento, quantidade in ((6, 6), (12, 1)):
+            status, _, corpo = self._request('GET', f"/api/admin/auditoria?acao=teste_seis&deslocamento={deslocamento}&ate_id={primeira['ateId']}", token=token)
+            atual = json.loads(corpo)
+            self.assertEqual(status, 200)
+            self.assertEqual(len(atual['itens']), quantidade)
+            self.assertFalse(ids & {i['id'] for i in atual['itens']})
+            ids.update(i['id'] for i in atual['itens'])
+        self.assertFalse(atual['temProxima'])
+        status, _, _ = self._request('GET', '/api/admin/auditoria?limite=7', token=token)
+        self.assertEqual(status, 422)
+
+    def test_glossario_paginado_busca_e_pagina_invalida(self):
+        status, _, corpo = self._request('GET', '/api/glossario')
+        self.assertEqual(status, 200)
+        primeira = json.loads(corpo)
+        self.assertEqual(len(primeira['itens']), 6)
+        status, _, corpo = self._request('GET', '/api/glossario?pagina=2')
+        segunda = json.loads(corpo)
+        self.assertEqual(len(segunda['itens']), 6)
+        self.assertFalse({i['id'] for i in primeira['itens']} & {i['id'] for i in segunda['itens']})
+        status, _, corpo = self._request('GET', '/api/glossario?q=acordao&pagina=99')
+        filtrada = json.loads(corpo)
+        self.assertEqual(filtrada['pagina'], 1)
+        self.assertEqual(filtrada['itens'][0]['id'], 'acordao')
+        status, _, _ = self._request('GET', '/glossario?pagina=0')
+        self.assertEqual(status, 422)
+
+    def test_cadastro_novo_guarda_interesse_limita_campos_e_nao_reflete_senha(self):
+        dados = {'nome':'João','sobrenome':'da Silva','interesse':'Direito Civil','email':'joao.teste+estudo@example.test',
+            'senha':'NovaSenha!123','confirmar_senha':'NovaSenha!123','consentimento_lgpd':True}
+        for extras in ({'nome': {'$ne': None}}, {'nome':'<script>alert(1)</script>'}, {'nome':'A'*41},
+                       {'sobrenome':'S'*51}, {'interesse':'Área inventada'}, {'senha':'NovaSenha123'},
+                       {'senha':'A1!'+'x'*23}, {'e_root_admin':True}):
+            status, _, corpo = self._request('POST','/api/auth/cadastro',{**dados,**extras})
+            self.assertEqual(status, 422)
+            self.assertNotIn(b'NovaSenha!123', corpo)
+            self.assertNotIn(b'"input"', corpo)
+        status, _, _ = self._request('POST','/api/auth/cadastro',dados)
+        self.assertEqual(status, 201)
+        usuario = self.db.query(Usuario).filter_by(email=dados['email']).one()
+        self.assertEqual(usuario.nome, 'João da Silva')
+        self.assertEqual(usuario.especialidade_juridica,'Direito Civil')
+        self.assertFalse(usuario.e_root_admin)
+        self.assertEqual(usuario.tipo_usuario,TipoUsuario.ESTUDANTE)
+
+    def test_interesse_mostra_so_publicadas_da_area_e_sem_cache(self):
+        usuario=self._usuario()
+        usuario.especialidade_juridica='Direito Civil'
+        civil=models.Categoria(nome='Direito Civil')
+        penal=models.Categoria(nome='Direito Penal')
+        self.db.add_all([civil,penal]);self.db.flush()
+        for indice in range(6):
+            self.db.add(models.Conteudo(titulo=f'Civil {indice}', resumo_home='Resumo', corpo_texto='Texto de teste',categoria_id=civil.uuid,
+                autor_id=usuario.uuid,tipo_fonte=models.TipoFonte.DOUTRINA,status=models.StatusConteudo.APROVADO))
+        self.db.add(models.Conteudo(titulo='Pendente',resumo_home='Resumo',corpo_texto='Texto',categoria_id=civil.uuid,autor_id=usuario.uuid,tipo_fonte=models.TipoFonte.DOUTRINA,status=models.StatusConteudo.EM_ANALISE))
+        self.db.add(models.Conteudo(titulo='Penal',resumo_home='Resumo',corpo_texto='Texto',categoria_id=penal.uuid,autor_id=usuario.uuid,tipo_fonte=models.TipoFonte.DOUTRINA,status=models.StatusConteudo.APROVADO))
+        self.db.commit()
+        status,headers,corpo=self._request('GET','/api/conteudos/interesse',token=criar_access_token(usuario))
+        self.assertEqual(status,200)
+        self.assertIn('no-store',headers['cache-control'])
+        dados=json.loads(corpo)
+        self.assertEqual(dados['area'],'Direito Civil')
+        self.assertEqual(len(dados['itens']),4)
+        self.assertTrue(all(i['titulo'].startswith('Civil ') for i in dados['itens']))
+
+    def test_busca_sql_e_curingas_sao_tratados_como_dados(self):
+        usuario=self._usuario()
+        categoria=models.Categoria(nome='Direito Civil');self.db.add(categoria);self.db.flush()
+        for titulo in ('Publicação comum','Desconto 10% no contrato','Exemplo_com_subtraço'):
+            self.db.add(models.Conteudo(titulo=titulo,resumo_home='Resumo',corpo_texto='Texto',categoria_id=categoria.uuid,autor_id=usuario.uuid,tipo_fonte=models.TipoFonte.DOUTRINA,status=models.StatusConteudo.APROVADO))
+        self.db.commit()
+        for termo,esperado in (("' OR 1=1 --",0),('%',1),('_',1)):
+            status,_,corpo=self._request('GET','/api/conteudos?'+urlencode({'busca':termo}))
+            self.assertEqual(status,200)
+            self.assertEqual(len(json.loads(corpo)),esperado)
+        for caminho in ('/api/conteudos?busca=%7B%22x%22%3A1%7D','/api/glossario?q=%3Cscript%3E','/api/conteudos?busca='+'a'*81):
+            status,_,_=self._request('GET',caminho)
+            self.assertEqual(status,422)
+        self.assertEqual(self.db.query(Usuario).count(),1)
+        self.assertEqual(self.db.query(models.Conteudo).count(),3)
+
+    def test_login_legado_continua_validando_senha_anterior(self):
+        usuario=self._usuario()
+        usuario.senha_hash=hash_senha('SenhaAntiga123')
+        self.db.commit()
+        status,_,corpo=self._request('POST','/api/auth/login',{'email':usuario.email,'senha':'SenhaAntiga123'})
+        self.assertEqual(status,200)
+        self.assertTrue(json.loads(corpo)['requer_2fa'])
+
+    def test_login_seis_falhas_ip_timer_persistente_e_reset_2fa_sem_bypass(self):
+        for i in range(6):
+            status,headers,_=self._request('POST','/api/auth/login',{'email':f'naoexiste{i}@example.test','senha':'Errada!123'},cliente='198.51.100.10',extra_headers=((b'x-forwarded-for',f'203.0.113.{i}'.encode()),))
+            self.assertEqual(status,429 if i==5 else 401)
+        self.assertGreater(int(headers['retry-after']),470)
+        status,_,corpo=self._request('GET','/api/auth/limite',cliente='198.51.100.10')
+        self.assertEqual(status,200)
+        self.assertTrue(json.loads(corpo)['bloqueado'])
+        status,_,_=self._request('POST','/api/solicitar-reset-2fa',{'email':'outra@example.test','senha':'Errada!123'},cliente='198.51.100.10')
+        self.assertEqual(status,429)
+        status,_,corpo=self._request('GET','/api/auth/limite',cliente='198.51.100.11')
+        self.assertFalse(json.loads(corpo)['bloqueado'])
+        status,_,_=self._request('POST','/api/auth/login',{'email':'naoexiste5@example.test','senha':'Errada!123'},cliente='198.51.100.11')
+        self.assertEqual(status,401)  # Só uma falha nesta conta, bloqueio anterior era da origem.
+
+    def test_cookie_sessao_sem_lembrar_e_lembrar_com_mfa_tem_14_dias(self):
+        from http.cookies import SimpleCookie
+        import pyotp
+        from routes.auth import Codigo2FA,validar_2fa
+        from auth.security import criar_token_2fa_pendente,decifrar_segredo_2fa
+        for lembrar in (False,True):
+            usuario=self._usuario()
+            response=Response()
+            codigo=pyotp.TOTP(decifrar_segredo_2fa(usuario.totp_secret)).now()
+            validar_2fa(Codigo2FA(desafio_token=criar_token_2fa_pendente(usuario),codigo=codigo,lembrar_conectado=lembrar),response,self.db)
+            cookies=SimpleCookie()
+            for valor in response.headers.getlist('set-cookie'):
+                cookies.load(valor)
+            acesso=cookies['jurishome_access_token']
+            sessao=self.db.get(models.SessaoAutenticada,security._decodificar_token(acesso.value)['sid'])
+            self.assertEqual(acesso['max-age'],'1800' if lembrar else '')
+            self.assertEqual(acesso['httponly'],True)
+            refresh=cookies['jurishome_refresh_token']
+            self.assertEqual(refresh['max-age'],str(14*86400) if lembrar else '0')
+            self.assertLessEqual((sessao.expira_em-sessao.criada_em).total_seconds(),14*86400 if lembrar else 1800)
+            if lembrar:self.assertEqual(refresh['samesite'],'strict')
+
     @classmethod
     def setUpClass(cls):
         cls.engine = create_engine(
@@ -536,6 +836,8 @@ class TestesSeguranca(unittest.TestCase):
         Base.metadata.drop_all(bind=self.engine)
         Base.metadata.create_all(bind=self.engine)
         self.db = self.Session()
+        from services.juridle import garantir_banco_inicial
+        garantir_banco_inicial(self.db)
 
     def tearDown(self):
         self.db.close()
@@ -545,7 +847,7 @@ class TestesSeguranca(unittest.TestCase):
             uuid=str(uuid.uuid4()),
             nome="Conta de teste",
             email=email or f"{uuid.uuid4().hex}@example.test",
-            senha_hash=hash_senha("SenhaSegura123"),
+            senha_hash=hash_senha("SenhaSegura123!"),
             tipo_usuario=papel,
             totp_secret=cifrar_segredo_2fa("JBSWY3DPEHPK3PXP"),
             is_2fa_enabled=True,
@@ -561,7 +863,7 @@ class TestesSeguranca(unittest.TestCase):
         finally:
             sessao.close()
 
-    def _request(self, method, path, data=None, token=None, cookie=None, extra_headers=(), suprimir_erro_interno=False):
+    def _request(self, method, path, data=None, token=None, cookie=None, extra_headers=(), suprimir_erro_interno=False, cliente="testclient"):
         overrides_anteriores = self.app.dependency_overrides.copy()
         self.app.dependency_overrides[get_db] = self._banco_teste
         self.app.dependency_overrides[get_feedback_db] = self._banco_teste
@@ -594,7 +896,7 @@ class TestesSeguranca(unittest.TestCase):
             "query_string": url.query.encode("ascii"),
             "root_path": "",
             "headers": cabecalhos,
-            "client": ("testclient", 1234),
+            "client": (cliente, 1234),
             "server": ("testserver", 80),
         }
         try:
@@ -1205,7 +1507,7 @@ class TestesSeguranca(unittest.TestCase):
         self.assertIn("samesite=lax", cookie)
         self.assertIn("secure", cookie)
         self.assertIn("path=/", cookie)
-        self.assertIn("max-age=1800", cookie)
+        self.assertNotIn("max-age", cookie)
 
     def test_respostas_tem_headers_basicos_e_endpoints_auth_nao_sao_cacheaveis(self):
         status, headers, _ = self._request("GET", "/")
@@ -1225,7 +1527,7 @@ class TestesSeguranca(unittest.TestCase):
         self.assertEqual("no-cache", headers["pragma"])
 
     def test_senha_nao_e_armazenada_em_texto_e_limite_bcrypt_em_bytes(self):
-        senha = "SenhaSegura123"
+        senha = "SenhaSegura123!"
         senha_hash = hash_senha(senha)
         self.assertNotEqual(senha, senha_hash)
         self.assertTrue(verificar_senha(senha, senha_hash))
@@ -1233,21 +1535,12 @@ class TestesSeguranca(unittest.TestCase):
         self.assertFalse(verificar_senha("a" * 73, senha_hash))
 
     def test_cadastro_publico_nao_permite_autopromocao_para_admin(self):
-        dados = CadastroUsuario.model_validate(
-            {
-                "nome": "Conta sem privilégios",
-                "email": "autopromocao@example.test",
-                "senha": "SenhaSegura123",
-                "confirmar_senha": "SenhaSegura123",
-                "consentimento_lgpd": True,
-                "tipo_usuario": "administrador",
-                "e_root_admin": True,
-            }
-        )
-        asyncio.run(cadastrar_usuario(dados, Response(), self.db))
-        usuario = self.db.query(Usuario).filter_by(email=dados.email).one()
-        self.assertEqual(TipoUsuario.ESTUDANTE, usuario.tipo_usuario)
-        self.assertFalse(usuario.e_root_admin)
+        from pydantic import ValidationError
+        with self.assertRaises(ValidationError):
+            CadastroUsuario.model_validate({'nome':'Conta','sobrenome':'Teste','interesse':'Direito Civil',
+                'email':'autopromocao@example.test','senha':'SenhaSegura123!','confirmar_senha':'SenhaSegura123!',
+                'consentimento_lgpd':True,'tipo_usuario':'administrador','e_root_admin':True})
+        self.assertIsNone(self.db.query(Usuario).filter_by(email='autopromocao@example.test').first())
 
     def test_login_nao_revela_se_email_existe(self):
         self._usuario(email="existente@example.test")
@@ -1312,7 +1605,7 @@ class TestesSeguranca(unittest.TestCase):
             uuid=str(uuid.uuid4()),
             nome="Conta para recuperação",
             email="recuperacao@example.test",
-            senha_hash=hash_senha("SenhaSegura123"),
+            senha_hash=hash_senha("SenhaSegura123!"),
             tipo_usuario=TipoUsuario.ESTUDANTE,
             totp_secret=cifrar_segredo_2fa(segredo),
             is_2fa_enabled=True,

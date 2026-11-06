@@ -1,40 +1,13 @@
-<!DOCTYPE html>
-<html lang="pt-BR" class="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Painel inicial do JurisHome com matérias organizadas por categoria">
-    <title>Juridle | JurisHome</title>
-    <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
-    <!-- Tailwind via CDN para padronização -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
-<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261030">
-<link rel="stylesheet" href="/static/css/home.css?v=20261030">
-<script>(()=>{let claro=false;try{claro=localStorage.getItem('tema_juris')==='claro';}catch(_){}document.documentElement.dataset.theme=claro?'light':'dark';document.documentElement.classList.toggle('dark',!claro);})();</script>
-<script src="/static/js/session.js" defer></script><script src="/static/js/curiosidades.js?v=20261030" defer></script>
-<script src="/static/js/juridle.js?v=20261030" defer></script>
-</head>
-<body class="juris-ui home-shell bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
-
-    <!-- Barra de Navegação -->
-    <a class="home-skip" href="#conteudo-principal">Pular para o conteúdo</a>
-{% include "_juris_nav.html" %}
-
-<main class="home-main juridle-page" id="conteudo-principal">
+<!DOCTYPE html><html lang="pt-BR" data-theme="dark"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Juridle | JurisHome</title><link rel="icon" href="/static/images/micrologo.png.png"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link rel="stylesheet" href="/static/css/legal.css"><link rel="stylesheet" href="/static/css/juris-ui.css"><link rel="stylesheet" href="/static/css/home.css"><link rel="stylesheet" href="/static/css/juridle.css?v=20261106"><script>(()=>{try{document.documentElement.dataset.theme=localStorage.getItem('tema_juris')==='claro'?'light':'dark';}catch(_){}})();</script><script src="/static/js/session.js" defer></script><script src="/static/js/curiosidades.js" defer></script><script src="/static/js/juridle.js?v=20261106" defer></script></head>
+<body class="juris-ui home-shell"><a class="home-skip" href="#conteudo-principal">Pular para o conteúdo</a>{% include "_juris_nav.html" %}
+<main class="quiz-page" id="conteudo-principal"><header class="quiz-header"><div><span class="home-eyebrow">SEU DESAFIO DIÁRIO DE DIREITO</span><h1><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Juridle<span class="quiz-title-dot">.</span></h1><p>Cinco perguntas. Uma pausa para aprender algo novo.</p></div>{% if tipo_usuario == 'administrador' %}<a class="quiz-outline" href="/juridle/ampliar"><i class="fa-solid fa-plus" aria-hidden="true"></i> Ampliar game</a>{% endif %}</header>
 <p id="home-aviso" role="status" hidden></p>
-<div class="juridle-stats" aria-label="Seu progresso de estudo"><div class="juridle-stat"><i class="fa-solid fa-crown" aria-hidden="true"></i><div><span>Seu nível</span><strong id="j-nivel">—</strong></div></div><div class="juridle-stat"><i class="fa-solid fa-fire-flame-curved" aria-hidden="true"></i><div><span>Dias seguidos de prática</span><strong id="j-frequencia">—</strong></div></div></div>
-<header class="juridle-heading"><span class="home-eyebrow"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> CANTO RECREATIVO</span><h1>Juridle</h1><p>Uma pergunta por vez. Quatro alternativas. Um novo conceito para aprender.</p></header>
-<div class="juridle-mini-stats"><span>Sequência: <strong id="j-sequencia">0</strong> acertos</span><span>Melhor sequência: <strong id="j-recorde">0</strong></span><span>Coroas: <strong id="j-coroas">0</strong></span></div>
-<section class="juridle-panel" aria-labelledby="juridle-sobre"><h2 id="juridle-sobre">Como funciona?</h2><p>Cada rodada tem cinco perguntas sobre termos do glossário jurídico, com quatro alternativas e uma resposta correta. Escolha sua resposta e confira uma explicação antes de continuar.</p><p>A cada dez acertos você avança um nível. Complete uma rodada para registrar seu dia de prática. Acerte as cinco perguntas da rodada para conquistar uma coroa. Um erro encerra a sequência de acertos, mas você pode seguir aprendendo.</p><button type="button" class="juridle-play" id="j-play" disabled><i class="fa-solid fa-play" aria-hidden="true"></i> Carregando…</button><p class="juridle-notice">Prática individual, sem limite de tempo por pergunta. Uma rodada pode ser retomada por até 24 horas. Frequência calculada pelo horário de Brasília.</p></section>
-<section class="juridle-panel" id="j-jogo" hidden tabindex="-1" aria-labelledby="j-pergunta-titulo">
-<p class="home-eyebrow" id="j-andamento"></p><h2 id="j-pergunta-titulo"></h2><p id="j-definicao"></p>
-<div class="juridle-options" id="j-opcoes" role="group" aria-label="Escolha uma resposta"></div>
-<div id="j-retorno" role="status" hidden><h3 id="j-resultado"></h3><p id="j-explicacao"></p><p id="j-exemplo"></p><a id="j-fonte" target="_blank" rel="noopener noreferrer">Consultar fonte oficial ↗</a></div>
-<button class="juridle-play" type="button" id="j-proxima" hidden>Próxima pergunta →</button>
-</section>
-<section class="juridle-panel" id="j-final" hidden tabindex="-1" aria-labelledby="j-final-titulo"><h2 id="j-final-titulo">Rodada concluída</h2><p id="j-final-texto"></p><button class="juridle-play" id="j-nova" type="button">Jogar outra rodada</button></section>
-<section class="juridle-panel"><h2>Suas últimas rodadas</h2><ul id="j-historico"><li>Carregando histórico…</li></ul></section>
-<div class="juridle-bottom"><a href="{{ '/home_admin' if tipo_usuario == 'administrador' else '/home_usuario' }}">← Voltar para a Home</a><a href="/glossario">Estudar pelo glossário →</a><a href="/conhecimento">Explorar conhecimento →</a></div>
-</main>{% include "_legal_links.html" %}</body></html>
+<div class="quiz-metrics" aria-label="Seu progresso"><div><i class="fa-solid fa-crown" aria-hidden="true"></i><span>Seu nível<strong id="j-nivel">—</strong></span></div><div><i class="fa-solid fa-fire-flame-curved" aria-hidden="true"></i><span>Frequência<strong id="j-frequencia">—</strong></span></div><div><i class="fa-solid fa-check-double" aria-hidden="true"></i><span>Acertos seguidos<strong id="j-sequencia">—</strong></span></div><div><i class="fa-solid fa-award" aria-hidden="true"></i><span>Coroas<strong id="j-coroas">—</strong></span></div></div>
+<section class="quiz-arena" aria-label="Palco do Juridle"><div class="quiz-arena-top"><span><span class="quiz-live-dot"></span> DESAFIO DO DIA</span><span id="j-dia">Horário de Brasília</span></div>
+<div id="j-inicio" class="quiz-welcome"><div class="quiz-emblem" aria-hidden="true"><i class="fa-solid fa-scale-balanced"></i></div><span class="quiz-kicker">CONHECIMENTO É A SUA CONQUISTA</span><h2>Vamos testar o que você sabe?</h2><p>Uma pergunta por vez, quatro alternativas e uma resposta correta. Depois de responder, descubra a explicação.</p><button type="button" class="quiz-primary" id="j-play" disabled>Carregando desafio…</button><p class="quiz-small" id="j-disponibilidade">Uma rodada por dia · 5 perguntas · sem cronômetro</p></div>
+<section id="j-jogo" hidden tabindex="-1" aria-labelledby="j-pergunta-titulo"><div class="quiz-question-meta"><span id="j-andamento"></span><div id="j-passos" class="quiz-steps" aria-label="Progresso da rodada"></div></div><div class="quiz-question-box"><span class="quiz-kicker">LEIA COM ATENÇÃO</span><h2 id="j-pergunta-titulo"></h2><p id="j-definicao"></p><figure id="j-figura" hidden><img id="j-imagem" alt=""><figcaption id="j-credito"></figcaption></figure></div><div class="quiz-options" id="j-opcoes" role="group" aria-label="Escolha uma resposta"></div>
+<div id="j-retorno" class="quiz-feedback" role="status" hidden><h3 id="j-resultado"></h3><p id="j-explicacao"></p><p id="j-exemplo"></p><a id="j-fonte" target="_blank" rel="noopener noreferrer">Consultar fonte ↗</a><button class="quiz-primary" type="button" id="j-proxima">Próxima pergunta →</button></div></section>
+<section id="j-final" class="quiz-welcome" hidden tabindex="-1" aria-labelledby="j-final-titulo"><div class="quiz-emblem" aria-hidden="true"><i class="fa-solid fa-flag-checkered"></i></div><span class="quiz-kicker">DESAFIO DO DIA FINALIZADO</span><h2 id="j-final-titulo"></h2><p id="j-final-texto"></p><strong class="quiz-score" id="j-placar"></strong><p class="quiz-small">Seu próximo desafio chega amanhã, à meia-noite de Brasília.</p><a class="quiz-outline" href="/glossario">Continuar estudando ↗</a></section>
+<div class="quiz-arena-footer"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i> Aprender é o objetivo. Sem dinheiro, competição ou ranking.</div></section>
+<div class="quiz-bottom-grid"><details class="quiz-panel"><summary>Como funciona o Juridle?</summary><p>Você tem uma rodada com cinco perguntas por dia, tanto como leitor quanto como administrador. Pode sair e continuar até a meia-noite de Brasília. Começar a rodada já reserva o desafio do dia.</p><p>As perguntas e a ordem das alternativas são sorteadas pelo servidor. Questões aprovadas não se repetem para você durante 30 dias. Se faltarem cinco questões inéditas, o jogo aguarda a ampliação do banco.</p><p>A cada dez acertos, você sobe um nível. Um erro reinicia a sequência de acertos, e você continua até a quinta pergunta. Concluir em dias consecutivos aumenta sua frequência; cinco acertos na rodada valem uma coroa.</p><p>Melhor sequência: <strong id="j-recorde">0</strong> acertos.</p></details><section class="quiz-panel"><h2>Suas últimas rodadas</h2><ul id="j-historico"><li>Carregando histórico…</li></ul></section></div>
+<div class="juridle-bottom"><a href="{{ '/home_admin' if tipo_usuario == 'administrador' else '/home_usuario' }}">← Voltar para a Home</a><a href="/conhecimento">Explorar conhecimento →</a></div></main>{% include "_legal_links.html" %}</body></html>

@@ -49,6 +49,7 @@
                         <tr><td>Feedback e suporte</td><td>Nome, e-mail, tipo, assunto, mensagem, avaliação opcional, protocolo, estado, prioridade, respostas, observações internas e histórico.</td><td>Receber, acompanhar e responder solicitações dos usuários.</td></tr>
                         <tr><td>Prática no Juridle</td><td>Identificador do usuário, rodadas, respostas, datas e progresso pessoal.</td><td>Retomar a prática e calcular nível, sequência de acertos, dias de frequência e coroas. Os registros individuais são removidos na anonimização da conta.</td></tr>
                         <tr><td>Leituras do acervo</td><td>Identificador do estudante, matéria e dia da leitura.</td><td>Apresentar totais agregados das matérias em alta, com no máximo uma contagem por pessoa, matéria e dia. Os registros individuais são removidos na anonimização da conta.</td></tr>
+                        <tr><td>Acessos a categorias</td><td>Identificador do estudante, categoria selecionada e dia do acesso.</td><td>Exibir no perfil as categorias que o próprio estudante mais acessou no mês. A mesma categoria conta no máximo uma vez por estudante em cada dia, mesmo que seja selecionada novamente.</td></tr>
                         <tr><td>Auditoria</td><td>Identificador do usuário quando necessário, perfil, ação, recurso, resultado, data, correlação e detalhes técnicos mínimos.</td><td>Rastrear operações, investigar falhas, prevenir abuso e demonstrar responsabilidade.</td></tr>
                     </tbody>
                 </table>
@@ -61,7 +62,7 @@
                 <table>
                     <thead><tr><th>Operação</th><th>Base legal indicada pelo projeto</th></tr></thead>
                     <tbody>
-                        <tr><td>Cadastro, autenticação, pesquisa e suporte</td><td>Execução do serviço solicitado pelo usuário e procedimentos relacionados, conforme art. 7º, V, da LGPD.</td></tr>
+                        <tr><td>Cadastro, autenticação, pesquisa, suporte e indicadores pessoais da dashboard</td><td>Execução do serviço solicitado pelo usuário e procedimentos relacionados, conforme art. 7º, V, da LGPD.</td></tr>
                         <tr><td>Segurança, prevenção a abuso e auditoria</td><td>Legítimo interesse na proteção do serviço e de seus usuários, conforme art. 7º, IX, com minimização e acesso restrito.</td></tr>
                         <tr><td>Prova de aceite, defesa em processos e preservação necessária de registros</td><td>Exercício regular de direitos, conforme art. 7º, VI.</td></tr>
                         <tr><td>Cumprimento de ordens e deveres aplicáveis</td><td>Cumprimento de obrigação legal ou regulatória, conforme art. 7º, II.</td></tr>
@@ -73,14 +74,14 @@
 
         <section>
             <h2>5. Pesquisa e navegação</h2>
-            <p>Os termos e filtros informados são usados para localizar matérias durante a consulta. A aplicação não mantém histórico de pesquisa nem usa esse histórico para personalizar o acervo. A página inicial apresenta matérias já cadastradas, sem perfilamento do usuário.</p>
+            <p>Os termos e filtros de pesquisa são usados para localizar matérias; a aplicação não grava um histórico desses termos. Para a dashboard pessoal, o sistema registra a categoria escolhida explicitamente na página inicial ou no filtro de categorias, no máximo uma vez por categoria e por dia para cada estudante. Esse registro permite exibir as categorias mais acessadas no mês e não é usado para publicidade nem para criar um perfil visível a outros usuários.</p>
         </section>
 
         <section>
             <h2>6. Armazenamento, sessão e dispositivos</h2>
             <p>O banco de dados utilizado depende da implantação: o projeto usa SQLite por padrão em ambiente local e pode utilizar PostgreSQL conforme a configuração do responsável. As imagens das matérias são reduzidas e convertidas para JPEG no navegador, codificadas em Base64 e armazenadas em campos de texto do banco de dados. Conteúdos legados também podem conter endereços externos de imagens.</p>
             <p>A sessão autenticada utiliza cookie HTTP-only. O desafio temporário da autenticação em duas etapas pode permanecer no <code>sessionStorage</code>, e preferências como tema visual podem permanecer no <code>localStorage</code>. Esses recursos são usados para segurança e funcionamento da interface, não para publicidade comportamental.</p>
-            <p>Esta versão não implementa ferramentas próprias de análise de comportamento ou publicidade. Os serviços externos podem registrar dados técnicos de acesso segundo suas configurações e políticas.</p>
+            <p>O JurisHome não utiliza rastreadores de terceiros para publicidade ou para acompanhar o usuário fora da plataforma. O registro de categoria descrito nesta Política é limitado ao funcionamento da dashboard pessoal. Serviços externos ainda podem registrar dados técnicos de acesso segundo suas configurações e políticas.</p>
         </section>
 
         <section>
@@ -115,6 +116,7 @@
                         <tr><td>Conteúdo pessoal de feedback</td><td>Até a resolução ou o arquivamento e por mais 180 dias.</td><td>Anonimização de nome, e-mail, assunto, mensagem, avaliação, respostas e observações; preservação do protocolo, estado e datas.</td></tr>
                         <tr><td>Logs gerais de auditoria</td><td>12 meses.</td><td>Remoção do identificador do usuário, do recurso e dos detalhes; preservação de ação, tipo, resultado, correlação e data sem identificação direta.</td></tr>
                         <tr><td>Prova de aceite</td><td>Durante a conta e por 5 anos após seu encerramento ou anonimização.</td><td>Eliminação do indicador, da data e da versão após o prazo.</td></tr>
+                        <tr><td>Acessos a categorias</td><td>Somente os registros do mês corrente. Ao abrir a dashboard ou escolher uma categoria em um novo mês, os registros de meses anteriores do estudante são eliminados. Também são removidos na anonimização da conta.</td><td>Exclusão dos registros por usuário, categoria e dia; não há cópia do histórico em outra tabela do JurisHome.</td></tr>
                         <tr><td>Registros de incidente</td><td>5 anos após o encerramento do incidente.</td><td>Eliminação ou minimização dos dados pessoais que deixarem de ser necessários.</td></tr>
                         <tr><td>Conteúdo administrativo</td><td>Enquanto publicado ou necessário à curadoria e à comprovação de autoria.</td><td>Retirada do conteúdo e revisão dos metadados que ainda precisem ser mantidos.</td></tr>
                     </tbody>

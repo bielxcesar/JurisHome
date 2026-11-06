@@ -6,7 +6,7 @@
     <title>JurisHome - Login</title>
     <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
     <link rel="stylesheet" href="/static/css/login.css?v=20260925-4">
-    <link rel="stylesheet" href="/static/css/auth-figma.css?v=20260925-1">
+    <link rel="stylesheet" href="/static/css/auth-figma.css?v=20261106-limites">
     <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
 </head>
 <body class="bg-login">
@@ -24,13 +24,13 @@
         <form id="form-login" class="form-login" novalidate>
             <div class="input-group">
                 <label for="email">E-mail</label>
-                <input type="email" id="email" placeholder="Digite seu e-mail" autocomplete="email" required>
+                <input type="email" id="email" maxlength="150" placeholder="Digite seu e-mail" autocomplete="email" required>
             </div>
 
             <div class="input-group">
                 <label for="senha">Senha</label>
                 <div class="password-input-wrap">
-                    <input type="password" id="senha" placeholder="Digite sua senha" autocomplete="current-password" required>
+                    <input type="password" id="senha" maxlength="72" placeholder="Digite sua senha" autocomplete="current-password" required>
                     <button class="password-toggle" type="button" data-password-toggle="senha" aria-label="Mostrar senha" aria-pressed="false">Mostrar</button>
                 </div>
             </div>
@@ -40,7 +40,7 @@
             <div class="login-options">
                 <label class="remember-option" for="manter-conectado">
                     <input type="checkbox" id="manter-conectado">
-                    <span>Manter conectado</span>
+                    <span>Manter conectado por até 14 dias</span>
                 </label>
                 <a class="link-esqueceu" href="/recuperar-senha">Esqueci minha senha</a>
             </div>
@@ -54,6 +54,6 @@
     </main>
 
     {% include "_legal_links.html" %}
-    <script src="/static/js/auth.js?v=20260926-2"></script>
+    <script src="/static/js/auth.js?v=20261106-limites"></script>
 </body>
 </html>

@@ -24,6 +24,30 @@ class GlossarioTests(unittest.TestCase):
         self.assertIn('Suporte', visitante)
         self.assertNotIn('href="/admin/auditoria"', visitante)
 
+    def test_paginacao_nao_omite_termos_e_mantem_links_e_filtros(self):
+        from routes.glossario import paginar, pagina_glossario
+        from starlette.requests import Request
+        resultado = paginar('', '', 1)
+        ids = []
+        for pagina in range(1, resultado['total_paginas'] + 1):
+            atual = paginar('', '', pagina)
+            self.assertLessEqual(len(atual['itens']), 6)
+            ids.extend(t['id'] for t in atual['itens'])
+        self.assertEqual(ids, [t['id'] for t in consultar_glossario()['itens']])
+        self.assertEqual(len(ids), len(set(ids)))
+        request = Request({'type':'http', 'method':'GET', 'path':'/glossario', 'headers':[]})
+        resposta = pagina_glossario(request, q='', letra='', origem='usuario', usuario=None, pagina=2)
+        html = resposta.body.decode()
+        self.assertEqual(html.count('<article id='), 6)
+        self.assertEqual(resposta.context['pagina'], 2)
+        self.assertIn('origem=usuario', resposta.context['pagina_proxima'])
+        self.assertIn('pagina=3', resposta.context['pagina_proxima'])
+        self.assertIn('rel="prev"', html)
+        filtrada = pagina_glossario(request, q='direito', letra='', origem='usuario', usuario=None, pagina=1)
+        self.assertIn('q=direito', filtrada.context['paginas'][0]['url'])
+        vazio = paginar('zzzinexistente', '', 50)
+        self.assertEqual((vazio['pagina'], vazio['primeiro'], vazio['ultimo'], vazio['itens']), (1,0,0,[]))
+
     def test_busca_ignora_acentos_caixa_e_espacos(self):
         resultado = consultar_glossario("  ACORDAO  ")
         self.assertEqual([t["id"] for t in resultado["itens"]], ["acordao"])

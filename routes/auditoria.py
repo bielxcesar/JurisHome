@@ -1,4 +1,5 @@
-from typing import Annotated
+from services.validacao import TextoBusca, padrao_busca
+from typing import Annotated, Literal
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Query, Request, HTTPException
@@ -23,10 +24,10 @@ def pagina_auditoria(request: Request):
 
 @admin_router.get("/api/admin/auditoria")
 def listar_logs_auditoria(
-    busca: Annotated[str | None, Query(max_length=100)] = None,
-    acao: Annotated[str | None, Query(max_length=80)] = None,
-    resultado: Annotated[str | None, Query(max_length=20)] = None,
-    limite: Annotated[int, Query(ge=1, le=200)] = 100,
+    busca: Annotated[TextoBusca | None, Query(max_length=80)] = None,
+    acao: Annotated[str | None, Query(max_length=80, pattern=r"^[a-zA-Z0-9_]+$")] = None,
+    resultado: Annotated[Literal["sucesso", "falha", "bloqueado"] | None, Query()] = None,
+    limite: Annotated[int, Query(ge=1, le=6)] = 6,
     db: Session = Depends(get_db),
     deslocamento: Annotated[int, Query(ge=0)] = 0,
     inicio: datetime | None = None,
@@ -51,13 +52,13 @@ def listar_logs_auditoria(
     if fim:
         consulta = consulta.filter(LogAuditoria.criado_em < fim)
     if busca:
-        termo = f"%{busca.strip()}%"
+        termo = padrao_busca(busca)
         consulta = consulta.filter(
             or_(
-                LogAuditoria.correlacao_id.ilike(termo),
-                LogAuditoria.usuario_id.ilike(termo),
-                LogAuditoria.recurso_id.ilike(termo),
-                LogAuditoria.recurso_tipo.ilike(termo),
+                LogAuditoria.correlacao_id.ilike(termo, escape="\\"),
+                LogAuditoria.usuario_id.ilike(termo, escape="\\"),
+                LogAuditoria.recurso_id.ilike(termo, escape="\\"),
+                LogAuditoria.recurso_tipo.ilike(termo, escape="\\"),
             )
         )
     if acao:

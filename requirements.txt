@@ -19,6 +19,7 @@ pyotp==2.9.0
 
 # Variáveis de Ambiente e Utilidades
 python-dotenv==1.2.3
+python-dateutil==2.9.0.post0
 qrcode[pil]==8.2
 emec-api==0.1.10; python_version < "3.12"
 PyYAML==6.0.3

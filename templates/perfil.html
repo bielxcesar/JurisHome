@@ -21,6 +21,7 @@
         })();
     </script>
 <link rel="stylesheet" href="/static/css/juris-ui.css?v=20261030"><link rel="stylesheet" href="/static/css/home.css?v=20261030"><script src="/static/js/session.js" defer></script><script src="/static/js/curiosidades.js?v=20261030" defer></script>
+{% if mostrar_dashboard %}<link rel="stylesheet" href="/static/css/perfil-dashboard.css?v=20261102-3"><script src="/static/js/perfil-dashboard.js?v=20261102-3" defer></script>{% endif %}
 </head>
 <body class="juris-ui home-shell bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
 
@@ -84,7 +85,7 @@
 
                     <div class="flex flex-col gap-2">
                         <label for="faculdade" class="text-gray-300 font-medium text-lg">Faculdade:</label>
-                        <input type="text" id="faculdade" name="faculdade" maxlength="255" value="{{ usuario.universidade or '' }}" placeholder="Nome da instituição" class="bg-transparent border border-amber-500 rounded-xl px-4 py-3 text-white focus:outline-none focus:bg-[#1e1e1e] transition placeholder-gray-600">
+                        <input type="text" id="faculdade" name="faculdade" maxlength="150" value="{{ usuario.universidade or '' }}" placeholder="Nome da instituição" class="bg-transparent border border-amber-500 rounded-xl px-4 py-3 text-white focus:outline-none focus:bg-[#1e1e1e] transition placeholder-gray-600">
                     </div>
 
                     <div class="flex flex-col gap-2">
@@ -102,6 +103,38 @@
                     </button>
                 </div>
             </form>
+
+            {% if mostrar_dashboard %}
+            <section id="perfil-dashboard" class="perfil-dashboard" aria-labelledby="perfil-dashboard-titulo" aria-busy="true">
+                <header class="perfil-dashboard-heading">
+                    <p class="perfil-dashboard-kicker">Perfil do leitor</p>
+                    <h2 id="perfil-dashboard-titulo">Seu histórico de estudos</h2>
+                    <p>Acompanhe as matérias que você consultou e as categorias do Direito que acessou neste mês.</p>
+                    <button id="dashboard-tentar-novamente" class="perfil-dashboard-retry" type="button" hidden>Tentar novamente</button>
+                </header>
+
+                <p id="perfil-dashboard-status" class="perfil-dashboard-status" role="status" aria-live="polite">Carregando seus dados de estudo.</p>
+
+                <div class="perfil-dashboard-cards" aria-label="Indicador do seu estudo">
+                    <article class="perfil-dashboard-card">
+                        <span class="perfil-dashboard-card-label"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Matérias consultadas no total</span>
+                        <strong id="dashboard-materias-total">—</strong>
+                        <small class="perfil-dashboard-card-note">Cada matéria é contada uma vez, mesmo que você a consulte em dias diferentes.</small>
+                    </article>
+                </div>
+
+                <div class="perfil-dashboard-charts">
+                    <article class="perfil-dashboard-chart" aria-labelledby="dashboard-categorias-titulo">
+                        <h3 id="dashboard-categorias-titulo">Categorias mais acessadas no mês</h3>
+                        <p id="dashboard-categorias-periodo" class="perfil-dashboard-chart-note">Mês atual</p>
+                        <div class="perfil-bar-layout">
+                            <ul id="dashboard-categorias-barras" class="perfil-bar-chart" aria-label="Acessos por categoria no mês" hidden></ul>
+                        </div>
+                        <p id="dashboard-categorias-vazio" class="perfil-dashboard-empty">Você ainda não acessou nenhuma categoria neste mês. Quando acessar uma, ela aparecerá aqui.</p>
+                    </article>
+                </div>
+            </section>
+            {% endif %}
 
             <div class="mt-12 bg-[#1e1e1e] rounded-2xl p-6 border border-gray-800 shadow-inner">
                 <h3 class="text-white font-bold mb-6 border-b border-gray-700 pb-2">Segurança e consentimentos</h3>
