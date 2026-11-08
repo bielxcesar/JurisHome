@@ -41,6 +41,7 @@
             } finally { saindo = false; }
         }));
     }
+
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar, {once: true});
     else iniciar();
 })();

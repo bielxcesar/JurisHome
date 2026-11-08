@@ -1,6 +1,6 @@
 from services.validacao import ModeloSeguro, TextoBusca
 from string import ascii_uppercase
-from typing import Annotated
+from typing import Annotated, Literal
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -11,7 +11,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from services.glossario import consultar_glossario
-from services.datajud import GRUPOS_TRIBUNAIS_DATAJUD, consultar_processo_publico
+from services.legislacao_senado import buscar_legislacao
 
 router = APIRouter(tags=["Glossário"])
 templates = Jinja2Templates(directory="templates")
@@ -22,14 +22,15 @@ Pagina = Annotated[int, Query(ge=1, description="Página de seis termos")]
 Letra = Annotated[str, Query(pattern="^[A-Za-z]?$", description="Inicial de A a Z")]
 
 
-class ConsultaProcessoDatajud(ModeloSeguro):
-    numero_processo: Annotated[str, Field(min_length=20, max_length=30)]
-    tribunal: Annotated[str, Field(min_length=2, max_length=12, pattern=r"^[a-z0-9-]+$")]
+class ConsultaLegislacao(ModeloSeguro):
+    tipo: Literal["LEI", "LCP"]
+    numero: Annotated[str, Field(min_length=1, max_length=8, pattern=r"^\d+$")]
+    ano: Annotated[int, Field(ge=1800, le=2100)]
 
 
-@router.post("/api/glossario/datajud")
-def consultar_processo_datajud(dados: ConsultaProcessoDatajud):
-    return consultar_processo_publico(dados.numero_processo, dados.tribunal)
+@router.post("/api/glossario/legislacao")
+def consultar_legislacao(dados: ConsultaLegislacao):
+    return buscar_legislacao(dados.tipo, dados.numero, dados.ano)
 
 
 def paginar(q, letra, pagina):
@@ -101,6 +102,5 @@ def pagina_glossario(
             "url_limpar": url_glossario(),
             "url_inicio": "/home_usuario" if origem_usuario else "/home_admin",
             "origem": "usuario" if origem_usuario else "",
-            "grupos_tribunais_datajud": GRUPOS_TRIBUNAIS_DATAJUD,
         },
     )

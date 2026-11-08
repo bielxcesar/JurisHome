@@ -92,13 +92,13 @@
                     <tbody>
                         <tr><td>Railway</td><td>Hospedagem da versão publicada e do banco PostgreSQL.</td><td>Requisições técnicas e dados armazenados nas tabelas do JurisHome.</td></tr>
                         <tr><td>Google Fonts e cdnjs/Cloudflare</td><td>Entrega de fontes e ícones da interface.</td><td>Metadados técnicos normais da requisição, como endereço IP e agente do navegador.</td></tr>
-                        <tr><td>CNJ / DataJud</td><td>Consulta de metadados públicos de processo iniciada no glossário.</td><td>Tribunal e número CNJ informados; dados da conta e e-mail não são enviados. A consulta não é armazenada pelo JurisHome.</td></tr>
+                        <tr><td>API de Dados Abertos do Senado Federal</td><td>Consulta de legislação federal iniciada no glossário.</td><td>Tipo da norma, número e ano informados; dados da conta e e-mail não são enviados. A busca não é armazenada pelo JurisHome.</td></tr>
                         <tr><td>Origem de imagem externa, quando presente em conteúdo legado</td><td>Carregamento de imagem quando o conteúdo contém uma URL externa.</td><td>Requisição do navegador à origem indicada na URL. As imagens cadastradas em Base64 são entregues pelo próprio JurisHome.</td></tr>
                         <tr><td>WhatsApp</td><td>Compartilhamento iniciado pelo usuário.</td><td>Título e endereço público da matéria preparados no navegador; contatos e mensagens permanecem sob controle do WhatsApp.</td></tr>
                     </tbody>
                 </table>
             </div>
-            <p>A consulta do DataJud retorna metadados públicos fornecidos pelo CNJ. O JurisHome não exibe dados de partes, não armazena o número consultado e identifica o CNJ e o DataJud como fonte. Os dados podem sofrer alterações ou indisponibilidade na origem. Dados também poderão ser compartilhados quando houver obrigação legal, ordem de autoridade competente, necessidade de proteger direitos ou resposta a incidente. O JurisHome não comercializa cadastros nem compartilha dados para publicidade de terceiros.</p>
+            <p>Quando o usuário consulta uma norma, o JurisHome envia à API de Dados Abertos do Senado Federal somente o tipo, o número e o ano informados, para obter a identificação, a ementa e o endereço do texto oficial. Dados da conta e e-mail não são enviados, e a busca não é armazenada pelo JurisHome. A disponibilidade e a atualização dependem do serviço externo; confira o texto vigente na fonte oficial. Outros compartilhamentos podem ocorrer quando houver obrigação legal, ordem de autoridade competente, necessidade de proteger direitos ou resposta a incidente. O JurisHome não comercializa cadastros nem compartilha dados para publicidade de terceiros.</p>
         </section>
 
         <section>

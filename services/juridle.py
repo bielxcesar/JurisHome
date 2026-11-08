@@ -30,7 +30,7 @@ def limites_dia():
 
 
 def garantir_banco_inicial(db):
-    """Migra os 25 termos já publicados, sem alterar questões existentes/revisadas."""
+    """Migra os termos já publicados, sem alterar questões existentes ou revisadas."""
     from services.glossario import consultar_glossario
     from sqlalchemy.exc import IntegrityError
     catalogo = consultar_glossario()['itens']
