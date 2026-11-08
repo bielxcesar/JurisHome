@@ -4,7 +4,7 @@
 |---|---|---|
 | Railway | hospedagem da versão publicada e do PostgreSQL | requisições técnicas e dados armazenados nas tabelas do JurisHome |
 | Google Fonts e cdnjs / Cloudflare | fontes e ícones da interface | metadados técnicos normais da requisição |
-| e-MEC / API pública CAU/BR | consulta opcional de IES por código | apenas o código numérico consultado |
+| CNJ / DataJud | consulta de metadados públicos de processo no glossário | tribunal e número CNJ; não são enviados dados da conta ou e-mail |
 | WhatsApp | compartilhamento iniciado pelo usuário | título e endereço público da matéria |
 | Origem de imagem em conteúdo legado | carregamento externo somente quando houver URL | requisição do navegador à origem indicada; as imagens novas em Base64 são armazenadas no banco e entregues pelo JurisHome |
 

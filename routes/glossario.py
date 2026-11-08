@@ -1,15 +1,17 @@
-from services.validacao import TextoBusca, padrao_busca
+from services.validacao import ModeloSeguro, TextoBusca
 from string import ascii_uppercase
 from typing import Annotated
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Query, Request
+from pydantic import Field
 from auth.security import get_current_user_optional
 from model.models import Usuario
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from services.glossario import consultar_glossario
+from services.datajud import GRUPOS_TRIBUNAIS_DATAJUD, consultar_processo_publico
 
 router = APIRouter(tags=["Glossário"])
 templates = Jinja2Templates(directory="templates")
@@ -18,6 +20,16 @@ Busca = Annotated[TextoBusca, Query(max_length=80, description="Termo ou palavra
 Pagina = Annotated[int, Query(ge=1, description="Página de seis termos")]
 
 Letra = Annotated[str, Query(pattern="^[A-Za-z]?$", description="Inicial de A a Z")]
+
+
+class ConsultaProcessoDatajud(ModeloSeguro):
+    numero_processo: Annotated[str, Field(min_length=20, max_length=30)]
+    tribunal: Annotated[str, Field(min_length=2, max_length=12, pattern=r"^[a-z0-9-]+$")]
+
+
+@router.post("/api/glossario/datajud")
+def consultar_processo_datajud(dados: ConsultaProcessoDatajud):
+    return consultar_processo_publico(dados.numero_processo, dados.tribunal)
 
 
 def paginar(q, letra, pagina):
@@ -89,5 +101,6 @@ def pagina_glossario(
             "url_limpar": url_glossario(),
             "url_inicio": "/home_usuario" if origem_usuario else "/home_admin",
             "origem": "usuario" if origem_usuario else "",
+            "grupos_tribunais_datajud": GRUPOS_TRIBUNAIS_DATAJUD,
         },
     )

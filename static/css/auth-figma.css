@@ -222,49 +222,6 @@ body.bg-recovery .overlay-login {
     color: #bcbcbc;
 }
 
-.university-lookup {
-    padding-top: 12px;
-    border-top: 1px solid #41321d;
-}
-
-.university-lookup .input-group > label span {
-    color: #bcbcbc;
-    font-weight: 400;
-}
-
-.emec-control {
-    grid-template-columns: minmax(0, 1fr) auto;
-}
-
-.btn-secundario {
-    min-height: 48px;
-    border-color: #db8f00;
-    border-radius: 10px;
-    background: #db8f00;
-    color: #151515;
-}
-
-.emec-result {
-    margin-top: 10px;
-    padding: 12px;
-    border-left: 3px solid #db8f00;
-    background: #1c1c1c;
-    color: #f1f1f1;
-    font-size: 14px;
-    line-height: 1.5;
-    overflow-wrap: anywhere;
-}
-
-.emec-result strong {
-    display: block;
-    color: #f3b32e;
-}
-
-.emec-result p {
-    margin: 3px 0 0;
-    color: #c9c9c9;
-}
-
 .checkbox-lgpd {
     margin-top: 3px;
     font-size: 13px;
@@ -549,10 +506,6 @@ body.bg-recovery .overlay-login {
         padding: 20px 16px 24px;
         border-width: 6px;
         border-radius: 32px;
-    }
-
-    .emec-control {
-        grid-template-columns: 1fr;
     }
 
     .auth-panel {

@@ -1,18 +1,12 @@
-import asyncio
 import base64
 import hashlib
 import hmac
-import json
-import logging
 import os
 import re
 import time
 from io import BytesIO
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Literal
-from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
-from urllib.request import urlopen
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from auth.sessions import (consumir_desafio, consumir_totp, criar_refresh, renovar_sessao,
@@ -43,11 +37,6 @@ TENTATIVAS_ANTES_DO_BLOQUEIO = 6
 MINUTOS_DE_BLOQUEIO = 8
 JANELA_TOTP = 2
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
-API_IES_PUBLICA = (
-    "https://gisserver.caubr.gov.br/server/rest/services/"
-    "CEF_IES_PUBLICO_2022/FeatureServer/0/query"
-)
-logger = logging.getLogger(__name__)
 
 
 class CadastroUsuario(ModeloSeguro):
@@ -327,122 +316,6 @@ def solicitar_reset_2fa(dados: PedidoReset2FA, db: Session = Depends(get_db), re
     db.commit()
     
     return {"mensagem": "Solicitação enviada com sucesso! O suporte analisará o caso."}
-
-def _serializar_resultado_emec(codigo_emec: int, dados: dict) -> dict | None:
-    nome = str(dados.get("nome_da_ies") or dados.get("nome") or "").strip()
-    if not nome:
-        return None
-    campus = dados.get("campus") or []
-    return {
-        "codigo_emec": codigo_emec,
-        "nome": nome,
-        "sigla": dados.get("sigla"),
-        "situacao": dados.get("situacao"),
-        "campus": [
-            {"codigo": item.get("code"), "cidade": item.get("city"), "uf": item.get("uf")}
-            for item in campus[:20]
-        ],
-        "fonte": "e-MEC / Ministério da Educação",
-    }
-
-
-def consultar_ies_api_publica(codigo_emec: int) -> dict | None:
-    parametros = urlencode(
-        {
-            "where": f"ies_cdg_mec_ies={codigo_emec}",
-            "outFields": "ies_cdg_mec_ies,ies_nome,ies_sigla,ies_campus,ies_municipio,ies_uf,curso_situacao",
-            "returnGeometry": "false",
-            "f": "json",
-        }
-    )
-    try:
-        with urlopen(f"{API_IES_PUBLICA}?{parametros}", timeout=10) as resposta:  # nosec B310
-            dados = json.loads(resposta.read().decode("utf-8"))
-    except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError):
-        return None
-
-    recursos = dados.get("features")
-    if not isinstance(recursos, list) or not recursos:
-        return None
-
-    primeiro = recursos[0].get("attributes", {})
-    nome = str(primeiro.get("ies_nome") or "").strip()
-    if not nome:
-        return None
-
-    campus_unicos = []
-    vistos = set()
-    for recurso in recursos:
-        atributos = recurso.get("attributes", {})
-        chave = (
-            str(atributos.get("ies_campus") or "").strip(),
-            str(atributos.get("ies_municipio") or "").strip(),
-            str(atributos.get("ies_uf") or "").strip(),
-        )
-        if chave in vistos:
-            continue
-        vistos.add(chave)
-        campus_unicos.append(
-            {
-                "codigo": None,
-                "nome": chave[0] or None,
-                "cidade": chave[1] or None,
-                "uf": chave[2] or None,
-            }
-        )
-
-    return {
-        "codigo_emec": codigo_emec,
-        "nome": nome,
-        "sigla": primeiro.get("ies_sigla"),
-        "situacao": primeiro.get("curso_situacao"),
-        "campus": campus_unicos[:20],
-        "fonte": "API pública de IES do CAU/BR, consultada pelo código e-MEC",
-    }
-
-
-def consultar_instituicao_emec(codigo_emec: int) -> dict:
-    try:
-        from emec_api.api.client import Institution
-    except ImportError as erro:
-        dados_publicos = consultar_ies_api_publica(codigo_emec)
-        if dados_publicos:
-            return dados_publicos
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="A consulta e-MEC está indisponível. Instale as dependências do projeto ou tente novamente mais tarde.",
-        ) from erro
-
-    dados_emec = None
-    try:
-        instituicao = Institution(codigo_emec)
-        instituicao.parse()
-        dados_emec = _serializar_resultado_emec(codigo_emec, instituicao.get_full_json())
-    except Exception as erro:
-        logger.warning(
-            "A fonte principal e-MEC falhou (%s); tentando a fonte pública de contingência.",
-            type(erro).__name__,
-        )
-    if dados_emec:
-        return dados_emec
-
-    dados_publicos = consultar_ies_api_publica(codigo_emec)
-    if dados_publicos:
-        return dados_publicos
-
-    raise HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail="As fontes externas de instituições não responderam à consulta. Tente novamente mais tarde.",
-    )
-
-
-async def obter_instituicao_emec(codigo_emec: int) -> dict:
-    return await asyncio.to_thread(consultar_instituicao_emec, codigo_emec)
-
-
-async def consultar_universidade(codigo_emec: Annotated[int, Field(ge=1)]):
-    return await obter_instituicao_emec(codigo_emec)
-
 
 @router.post("/auth/cadastro", status_code=status.HTTP_201_CREATED)
 async def cadastrar_usuario(

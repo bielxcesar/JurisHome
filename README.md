@@ -36,7 +36,7 @@ Em pesquisa realizada com acadêmicos, evidenciou-se a frustração com o excess
 - 🔒 **Autenticação Segura & Múltiplos Perfis**: Cadastro de estudantes, login com senha e segundo fator de autenticação por aplicativo (2FA/TOTP).
 - 📚 **Acervo Organizado & Pesquisa**: Navegação, filtros e listagem de matérias aprovadas.
 - 📖 **Glossário Jurídico (Funcionalidade 4)**: Página dedicada com 25 termos introdutórios, explicações simples, exemplos e referências legais (CPC e CF). A busca é inteligente (ignora acentos e maiúsculas) e funciona mesmo sem JavaScript.
-- 🏛️ **Integração e-MEC**: Consulta opcional da instituição de ensino pelo código e-MEC (usando a API pública do CAU/BR).
+- ⚖️ **Consulta DataJud no glossário**: Pesquisa de processos públicos pelo número CNJ e tribunal, com metadados consultados no CNJ e documentação em [`docs/INTEGRACAO_API_DATAJUD.md`](docs/INTEGRACAO_API_DATAJUD.md).
 - 💬 **Canal de Feedback e Auditoria**: Envio de dúvidas e sugestões pelos alunos, com painel administrativo para respostas, organização de atendimentos e consulta de registros de auditoria.
 - 🛡️ **Privacidade (LGPD)**: Rotina de retenção e manutenção de dados disponível no sistema.
 
@@ -90,6 +90,7 @@ Rode o arquivo de configuração. Ele criará automaticamente o seu arquivo .env
 ```bash
 python setup_local.py
 ```
+O arquivo `.env` local também recebe `DATAJUD_API_KEY` para a consulta do DataJud no glossário. O `.env` fica fora do Git. Consulte `docs/INTEGRACAO_API_DATAJUD.md` para atualizar a chave pública quando o CNJ a alterar.
 
 ### Passo 3: Criar Contas e Dados de Teste
 O projeto não vem com uma senha administrativa padrão. Para criar o seu acesso de Administrador, rode:
@@ -204,7 +205,7 @@ O envio exige o aceite explícito das regras editoriais (versão 2026-10-30): ve
 
 - Cadastro: nome de 2–40 e sobrenome de 2–50 letras (acentos e espaços); e-mail até 150 caracteres com sintaxe usual; interesse obrigatório em uma das dez áreas. Nome completo continua armazenado em `usuarios.nome`; interesse usa `especialidade_juridica`, sem recriar o banco. O perfil permite mudar a preferência; a Home mostra até quatro matérias aprovadas dessa área, ou um aviso/atalho quando não há conteúdo.
 - Senhas novas e alteradas: 8–25 caracteres, maiúscula, número e símbolo; limite adicional de 72 bytes do bcrypt. Senhas não são normalizadas nem aparadas. Login e confirmação da senha atual continuam aceitando as senhas legadas; não é feita alteração forçada.
-- Removidos a consulta e-MEC do cadastro, o código de consulta no navegador e a rota HTTP pública. Rotinas legadas de consulta permanecem isoladas para compatibilidade interna; a escolha de interesse não depende de serviço externo.
+- A consulta de instituições foi removida do cadastro, do backend e das dependências. A integração externa ativa fica no glossário: consulta de metadados processuais públicos do DataJud por número CNJ e tribunal; a chave pública é lida do `.env` e a pesquisa não é armazenada pelo JurisHome.
 - `services/validacao.py`: modelos recusam campos JSON extras, objetos/listas/números em campos de texto, caracteres de controle e tamanhos excessivos. Campos curtos não aceitam HTML. Matérias continuam aceitando pontuação e texto livre no corpo, escapado ao exibir; a formatação editorial permitida é aplicada depois do escape.
 - Títulos: 180; subtítulo/resumo: 500; corpo: 50.000; tags: 500; links de fontes: 2.000; buscas: 80 caracteres. Links HTTP/HTTPS sem credenciais. Nomes não aceitam comandos, HTML, números ou símbolos; e-mails conservam ponto, hífen, sublinhado e `+`, necessários em endereços usuais.
 - `EntradaSeguraMiddleware`: JSON máximo 8 MB (cobre quatro imagens), demais envios 3 MB, query 4 KB/30 parâmetros, sem chaves JSON ou parâmetros repetidos, JSON não padrão ou profundidade maior que 12. O formulário de perfil também recusa campos extras/repetidos.

@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <script src="/static/js/glossario.js?v=20261028" defer></script>
+    <script src="/static/js/datajud.js?v=20261107" defer></script>
     <script src="/static/js/session.js" defer></script>
     <script>
         (() => {
@@ -112,6 +113,38 @@
                     {% endif %}
                 {% endfor %}
             </nav>
+        </section>
+
+        <section class="bg-[#25262a] border border-gray-800 rounded-2xl p-6 md:p-8 shadow-lg mb-12" aria-labelledby="titulo-datajud">
+            <div class="mb-6">
+                <p class="text-amber-500 font-bold text-xs uppercase tracking-wider mb-3">CONSULTA DE PROCESSO PÚBLICO</p>
+                <h2 id="titulo-datajud" class="text-2xl font-bold text-white mb-2">Pesquise no DataJud</h2>
+                <p class="text-gray-400">Consulte metadados públicos de um processo pelo número CNJ e pelo tribunal responsável.</p>
+            </div>
+            <form id="datajud-form" class="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-4" novalidate>
+                <div>
+                    <label for="datajud-numero" class="block text-white font-semibold mb-2">Número do processo (CNJ)</label>
+                    <input id="datajud-numero" name="numero_processo" type="text" inputmode="numeric" autocomplete="off" maxlength="30" placeholder="0000000-00.0000.0.00.0000" aria-describedby="datajud-ajuda" required class="w-full bg-[#1e1e1e] border border-gray-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-amber-500 transition">
+                </div>
+                <div>
+                    <label for="datajud-tribunal" class="block text-white font-semibold mb-2">Tribunal</label>
+                    <select id="datajud-tribunal" name="tribunal" required class="w-full bg-[#1e1e1e] border border-gray-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-amber-500 transition">
+                        <option value="">Selecione o tribunal</option>
+                        {% for grupo in grupos_tribunais_datajud %}
+                        <optgroup label="{{ grupo.nome }}">
+                            {% for tribunal in grupo.itens %}<option value="{{ tribunal.alias }}">{{ tribunal.nome }}</option>{% endfor %}
+                        </optgroup>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button id="datajud-buscar" type="submit" class="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-60 disabled:cursor-wait text-black font-bold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2 whitespace-nowrap">Consultar <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                </div>
+            </form>
+            <p id="datajud-ajuda" class="text-gray-500 text-sm mt-3">Informe os 20 algarismos do número CNJ, com ou sem pontuação. O número e o tribunal são enviados ao CNJ apenas para realizar esta consulta.</p>
+            <p id="datajud-status" class="mt-4 text-sm" role="status" aria-live="polite" hidden></p>
+            <div id="datajud-resultado" class="mt-5" aria-live="polite"></div>
+            <p class="text-gray-500 text-xs mt-6">Fonte: <a class="text-amber-500 hover:text-amber-400 underline" href="https://datajud-wiki.cnj.jus.br/api-publica/" target="_blank" rel="noopener noreferrer">CNJ — DataJud</a>. A consulta exibe somente metadados públicos; a disponibilidade e a atualização dependem da fonte oficial.</p>
         </section>
 
         {% macro navegacao_paginas() %}

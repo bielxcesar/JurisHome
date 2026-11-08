@@ -1,5 +1,5 @@
 from services.validacao import nome_pessoa, linha, area_interesse, ModeloSeguro
-from fastapi import APIRouter, HTTPException, Depends, Request, Response
+from fastapi import APIRouter, HTTPException, Depends, Request, Response, Query
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -244,13 +244,16 @@ def api_dashboard_perfil(
     response: Response,
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
+    periodo: int = Query(default=30, ge=30, le=90),
 ):
     if usuario.tipo_usuario != TipoUsuario.ESTUDANTE:
         raise HTTPException(status_code=404, detail="Página não encontrada.")
+    if periodo not in (30, 90):
+        raise HTTPException(status_code=422, detail="Selecione um período de 30 ou 90 dias.")
 
     response.headers["Cache-Control"] = "no-store, max-age=0"
     response.headers["Pragma"] = "no-cache"
-    return obter_dashboard_estudos(db, str(usuario.uuid))
+    return obter_dashboard_estudos(db, str(usuario.uuid), periodo_dias=periodo)
 
 
 @router.post("/api/perfil/categoria-acesso")

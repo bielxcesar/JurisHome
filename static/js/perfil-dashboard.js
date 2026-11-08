@@ -6,19 +6,39 @@
 
     const status = document.getElementById("perfil-dashboard-status");
     const totalMaterias = document.getElementById("dashboard-materias-total");
+    const seletorPeriodo = document.getElementById("dashboard-periodo");
     const barras = document.getElementById("dashboard-categorias-barras");
     const vazio = document.getElementById("dashboard-categorias-vazio");
-    const periodo = document.getElementById("dashboard-categorias-periodo");
+    const periodoLegivel = document.getElementById("dashboard-categorias-periodo");
     const tentarNovamente = document.getElementById("dashboard-tentar-novamente");
     const formatarNumero = valor => Math.max(0, Number(valor) || 0).toLocaleString("pt-BR");
     const cores = ["#38a3ff", "#4bbe75", "#f87171", "#f5b32c", "#bd70ff", "#21c9cd", "#f59e0b", "#939aaa"];
+    let requisicaoAtual = 0;
+
+    function nomePeriodo(dias) {
+        return `Últimos ${dias} dias`;
+    }
+
+    function dataLegivel(valor) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(valor || "")) return "";
+        const [ano, mes, dia] = valor.split("-");
+        return `${dia}/${mes}/${ano}`;
+    }
 
     function informar(mensagem, estado = "carregando") {
         status.textContent = mensagem;
         status.dataset.estado = estado;
     }
 
-    function desenharBarras(registros) {
+    function limparResumo() {
+        totalMaterias.textContent = "—";
+        barras.replaceChildren();
+        barras.hidden = true;
+        vazio.hidden = false;
+        vazio.textContent = "Aguardando os dados do período.";
+    }
+
+    function desenharBarras(registros, dias) {
         barras.replaceChildren();
         const dados = Array.isArray(registros)
             ? registros.filter(item => item && Number(item.quantidade) > 0)
@@ -27,12 +47,14 @@
         if (!dados.length) {
             barras.hidden = true;
             vazio.hidden = false;
+            vazio.textContent = `Você ainda não acessou nenhuma categoria nos ${dias} dias selecionados.`;
             return false;
         }
 
         vazio.hidden = true;
         barras.hidden = false;
         const maiorValor = Math.max(...dados.map(item => Number(item.quantidade) || 0));
+        const periodo = nomePeriodo(dias).toLocaleLowerCase("pt-BR");
 
         dados.forEach((item, indice) => {
             const quantidade = Math.max(0, Number(item.quantidade) || 0);
@@ -54,11 +76,11 @@
             const trilho = document.createElement("div");
             trilho.className = "perfil-bar-track";
             trilho.setAttribute("role", "progressbar");
-            trilho.setAttribute("aria-label", `${nomeCategoria}: acessos no mês`);
+            trilho.setAttribute("aria-label", `${nomeCategoria}: acessos no período`);
             trilho.setAttribute("aria-valuemin", "0");
             trilho.setAttribute("aria-valuemax", String(maiorValor));
             trilho.setAttribute("aria-valuenow", String(quantidade));
-            trilho.setAttribute("aria-valuetext", `${formatarNumero(quantidade)} ${quantidade === 1 ? "acesso" : "acessos"} no mês`);
+            trilho.setAttribute("aria-valuetext", `${formatarNumero(quantidade)} ${quantidade === 1 ? "acesso" : "acessos"} nos ${periodo}`);
             const preenchimento = document.createElement("span");
             preenchimento.className = "perfil-bar-fill";
             preenchimento.style.width = `${Math.max(2, (quantidade / maiorValor) * 100)}%`;
@@ -73,21 +95,26 @@
         return true;
     }
 
-    function atualizarPeriodo(dados) {
-        const inicio = dados?.periodo?.inicio;
-        if (!inicio || !/^\d{4}-\d{2}-\d{2}$/.test(inicio)) return;
-        const dataMes = new Date(`${inicio}T12:00:00`);
-        const rotulo = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(dataMes);
-        const mesLegivel = rotulo.charAt(0).toLocaleUpperCase("pt-BR") + rotulo.slice(1);
-        periodo.textContent = `${mesLegivel}. A mesma categoria conta uma vez por dia, mesmo que você a acesse mais vezes.`;
+    function atualizarPeriodo(dados, dias) {
+        const inicio = dataLegivel(dados?.periodo?.inicio);
+        const fim = dataLegivel(dados?.periodo?.fim);
+        periodoLegivel.textContent = inicio && fim
+            ? `${nomePeriodo(dias)} · ${inicio} a ${fim}`
+            : nomePeriodo(dias);
     }
 
     async function carregarDashboard() {
+        const requisicao = ++requisicaoAtual;
+        const dias = Number(seletorPeriodo.value) === 90 ? 90 : 30;
+        const periodo = nomePeriodo(dias).toLocaleLowerCase("pt-BR");
         painel.setAttribute("aria-busy", "true");
         tentarNovamente.hidden = true;
-        informar("Carregando seu resumo...");
+        periodoLegivel.textContent = nomePeriodo(dias);
+        limparResumo();
+        informar(`Carregando o resumo dos ${periodo}...`);
+
         try {
-            const resposta = await fetch("/api/perfil/dashboard", {
+            const resposta = await fetch(`/api/perfil/dashboard?periodo=${dias}`, {
                 method: "GET",
                 credentials: "same-origin",
                 headers: { Accept: "application/json" },
@@ -95,23 +122,27 @@
             });
             if (!resposta.ok) throw new Error("dashboard indisponível");
             const dados = await resposta.json();
-            const indicadores = dados.indicadores || {};
+            if (requisicao !== requisicaoAtual) return;
 
+            const indicadores = dados.indicadores || {};
             totalMaterias.textContent = formatarNumero(indicadores.materias_total);
-            atualizarPeriodo(dados);
-            const temCategorias = desenharBarras(dados.categorias_mes);
+            atualizarPeriodo(dados, dias);
+            const temCategorias = desenharBarras(dados.categorias, dias);
             const semAtividade = !Number(indicadores.materias_total) && !temCategorias;
             informar(semAtividade
-                ? "Ainda não há dados para mostrar. Suas consultas e categorias acessadas aparecerão aqui."
-                : "Resumo atualizado.", "pronto");
+                ? `Ainda não há dados nos ${periodo} selecionados. Suas consultas e categorias acessadas aparecerão aqui.`
+                : `Resumo atualizado para ${periodo}.`, "pronto");
         } catch (_erro) {
+            if (requisicao !== requisicaoAtual) return;
+            limparResumo();
             informar("Não foi possível carregar seu resumo agora. Tente novamente.", "erro");
             tentarNovamente.hidden = false;
         } finally {
-            painel.setAttribute("aria-busy", "false");
+            if (requisicao === requisicaoAtual) painel.setAttribute("aria-busy", "false");
         }
     }
 
+    seletorPeriodo.addEventListener("change", carregarDashboard);
     tentarNovamente.addEventListener("click", carregarDashboard);
     carregarDashboard();
 })();
