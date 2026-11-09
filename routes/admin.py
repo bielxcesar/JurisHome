@@ -1,3 +1,4 @@
+from services.categorias import categoria_disponivel, categorias_disponiveis
 from typing import Optional, Literal
 from fastapi import APIRouter, Request, Depends, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -18,7 +19,7 @@ from datetime import datetime, timezone
 
 from database import get_db
 from model.models import Categoria, Conteudo, LogAuditoria, StatusConteudo, gerar_uuid, Usuario, TipoUsuario, TipoFonte, FeedbackAtendimento, ConteudoLeitura
-from services.imagens import normalizar_imagem, LIMITE_IMAGEM_BYTES
+from services.imagens import normalizar_imagem, normalizar_imagem_bytes, LIMITE_IMAGEM_BYTES
 from services.categorias import tags_padrao, combinar_tags, normalizar
 from auth.security import get_current_user, hash_senha
 import base64
@@ -263,7 +264,7 @@ def preview_editorial(dados: MateriaCreate, request: Request, usuario: Usuario =
     })
 
 @router.post("/upload-imagem")
-async def upload_imagem(
+def upload_imagem(
     arquivo: UploadFile = File(...),
     usuario_logado: Usuario = Depends(get_current_user)
 ):
@@ -271,11 +272,11 @@ async def upload_imagem(
         raise HTTPException(status_code=403, detail="Acesso negado.")
     
     try:
-        conteudo_arquivo = await arquivo.read(LIMITE_IMAGEM_BYTES + 1)
+        conteudo_arquivo = arquivo.file.read(LIMITE_IMAGEM_BYTES + 1)
         if len(conteudo_arquivo) > LIMITE_IMAGEM_BYTES:
             raise HTTPException(status_code=413, detail="A imagem deve ter no máximo 1 MB.")
-        base64_encoded = base64.b64encode(conteudo_arquivo).decode("utf-8")
-        url_base64 = normalizar_imagem(f"data:image/jpeg;base64,{base64_encoded}")
+        jpeg = normalizar_imagem_bytes(conteudo_arquivo)
+        url_base64 = "data:image/jpeg;base64," + base64.b64encode(jpeg).decode("ascii")
         
         return {"url": url_base64}
         
@@ -291,12 +292,12 @@ def pagina_home_admin(request: Request):
 
 @router.get("/nova-materia", response_class=HTMLResponse)
 def pagina_nova_materia(request: Request, db: Session = Depends(get_db)):
-    categorias = db.query(Categoria).order_by(Categoria.nome).all()
+    categorias = categorias_disponiveis(db)
     return templates.TemplateResponse(request=request, name="novaMateria.html", context={"categorias": categorias, "tags_por_categoria": {item.uuid: tags_padrao(item.nome) for item in categorias}})
 
 @router.get("/nova-materia-ex", response_class=HTMLResponse)
 def pagina_nova_materia_ex(request: Request):
-    return templates.TemplateResponse(request=request, name="novaMateriaEX.html")
+    return templates.TemplateResponse(request=request, name="novaMateriaEX.html", context={"tipo_usuario": "administrador"})
 
 @router.get("/configuracao", response_class=HTMLResponse)
 def pagina_configuracao(request: Request):
@@ -466,7 +467,7 @@ def criar_materia(
         raise HTTPException(422, "Leia e aceite as regras editoriais vigentes antes de enviar a matéria.")
 
     categoria = db.get(Categoria, dados_tela.categoria_id)
-    if categoria is None:
+    if categoria is None or not categoria_disponivel(categoria.nome):
         raise HTTPException(status_code=422, detail="Selecione uma categoria válida.")
 
     resumo_gerado = dados_tela.resumo_home
@@ -514,7 +515,7 @@ def editar_materia(uuid: str, dados: MateriaUpdateSchema, db: Session = Depends(
 
     alteracoes = dados.model_dump(exclude_unset=True)
     categoria = db.get(Categoria, alteracoes.get("categoria_id", materia.categoria_id))
-    if categoria is None:
+    if categoria is None or ("categoria_id" in alteracoes and not categoria_disponivel(categoria.nome)):
         raise HTTPException(status_code=422, detail="Selecione uma categoria válida.")
     extras = alteracoes.get("tags", materia.tags)
     if "categoria_id" in alteracoes and "tags" not in alteracoes:

@@ -23,49 +23,14 @@
             }
         })();
     </script>
-    <link rel="stylesheet" href="/static/css/juris-ui.css?v=20261028-1">
+    <link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav">
     {% if visao == 'categorias' %}<link rel="stylesheet" href="/static/css/conteudo-educacional.css?v=20261103-1">{% endif %}
     {% if tipo_usuario != 'administrador' %}<script src="/static/js/categoria-acesso.js?v=20261103-1" defer></script>{% endif %}
 </head>
 <body class="juris-ui juris-list bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col" data-visao="{{ visao }}" data-tipo-usuario="{{ tipo_usuario }}">
     
     <!-- Barra de Navegação Padronizada -->
-    <header data-juris-navbar class="bg-[#25262a] border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between sticky top-0 z-50">
-        <div class="text-gray-400 text-sm hidden md:block font-mono" id="data-atual">--/--/----</div>
-        
-        <nav aria-label="Navegação principal" class="flex flex-1 md:justify-center gap-4 md:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide text-sm md:text-base">
-            <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-house text-amber-500"></i> Home</a>
-            
-            <a href="/exibir-mais" class="{% if visao == 'recentes' %}text-white border-b-2 border-amber-500 pb-1 font-semibold{% else %}text-gray-300 hover:text-amber-500 pb-1{% endif %} flex items-center gap-2 transition" {% if visao == 'recentes' %}aria-current="page"{% endif %}><i class="fa-solid fa-square-plus text-amber-500"></i> Exibir mais</a>
-            
-            {% if tipo_usuario == 'administrador' %}
-                <a href="/admin-feedbacks" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-inbox text-amber-500"></i> Feedbacks</a>
-                <a href="/admin/auditoria" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-list-check text-amber-500"></i> Auditoria</a>
-            {% else %}
-                <a href="/configuracoes-usuario#feedback" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-headset text-amber-500"></i> Suporte</a>
-            {% endif %}
-            
-            <span class="text-gray-600 cursor-not-allowed pb-1 flex items-center gap-2" title="Página indisponível"><i class="fa-solid fa-user-group text-gray-600"></i> Sobre nós</span>
-            
-            <a href="/categorias" class="{% if visao == 'categorias' %}text-white border-b-2 border-amber-500 pb-1 font-semibold{% else %}text-gray-300 hover:text-amber-500 pb-1{% endif %} flex items-center gap-2 transition" {% if visao == 'categorias' %}aria-current="page"{% endif %}><i class="fa-solid fa-newspaper text-amber-500"></i> Categorias</a>
-            
-            <a href="/pesquisa" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-magnifying-glass text-amber-500"></i> Pesquisa</a>
-            <a href="/glossario{% if tipo_usuario != 'administrador' %}?origem=usuario{% endif %}" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-book-open text-amber-500"></i> Glossário</a>
-        </nav>
-
-        <div class="relative ml-4">
-            <button type="button" aria-label="Abrir menu do perfil" aria-expanded="false" aria-controls="dropdown-perfil" id="btn-perfil" class="w-10 h-10 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500 hover:bg-amber-500 hover:text-black transition cursor-pointer">
-                <i class="fa-solid fa-user-group"></i>
-            </button>
-
-            <div id="dropdown-perfil" class="hidden absolute right-0 top-14 w-56 bg-[#25262a] border border-gray-700 rounded-lg shadow-2xl flex-col gap-1 p-2 z-[100]">
-                <a href="{% if tipo_usuario == 'administrador' %}/configuracao{% else %}/configuracoes-usuario{% endif %}" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Configurações <i class="fa-solid fa-gear text-gray-400"></i></a>
-                <a href="/termos-de-aceite" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Termo de Aceite <i class="fa-regular fa-file-lines text-gray-400"></i></a>
-                <a href="/politica-de-privacidade" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Privacidade <i class="fa-solid fa-shield-halved text-gray-400"></i></a>
-                <a href="/" class="btn-desconectar mt-2 text-white bg-red-600 hover:bg-red-700 px-3 py-2 rounded flex justify-between items-center transition font-semibold">Sair <i class="fa-solid fa-power-off text-white"></i></a>
-            </div>
-        </div>
-    </header>
+    {% include "_juris_nav.html" %}
 
     <!-- Área Principal -->
     <main class="w-full max-w-4xl mx-auto px-4 py-12 flex-1" id="conteudo-principal">

@@ -18,27 +18,16 @@
             }
         })();
     </script>
+<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav">
 </head>
-<body class="bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
+<body class="juris-ui bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
 
   <!-- Barra de Navegação Padrão -->
-  <header class="bg-[#25262a] border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between sticky top-0 z-50">
-    <div class="flex items-center gap-4">
-        <button onclick="window.close()" class="bg-[#1e1e1e] border border-gray-600 hover:border-amber-500 hover:text-amber-500 text-gray-300 px-4 py-2 rounded-xl transition flex items-center gap-2 text-sm shadow-md cursor-pointer">
+  {% include "_juris_nav.html" %}
+  <div class="px-4 pt-4"><button onclick="window.close()" class="bg-[#1e1e1e] border border-gray-600 hover:border-amber-500 hover:text-amber-500 text-gray-300 px-4 py-2 rounded-xl transition flex items-center gap-2 text-sm shadow-md cursor-pointer">
             <i class="fa-solid fa-xmark"></i>
             <span>Retornar (Fechar aba)</span>
-        </button>
-        <span class="text-gray-400 text-sm hidden md:block font-mono" id="data-atual">--/--/----</span>
-    </div>
-
-    <nav class="flex flex-1 md:justify-center gap-4 md:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide text-sm md:text-base">
-        <a href="/home_admin" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-house text-amber-500"></i> Início</a>
-        <a href="/exibir-mais" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-square-plus text-amber-500"></i> Exibir mais</a>
-        <a href="/admin-feedbacks" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-headset text-amber-500"></i> Feedback</a>
-        <a href="/categorias" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-newspaper text-amber-500"></i> Categorias</a>
-        <a href="/pesquisa" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-magnifying-glass text-amber-500"></i> Pesquisa</a>
-    </nav>
-  </header>
+        </button></div>
 
   <!-- Conteúdo Principal -->
   <main class="w-full max-w-4xl mx-auto px-4 py-12 flex-1">

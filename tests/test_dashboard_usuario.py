@@ -1,5 +1,6 @@
 import unittest
 from datetime import date, timedelta
+from unittest.mock import patch
 
 from fastapi import HTTPException, Response
 from sqlalchemy import create_engine
@@ -24,7 +25,7 @@ from routes.paginas import (
     api_registrar_acesso_categoria,
     pagina_perfil,
 )
-from services.dashboard_usuario import obter_dashboard_estudos, registrar_acesso_categoria
+from services.dashboard_usuario import inicio_periodo, obter_dashboard_estudos, registrar_acesso_categoria
 
 
 class DashboardUsuarioTests(unittest.TestCase):
@@ -71,12 +72,25 @@ class DashboardUsuarioTests(unittest.TestCase):
         )
         civil = Categoria(nome="Direito Civil")
         penal = Categoria(nome="Direito Penal")
-        self.categorias = {"Direito Civil": civil, "Direito Penal": penal}
-        self.session.add_all([estudante, outro_estudante, civil, penal])
+        constitucional = Categoria(nome="Direito Constitucional")
+        trabalhista = Categoria(nome="Direito Trabalhista")
+        self.categorias = {
+            "Direito Civil": civil,
+            "Direito Penal": penal,
+            "Direito Constitucional": constitucional,
+            "Direito Trabalhista": trabalhista,
+        }
+        self.session.add_all([estudante, outro_estudante, civil, penal, constitucional, trabalhista])
         self.session.flush()
 
         materias = {}
-        for identificador, categoria in (("materia-civil-1", civil), ("materia-civil-2", civil), ("materia-penal-1", penal)):
+        for identificador, categoria in (
+            ("materia-civil-1", civil),
+            ("materia-civil-2", civil),
+            ("materia-penal-1", penal),
+            ("materia-constitucional-1", constitucional),
+            ("materia-trabalhista-1", trabalhista),
+        ):
             materias[identificador] = Conteudo(
                 uuid=identificador,
                 titulo=f"Título {identificador}",
@@ -91,18 +105,23 @@ class DashboardUsuarioTests(unittest.TestCase):
         self.session.flush()
 
         ontem = (self.hoje - timedelta(days=1)).isoformat()
-        inicio_periodo = (self.hoje - timedelta(days=6)).isoformat()
-        fora_periodo = (self.hoje - timedelta(days=7)).isoformat()
+        inicio_30_dias = (self.hoje - timedelta(days=29)).isoformat()
+        fora_30_dias = (self.hoje - timedelta(days=30)).isoformat()
+        inicio_90_dias = (self.hoje - timedelta(days=89)).isoformat()
+        fora_90_dias = (self.hoje - timedelta(days=90)).isoformat()
         self.session.add_all([
             ConteudoLeitura(usuario_id=estudante.uuid, conteudo_id="materia-civil-1", dia=self.hoje.isoformat()),
             ConteudoLeitura(usuario_id=estudante.uuid, conteudo_id="materia-civil-1", dia=ontem),
-            ConteudoLeitura(usuario_id=estudante.uuid, conteudo_id="materia-civil-2", dia=inicio_periodo),
-            ConteudoLeitura(usuario_id=estudante.uuid, conteudo_id="materia-penal-1", dia=fora_periodo),
+            ConteudoLeitura(usuario_id=estudante.uuid, conteudo_id="materia-civil-2", dia=inicio_30_dias),
+            ConteudoLeitura(usuario_id=estudante.uuid, conteudo_id="materia-penal-1", dia=fora_30_dias),
+            ConteudoLeitura(usuario_id=estudante.uuid, conteudo_id="materia-constitucional-1", dia=inicio_90_dias),
+            ConteudoLeitura(usuario_id=estudante.uuid, conteudo_id="materia-trabalhista-1", dia=fora_90_dias),
             ConteudoLeitura(usuario_id=outro_estudante.uuid, conteudo_id="materia-penal-1", dia=self.hoje.isoformat()),
-            CategoriaAcesso(usuario_id=estudante.uuid, categoria_id=civil.uuid, dia="2026-10-31"),
-            CategoriaAcesso(usuario_id=estudante.uuid, categoria_id=civil.uuid, dia="2026-11-01"),
+            CategoriaAcesso(usuario_id=estudante.uuid, categoria_id=civil.uuid, dia=inicio_30_dias),
             CategoriaAcesso(usuario_id=estudante.uuid, categoria_id=civil.uuid, dia="2026-11-02"),
-            CategoriaAcesso(usuario_id=estudante.uuid, categoria_id=penal.uuid, dia="2026-11-02"),
+            CategoriaAcesso(usuario_id=estudante.uuid, categoria_id=penal.uuid, dia=fora_30_dias),
+            CategoriaAcesso(usuario_id=estudante.uuid, categoria_id=constitucional.uuid, dia=inicio_90_dias),
+            CategoriaAcesso(usuario_id=estudante.uuid, categoria_id=trabalhista.uuid, dia=fora_90_dias),
             CategoriaAcesso(usuario_id=outro_estudante.uuid, categoria_id=civil.uuid, dia="2026-11-02"),
         ])
 
@@ -113,24 +132,60 @@ class DashboardUsuarioTests(unittest.TestCase):
         Base.metadata.drop_all(bind=self.engine)
         self.engine.dispose()
 
-    def test_indicador_conta_materias_distintas(self):
+    def test_periodo_padrao_de_30_dias_inclui_os_dois_limites(self):
         dados = obter_dashboard_estudos(self.session, "estudante-dashboard", self.hoje)
 
-        self.assertEqual({"materias_total": 3}, dados["indicadores"])
+        self.assertEqual({"materias_total": 2}, dados["indicadores"])
+        self.assertEqual({"dias": 30, "rotulo": "Últimos 30 dias", "inicio": "2026-10-04", "fim": "2026-11-02"}, dados["periodo"])
+        self.assertEqual(
+            [{"categoria": "Direito Civil", "quantidade": 2}],
+            dados["categorias"],
+        )
         self.assertNotIn("rodadas_juridle_concluidas", dados["indicadores"])
 
-    def test_categorias_mostram_acessos_do_mes_atual(self):
-        dados = obter_dashboard_estudos(self.session, "estudante-dashboard", self.hoje)
-        categorias = {item["categoria"]: item["quantidade"] for item in dados["categorias_mes"]}
+    def test_periodo_rejeita_duracoes_nao_disponiveis(self):
+        with self.assertRaises(ValueError):
+            inicio_periodo(self.hoje, 60)
 
-        self.assertEqual({"Direito Civil": 2, "Direito Penal": 1}, categorias)
-        self.assertEqual({"inicio": "2026-11-01", "fim": "2026-11-02"}, dados["periodo"])
+    def test_periodo_de_90_dias_inclui_o_limite_e_atualiza_os_dois_indicadores(self):
+        dados = obter_dashboard_estudos(self.session, "estudante-dashboard", self.hoje, periodo_dias=90)
+        categorias = {item["categoria"]: item["quantidade"] for item in dados["categorias"]}
+
+        self.assertEqual({"materias_total": 4}, dados["indicadores"])
+        self.assertEqual({"Direito Civil": 2, "Direito Constitucional": 1, "Direito Penal": 1}, categorias)
+        self.assertEqual({"dias": 90, "rotulo": "Últimos 90 dias", "inicio": "2026-08-05", "fim": "2026-11-02"}, dados["periodo"])
         self.assertEqual(
             0,
             self.session.query(CategoriaAcesso)
-            .filter_by(usuario_id=self.estudante.uuid, dia="2026-10-31")
+            .filter_by(usuario_id=self.estudante.uuid, dia="2026-08-04")
             .count(),
         )
+
+    def test_materias_repetidas_em_dias_diferentes_contam_uma_vez(self):
+        dados = obter_dashboard_estudos(self.session, "estudante-dashboard", self.hoje, periodo_dias=90)
+        self.assertEqual(4, dados["indicadores"]["materias_total"])
+
+    def test_limpeza_preserva_limite_de_90_dias_e_nao_apaga_dados_de_outro_leitor(self):
+        dentro_do_limite = (self.hoje - timedelta(days=89)).isoformat()
+        anterior_ao_limite = (self.hoje - timedelta(days=90)).isoformat()
+        civil_id = self.categorias["Direito Civil"].uuid
+        leitor_id = "outro-estudante-dashboard"
+        self.session.add_all([
+            CategoriaAcesso(usuario_id=self.estudante.uuid, categoria_id=civil_id, dia=dentro_do_limite),
+            CategoriaAcesso(usuario_id=self.estudante.uuid, categoria_id=civil_id, dia=anterior_ao_limite),
+            CategoriaAcesso(usuario_id=leitor_id, categoria_id=civil_id, dia=anterior_ao_limite),
+        ])
+        self.session.commit()
+
+        obter_dashboard_estudos(self.session, self.estudante.uuid, self.hoje)
+
+        self.assertEqual(1, self.session.query(CategoriaAcesso).filter_by(
+            usuario_id=self.estudante.uuid,
+            categoria_id=civil_id,
+            dia=dentro_do_limite,
+        ).count())
+        self.assertEqual(0, self.session.query(CategoriaAcesso).filter_by(usuario_id=self.estudante.uuid, dia=anterior_ao_limite).count())
+        self.assertEqual(1, self.session.query(CategoriaAcesso).filter_by(usuario_id=leitor_id, dia=anterior_ao_limite).count())
 
     def test_acesso_a_categoria_conta_uma_vez_por_usuario_categoria_e_dia(self):
         amanha = self.hoje + timedelta(days=1)
@@ -153,16 +208,29 @@ class DashboardUsuarioTests(unittest.TestCase):
         self.assertEqual({"materias_total": 1}, dados["indicadores"])
         self.assertEqual(
             [{"categoria": "Direito Civil", "quantidade": 1}],
-            dados["categorias_mes"],
+            dados["categorias"],
         )
 
     def test_rota_retorna_resumo_sem_cache_para_estudante(self):
         resposta = Response()
-        dados = api_dashboard_perfil(resposta, self.session, self.estudante)
+        previsto = {
+            "indicadores": {"materias_total": 2},
+            "categorias": [{"categoria": "Direito Civil", "quantidade": 1}],
+            "periodo": {"dias": 30, "rotulo": "Últimos 30 dias", "inicio": "2026-10-04", "fim": "2026-11-02"},
+        }
+        with patch("routes.paginas.obter_dashboard_estudos", return_value=previsto) as consultar:
+            dados = api_dashboard_perfil(resposta, self.session, self.estudante, periodo=30)
 
         self.assertEqual("no-store, max-age=0", resposta.headers["Cache-Control"])
-        self.assertEqual(3, dados["indicadores"]["materias_total"])
-        self.assertEqual(2, len(dados["categorias_mes"]))
+        self.assertEqual(2, dados["indicadores"]["materias_total"])
+        self.assertEqual(1, len(dados["categorias"]))
+        consultar.assert_called_once_with(self.session, self.estudante.uuid, periodo_dias=30)
+
+    def test_rota_rejeita_periodo_fora_das_opcoes(self):
+        with self.assertRaises(HTTPException) as contexto:
+            api_dashboard_perfil(Response(), self.session, self.estudante, periodo=45)
+
+        self.assertEqual(422, contexto.exception.status_code)
 
     def test_rota_registra_categoria_e_nao_fica_disponivel_para_admin(self):
         resposta = Response()
@@ -208,11 +276,14 @@ class DashboardUsuarioTests(unittest.TestCase):
         html = resposta.body.decode("utf-8")
 
         self.assertIn('id="perfil-dashboard"', html)
-        self.assertIn("perfil-dashboard.js?v=20261102-3", html)
-        self.assertIn("Matérias consultadas no total", html)
+        self.assertIn("perfil-dashboard.js?v=20261107-1", html)
+        self.assertIn("Matérias consultadas no período", html)
         self.assertIn("Seu histórico de estudos", html)
-        self.assertIn("Cada matéria é contada uma vez", html)
-        self.assertIn("Categorias mais acessadas no mês", html)
+        self.assertIn("Cada matéria conta uma vez", html)
+        self.assertIn("Categorias mais acessadas no período", html)
+        self.assertIn('id="dashboard-periodo"', html)
+        self.assertIn('value="30" selected', html)
+        self.assertIn('value="90"', html)
         self.assertIn("dashboard-categorias-barras", html)
         self.assertNotIn("Partidas do JuridLE", html)
         self.assertNotIn("dashboard-categorias-pizza", html)

@@ -14,12 +14,17 @@ def texto_seguro(valor):
     return valor
 
 
-def linha(valor, limite=180):
+def texto_simples(valor):
     valor = unicodedata.normalize('NFC', texto_seguro(valor)).strip()
-    if len(valor) > limite or any(c in valor for c in '\n\r\t'):
-        raise ValueError(f'Use uma única linha com até {limite} caracteres.')
     if re.search(r'<\s*/?\s*[A-Za-z!]', valor):
         raise ValueError('Este campo aceita texto simples, sem marcação HTML.')
+    return valor
+
+
+def linha(valor, limite=180):
+    valor = texto_simples(valor)
+    if len(valor) > limite or any(c in valor for c in '\n\r\t'):
+        raise ValueError(f'Use uma única linha com até {limite} caracteres.')
     return valor
 
 

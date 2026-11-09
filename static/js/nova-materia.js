@@ -3,6 +3,13 @@
 const $=id=>document.getElementById(id),form=$('form-nova-materia');
 const tags=JSON.parse($('categorias-tags').textContent),cache=new Map(),urls=new Map();
 let etapa=0,ocupado=false,previaValida=false,ultimoPayload=null,previaHtml="",urlPrevia=null;
+const cancelarMateria = $('cancelar-materia');
+cancelarMateria.addEventListener('click', evento => {
+    if (cancelarMateria.dataset.enviada === 'true') return;
+    if (ocupado || !window.confirm('Tem certeza de que deseja cancelar a matéria? Os dados não enviados serão perdidos.')) {
+        evento.preventDefault();
+    }
+});
 function aviso(texto){$('home-aviso').textContent=texto;$('home-aviso').hidden=false;$('home-aviso').focus();}
 function atualizarTags(){const box=$('tags-materia-preview');box.replaceChildren();for(const tag of tags[$('categoria_id').value]||[]){const s=document.createElement('span');s.textContent='#'+tag;box.append(s);}}
 $('categoria_id').addEventListener('change',atualizarTags);atualizarTags();
@@ -35,5 +42,5 @@ async function atualizarPrevia(){if(ocupado)return;travar(true);previaValida=fal
 $('btn-preview').addEventListener('click',atualizarPrevia);
 $('btn-visualizar').addEventListener('click',()=>{if(!previaValida){aviso('Atualize a chamada antes de visualizar o modelo.');return;}if(urlPrevia)URL.revokeObjectURL(urlPrevia);urlPrevia=URL.createObjectURL(new Blob([previaHtml],{type:'text/html'}));const link=document.createElement('a');link.href=urlPrevia;link.target='_blank';link.rel='noopener noreferrer';link.click();$('previa-status').textContent='Modelo aberto em uma nova aba. Esta visualização ainda não publica a matéria.';});
 window.addEventListener('pagehide',()=>{if(urlPrevia)URL.revokeObjectURL(urlPrevia);});
-form.addEventListener('submit',async e=>{e.preventDefault();if(etapa!==3){await ir(etapa+1);return;}if(ocupado||!previaValida)return;if(!validar(3))return;travar(true);try{const r=await fetch('/criar-materia',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({...ultimoPayload,aceite_editorial:$('aceite-editorial').checked,versao_termos:'2026-10-30'})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(erroDados(d));$('msg-retorno').textContent='Matéria enviada para análise. Você pode acompanhar a aprovação em Tabelas / Notícias.';$('msg-retorno').hidden=false;$('btn-enviar').textContent='Enviada para análise';form.querySelectorAll('input,select,textarea,button').forEach(c=>c.disabled=true);$('msg-retorno').scrollIntoView({block:'center'});}catch(erro){aviso(erro.message);travar(false);}});
+form.addEventListener('submit',async e=>{e.preventDefault();if(etapa!==3){await ir(etapa+1);return;}if(ocupado||!previaValida)return;if(!validar(3))return;travar(true);try{const r=await fetch('/criar-materia',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({...ultimoPayload,aceite_editorial:$('aceite-editorial').checked,versao_termos:'2026-10-30'})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(erroDados(d));$('msg-retorno').textContent='Matéria enviada para análise. Você pode acompanhar a aprovação em Tabelas / Notícias.';$('msg-retorno').hidden=false;$('btn-enviar').textContent='Enviada para análise';cancelarMateria.dataset.enviada='true';cancelarMateria.textContent='Ir para Tabelas / Notícias';form.querySelectorAll('input,select,textarea,button').forEach(c=>c.disabled=true);$('msg-retorno').scrollIntoView({block:'center'});}catch(erro){aviso(erro.message);travar(false);}});
 })();

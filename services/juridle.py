@@ -1,10 +1,11 @@
 """Quiz diário: banco revisado, sorteio privado e consumo atômico por pessoa/dia."""
 import json
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 
 from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.orm import load_only
 from model.models import (fuso_br, Usuario, JuridleRodada, JuridleDia,
                           JuridleQuestao, JuridleQuestaoUso)
 from auth.sessions import garantir_transacao
@@ -12,6 +13,8 @@ from auth.sessions import garantir_transacao
 TAMANHO_RODADA = 5
 META_MENSAL = 150
 FUSO = fuso_br
+VIRADA = time(5)
+UM_DIA = timedelta(days=1)
 
 
 def agora():
@@ -19,18 +22,19 @@ def agora():
 
 
 def data_local(data):
-    return data.replace(tzinfo=timezone.utc).astimezone(FUSO).date()
+    local = data.replace(tzinfo=timezone.utc).astimezone(FUSO)
+    return local.date() - UM_DIA if local.time() < VIRADA else local.date()
 
 
-def limites_dia():
-    dia = data_local(agora())
-    inicio = datetime.combine(dia, datetime.min.time()).replace(tzinfo=FUSO)
-    fim = datetime.combine(dia + timedelta(days=1), datetime.min.time()).replace(tzinfo=FUSO)
+def limites_dia(instante=None):
+    dia = data_local(instante if instante is not None else agora())
+    inicio = datetime.combine(dia, VIRADA, tzinfo=FUSO)
+    fim = datetime.combine(dia + UM_DIA, VIRADA, tzinfo=FUSO)
     return dia.isoformat(), inicio.astimezone(timezone.utc).replace(tzinfo=None), fim.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 def garantir_banco_inicial(db):
-    """Migra os 25 termos já publicados, sem alterar questões existentes/revisadas."""
+    """Migra os termos já publicados, sem alterar questões existentes ou revisadas."""
     from services.glossario import consultar_glossario
     from sqlalchemy.exc import IntegrityError
     catalogo = consultar_glossario()['itens']
@@ -54,10 +58,38 @@ def garantir_banco_inicial(db):
     db.commit()
 
 
-def progresso(db, usuario_id):
-    rodadas = db.query(JuridleRodada).filter_by(usuario_id=usuario_id).order_by(JuridleRodada.criada_em, JuridleRodada.uuid).all()
+def resumo_coroas(dias, instante):
+    hoje = data_local(instante)
+    ontem = hoje - UM_DIA
+    anterior = None
+    sequencia = recorde = atual = 0
+    for dia in sorted(dias):
+        sequencia = sequencia + 1 if anterior == dia - UM_DIA else 1
+        recorde = max(recorde, sequencia)
+        if dia in (ontem, hoje):
+            atual = sequencia
+        anterior = dia
+    _, _, fim = limites_dia(instante)
+    return {'coroaHoje': hoje in dias, 'sequenciaCoroas': atual,
+            'recordeCoroas': recorde, 'proximaRodadaEm': fim.isoformat() + 'Z',
+            'diaDesafio': hoje.isoformat()}
+
+
+def coroa_diaria(db, usuario_id):
+    concluidas = db.query(JuridleRodada.concluida_em, JuridleRodada.respostas_json).filter(
+        JuridleRodada.usuario_id == usuario_id, JuridleRodada.concluida_em.is_not(None))
+    dias = {data_local(data) for data, respostas in concluidas
+            if sum(int(r['acertou']) for r in json.loads(respostas)) == TAMANHO_RODADA}
+    instante = agora()
+    return {**resumo_coroas(dias, instante), 'servidorEm': instante.isoformat() + 'Z'}
+
+
+def progresso(db, usuario_id, instante=None):
+    instante = instante if instante is not None else agora()
+    rodadas = db.query(JuridleRodada).options(load_only(
+        JuridleRodada.respostas_json, JuridleRodada.concluida_em)).filter_by(usuario_id=usuario_id).order_by(JuridleRodada.criada_em, JuridleRodada.uuid).all()
     acertos = total = sequencia = recorde = coroas = concluidas = 0
-    dias, recentes = set(), []
+    dias, dias_coroa, recentes = set(), set(), []
     for rodada in rodadas:
         respostas = json.loads(rodada.respostas_json)
         for resposta in respostas:
@@ -69,16 +101,19 @@ def progresso(db, usuario_id):
             concluidas += 1
             pontos = sum(int(r['acertou']) for r in respostas)
             coroas += int(pontos == TAMANHO_RODADA)
-            dias.add(data_local(rodada.concluida_em))
+            dia = data_local(rodada.concluida_em)
+            dias.add(dia)
+            if pontos == TAMANHO_RODADA:
+                dias_coroa.add(dia)
             recentes.append({'uuid': rodada.uuid, 'acertos': pontos, 'total': TAMANHO_RODADA,
                 'data': rodada.concluida_em.isoformat() + 'Z', 'coroa': pontos == TAMANHO_RODADA})
-    hoje = data_local(agora())
+    hoje = data_local(instante)
     inicio = hoje if hoje in dias else hoje - timedelta(days=1)
     frequencia = 0
     while inicio in dias:
         frequencia += 1
         inicio -= timedelta(days=1)
-    return {'nivel': 1 + acertos // 10, 'acertos': acertos, 'respondidas': total,
+    return {**resumo_coroas(dias_coroa, instante), 'nivel': 1 + acertos // 10, 'acertos': acertos, 'respondidas': total,
         'sequencia': sequencia, 'melhorSequencia': recorde, 'frequencia': frequencia,
         'coroas': coroas, 'rodadas': concluidas, 'historico': list(reversed(recentes[-5:]))}
 
@@ -100,13 +135,15 @@ def serializar(rodada):
     return resultado
 
 
-def ativa(db, usuario_id, bloquear=False):
+def ativa(db, usuario_id, bloquear=False, janela=None):
     """Retorna a rodada DO DIA, inclusive concluída; respeita o histórico legado."""
-    dia, inicio, fim = limites_dia()
+    dia, inicio, fim = janela if janela is not None else limites_dia()
     consulta = db.query(JuridleDia).filter_by(usuario_id=usuario_id, dia=dia)
     registro = (consulta.with_for_update() if bloquear else consulta).first()
     if registro:
-        return db.get(JuridleRodada, registro.rodada_id)
+        rodada = db.get(JuridleRodada, registro.rodada_id)
+        if inicio <= rodada.criada_em < fim:
+            return rodada
     consulta = db.query(JuridleRodada).filter(JuridleRodada.usuario_id == usuario_id,
         JuridleRodada.criada_em >= inicio, JuridleRodada.criada_em < fim).order_by(JuridleRodada.criada_em.desc(), JuridleRodada.uuid.desc())
     return (consulta.with_for_update() if bloquear else consulta).first()
@@ -118,15 +155,14 @@ def iniciar(db, usuario_id):
     usuario = db.query(Usuario).filter_by(uuid=usuario_id).with_for_update().first()
     if not usuario:
         raise HTTPException(404, 'Conta não encontrada.')
-    dia, _, fim = limites_dia()
-    rodada = ativa(db, usuario_id, bloquear=True)
+    instante = agora()
+    janela = limites_dia(instante)
+    dia, _, fim = janela
+    rodada = ativa(db, usuario_id, bloquear=True, janela=janela)
     if rodada:
-        if not db.get(JuridleDia, (usuario_id, dia)):
-            db.add(JuridleDia(usuario_id=usuario_id, dia=dia, rodada_id=rodada.uuid))
-            db.commit()
         return rodada
     # Uma questão sorteada fica reservada mesmo que a pessoa abandone a rodada.
-    corte = (data_local(agora()) - timedelta(days=29)).isoformat()
+    corte = (data_local(instante) - timedelta(days=29)).isoformat()
     usadas = select(JuridleQuestaoUso.questao_id).where(JuridleQuestaoUso.usuario_id == usuario_id, JuridleQuestaoUso.dia >= corte)
     ids = list(db.scalars(select(JuridleQuestao.uuid).where(JuridleQuestao.status == 'aprovada', JuridleQuestao.uuid.not_in(usadas))))
     if len(ids) < TAMANHO_RODADA:
@@ -147,20 +183,28 @@ def iniciar(db, usuario_id):
     # Limpa a chave legada; a unicidade por dia é garantida pela nova tabela.
     db.query(JuridleRodada).filter_by(ativa_chave=usuario_id).update({'ativa_chave': None}, synchronize_session=False)
     nova = JuridleRodada(usuario_id=usuario_id, ativa_chave=usuario_id,
-        perguntas_json=json.dumps(perguntas, ensure_ascii=False), respostas_json='[]', criada_em=agora(), expira_em=fim)
+        perguntas_json=json.dumps(perguntas, ensure_ascii=False), respostas_json='[]', criada_em=instante, expira_em=fim)
     db.add(nova)
     db.flush()
-    db.add(JuridleDia(usuario_id=usuario_id, dia=dia, rodada_id=nova.uuid))
+    registro = db.get(JuridleDia, (usuario_id, dia))
+    if registro:
+        # Uma rodada legada iniciada antes das 05h pertence ao dia anterior.
+        registro.rodada_id = nova.uuid
+    else:
+        db.add(JuridleDia(usuario_id=usuario_id, dia=dia, rodada_id=nova.uuid))
     db.add_all([JuridleQuestaoUso(usuario_id=usuario_id, questao_id=i, rodada_id=nova.uuid, dia=dia) for i in escolhidas])
     db.commit()
     return nova
 
 
 def estado(db, usuario_id):
-    rodada = ativa(db, usuario_id)
-    _, _, fim = limites_dia()
-    return {'rodada': serializar(rodada), 'progresso': progresso(db, usuario_id),
-        'disponivel': rodada is None, 'proximaRodadaEm': fim.isoformat() + 'Z'}
+    instante = agora()
+    janela = limites_dia(instante)
+    rodada = ativa(db, usuario_id, janela=janela)
+    _, _, fim = janela
+    return {'rodada': serializar(rodada), 'progresso': progresso(db, usuario_id, instante),
+        'disponivel': rodada is None, 'proximaRodadaEm': fim.isoformat() + 'Z',
+        'servidorEm': instante.isoformat() + 'Z'}
 
 
 def responder(db, usuario_id, rodada_id, indice, opcao):
@@ -174,7 +218,8 @@ def responder(db, usuario_id, rodada_id, indice, opcao):
         if anterior['opcao'] != opcao:
             raise HTTPException(409, 'Esta pergunta já foi respondida.')
         return rodada, anterior
-    if rodada.concluida_em or rodada.expira_em <= agora() or indice != rodada.respondidas or data_local(rodada.criada_em) != data_local(agora()):
+    instante = agora()
+    if rodada.concluida_em or rodada.expira_em <= instante or indice != rodada.respondidas or data_local(rodada.criada_em) != data_local(instante):
         raise HTTPException(409, 'Rodada encerrada ou pergunta fora de ordem. Atualize o jogo.')
     pergunta = json.loads(rodada.perguntas_json)[indice]
     resposta = {'opcao': opcao, 'acertou': opcao == pergunta['correta'], 'correta': pergunta['correta'],
@@ -184,7 +229,7 @@ def responder(db, usuario_id, rodada_id, indice, opcao):
     rodada.respostas_json = json.dumps(respostas, ensure_ascii=False)
     rodada.respondidas += 1
     if rodada.respondidas == TAMANHO_RODADA:
-        rodada.concluida_em = agora()
+        rodada.concluida_em = instante
         rodada.ativa_chave = None
     db.commit()
     return rodada, resposta

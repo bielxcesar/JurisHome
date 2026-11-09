@@ -3,6 +3,8 @@ import json
 from urllib.parse import parse_qsl
 from starlette.responses import JSONResponse
 
+from services.imagens import LIMITE_IMAGEM_BASE64, LIMITE_IMAGEM_BYTES
+
 
 def objeto_sem_duplicatas(pares):
     resultado = {}
@@ -50,6 +52,11 @@ class EntradaSeguraMiddleware:
         headers = dict(scope.get('headers', []))
         tipo = headers.get(b'content-type', b'').split(b';')[0].strip().lower()
         limite = 8*1024*1024 if tipo == b'application/json' else 3*1024*1024
+        caminho = scope['path']
+        if caminho == '/api/juridle/questoes' and tipo == b'application/json':
+            limite = LIMITE_IMAGEM_BASE64 + 64 * 1024
+        elif caminho == '/upload-imagem':
+            limite = LIMITE_IMAGEM_BYTES + 64 * 1024
         try:
             if int(headers.get(b'content-length', b'0')) > limite:
                 return await erro(413, 'O envio ultrapassa o tamanho permitido.')

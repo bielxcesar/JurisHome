@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Termos jurídicos explicados para estudantes iniciantes, com exemplos e referências legais.">
+    <meta name="description" content="Consulte termos jurídicos do acervo JurisHome e pesquise normas federais.">
     <title>Glossário jurídico | JurisHome</title>
     <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
     
@@ -11,7 +11,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <script src="/static/js/glossario.js?v=20261028" defer></script>
+    <script src="/static/js/glossario.js?v=20261108-ano-local" defer></script>
     <script src="/static/js/session.js" defer></script>
     <script>
         (() => {
@@ -22,46 +22,15 @@
         })();
     </script>
 <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
-<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261028">
-<link rel="stylesheet" href="/static/css/glossario.css?v=20261106-6">
+<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav">
+<link rel="stylesheet" href="/static/css/glossario.css?v=20261108-ano">
+    <script src="/static/js/legislacao-senado.js?v=20261108-ano" defer></script>
 </head>
 <body class="juris-ui glossario-shell bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
     
     <!-- Barra de Navegação Padronizada (Mesma da Home e Pesquisa) -->
     <a class="glossario-skip" href="#conteudo">Pular para o conteúdo</a>
-    <header data-juris-navbar class="bg-[#25262a] border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between sticky top-0 z-50">
-        <div class="text-gray-400 text-sm hidden md:block font-mono" id="data-atual">--/--/----</div>
-        
-        <nav aria-label="Navegação principal" class="flex flex-1 md:justify-center gap-4 md:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide text-sm md:text-base">
-            <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-house text-amber-500"></i> Home</a>
-            <a href="/exibir-mais" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-square-plus text-amber-500"></i> Exibir mais</a>
-            
-            {% if tipo_usuario == 'administrador' %}
-                <a href="/admin-feedbacks" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-inbox text-amber-500"></i> Feedbacks</a>
-                <a href="/admin/auditoria" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-list-check text-amber-500"></i> Auditoria</a>
-            {% else %}
-                <a href="/configuracoes-usuario#feedback" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-headset text-amber-500"></i> Suporte</a>
-            {% endif %}
-            
-            <span class="text-gray-600 cursor-not-allowed pb-1 flex items-center gap-2" title="Página indisponível"><i class="fa-solid fa-user-group text-gray-600"></i> Sobre nós</span>
-            <a href="/categorias" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-newspaper text-amber-500"></i> Categorias</a>
-            <a href="/pesquisa" class="text-gray-300 hover:text-amber-500 pb-1 flex items-center gap-2 transition"><i class="fa-solid fa-magnifying-glass text-amber-500"></i> Pesquisa</a>
-            <a href="/glossario" aria-current="page" class="text-white border-b-2 border-amber-500 pb-1 font-semibold flex items-center gap-2 transition"><i class="fa-solid fa-book-open text-amber-500"></i> Glossário</a>
-        </nav>
-
-        <div class="relative ml-4">
-            <button type="button" aria-label="Abrir menu do perfil" aria-controls="dropdown-perfil" aria-expanded="false" id="btn-perfil" class="w-10 h-10 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500 hover:bg-amber-500 hover:text-black transition cursor-pointer">
-                <i class="fa-solid fa-user-group"></i>
-            </button>
-
-            <div id="dropdown-perfil" class="hidden absolute right-0 top-14 w-56 bg-[#25262a] border border-gray-700 rounded-lg shadow-2xl flex-col gap-1 p-2 z-[100]">
-                <a href="{% if tipo_usuario == 'administrador' %}/configuracao{% else %}/configuracoes-usuario{% endif %}" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Configurações <i class="fa-solid fa-gear text-gray-400"></i></a>
-                <a href="/termos-de-aceite" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Termo de Aceite <i class="fa-regular fa-file-lines text-gray-400"></i></a>
-                <a href="/politica-de-privacidade" class="text-white hover:bg-gray-700 px-3 py-2 rounded flex justify-between items-center transition">Privacidade <i class="fa-solid fa-shield-halved text-gray-400"></i></a>
-                <a href="/" class="btn-desconectar mt-2 text-white bg-red-600 hover:bg-red-700 px-3 py-2 rounded flex justify-between items-center transition font-semibold">Sair <i class="fa-solid fa-power-off text-white"></i></a>
-            </div>
-        </div>
-    </header>
+    {% include "_juris_nav.html" %}
 
     <main id="conteudo" tabindex="-1" class="w-full max-w-6xl mx-auto px-4 py-12 flex-1">
         
@@ -73,7 +42,7 @@
                     <span class="w-2 h-2 bg-amber-500 rounded-full"></span> SEUS PRIMEIROS PASSOS NO DIREITO
                 </p>
                 <h1 id="titulo-glossario" class="text-4xl md:text-5xl font-bold text-white mb-4">Glossário <span class="text-amber-500">jurídico.</span></h1>
-                <p class="text-gray-400 text-lg max-w-2xl">Uma palavra nova não precisa interromper seu estudo. Explore os significados, veja exemplos e siga aprendendo.</p>
+                <p class="text-gray-400 text-lg max-w-2xl">Consulte definições, exemplos e referências legais reunidos no Glossário do JurisHome.</p>
             </div>
             
             <div class="bg-[#25262a] border border-gray-800 rounded-2xl p-6 flex flex-col items-center justify-center text-center shadow-lg min-w-[160px]" aria-label="{{ total_catalogo }} termos disponíveis">
@@ -114,6 +83,45 @@
             </nav>
         </section>
 
+        <section id="consulta-lei" aria-labelledby="titulo-legislacao" class="scroll-mt-24 bg-[#25262a] border border-gray-800 rounded-2xl p-5 md:p-8 mb-12">
+            <p class="text-amber-500 font-bold text-xs uppercase tracking-wider mb-3">Legislação federal</p>
+            <h2 id="titulo-legislacao" class="text-2xl font-bold text-white mb-2">Consulte uma lei</h2>
+            <p class="text-gray-400 mb-6">Encontre normas federais pelo tipo, número e ano de publicação.</p>
+            <form id="legislacao-form" class="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] gap-4 items-end">
+                <div>
+                    <label for="legislacao-tipo" class="block font-semibold mb-2">Tipo de norma</label>
+                    <select id="legislacao-tipo" class="w-full bg-[#1e1e1e] border border-gray-700 rounded-xl py-3 px-4">
+                        <option value="LEI">Lei</option>
+                        <option value="LCP">Lei Complementar</option>
+                        <option value="DEL">Decreto-Lei</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="legislacao-numero" class="block font-semibold mb-2">Número</label>
+                    <input id="legislacao-numero" inputmode="numeric" pattern="[0-9]{1,8}" maxlength="8" placeholder="Ex.: 15211" required class="w-full bg-[#1e1e1e] border border-gray-700 rounded-xl py-3 px-4">
+                </div>
+                <div>
+                    <label for="legislacao-ano" class="block font-semibold mb-2">Ano</label>
+                    <input id="legislacao-ano" type="number" min="1800" max="2100" step="1" placeholder="Ex.: 2025" required class="w-full bg-[#1e1e1e] border border-gray-700 rounded-xl py-3 px-4">
+                </div>
+                <button id="legislacao-buscar" type="submit" class="bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-black font-bold rounded-xl px-6 py-3">Consultar →</button>
+                <div id="legislacao-linha-tempo" class="legislacao-linha-tempo md:col-span-full" hidden>
+                    <div class="legislacao-linha-tempo-topo">
+                        <label for="legislacao-ano-slider">Escolha o ano na linha do tempo</label>
+                        <output id="legislacao-ano-escolhido" for="legislacao-ano-slider legislacao-ano"></output>
+                    </div>
+                    <input id="legislacao-ano-slider" type="range" min="1800" max="2100" step="1">
+                    <div class="legislacao-marcas" aria-hidden="true">
+                        <span>1800</span><span>1850</span><span>1900</span><span>1950</span><span>2000</span><span>2050</span><span>2100</span>
+                    </div>
+                </div>
+            </form>
+            <p class="text-gray-400 text-sm mt-3">Exemplo de busca: Lei, número 15211, ano 2025.</p>
+            <p id="legislacao-status" role="status" hidden></p>
+            <div id="legislacao-resultado" class="mt-5" aria-live="polite"></div>
+            <p class="text-gray-400 text-xs mt-6">Fonte: <a class="text-amber-500 underline" href="https://legis.senado.leg.br/dadosabertos/api-docs/swagger-ui/index.html" target="_blank" rel="noopener noreferrer">Dados Abertos do Senado Federal</a>.</p>
+        </section>
+
         {% macro navegacao_paginas() %}
         <nav class="glossario-pagination" aria-label="Páginas de termos">
             <p>Exibindo {{ primeiro }}–{{ ultimo }} de {{ total }} termos · Página {{ pagina }} de {{ total_paginas }}</p>
@@ -125,7 +133,7 @@
         </nav>
         {% endmacro %}
         <!-- Resultados -->
-        <section aria-labelledby="titulo-resultados">
+        <section id="glossario-resultados" aria-labelledby="titulo-resultados">
             <div class="flex flex-wrap justify-between items-end border-b border-gray-800 pb-4 mb-8 gap-4">
                 <div>
                     <h2 id="titulo-resultados" class="text-2xl font-bold text-white mb-1">{% if q or letra %}Resultado da consulta{% else %}Explore os termos{% endif %}</h2>
@@ -166,10 +174,10 @@
                 {% endfor %}
             </div>
             {% else %}
-            <div class="bg-[#25262a] border border-gray-800 rounded-xl py-16 flex flex-col items-center justify-center text-center px-4">
+            <div id="glossario-vazio-local" class="bg-[#25262a] border border-gray-800 rounded-xl py-16 flex flex-col items-center justify-center text-center px-4">
                 <i class="fa-solid fa-font text-5xl text-gray-700 mb-4"></i>
-                <h3 class="text-xl font-bold text-white mb-2">Nenhum termo por aqui.</h3>
-                <p class="text-gray-400 mb-6 max-w-md">Tente uma palavra mais curta ou remova o filtro de letra para ampliar a busca.</p>
+                <h3 class="text-xl font-bold text-white mb-2">Nenhum termo encontrado no acervo do JurisHome.</h3>
+                <p class="text-gray-400 mb-6 max-w-md">{% if q %}Tente outra palavra ou confira a grafia do termo.{% else %}Tente uma palavra ou remova o filtro de letra para ampliar a busca.{% endif %}</p>
                 <a href="{{ url_limpar }}" class="bg-[#1e1e1e] border border-gray-700 hover:border-amber-500 text-gray-300 hover:text-amber-500 font-bold py-2 px-6 rounded-lg transition flex items-center gap-2">
                     Ver todos os termos <i class="fa-solid fa-arrow-right"></i>
                 </a>
@@ -179,7 +187,7 @@
         </section>
 
         <footer class="mt-16 text-center border-t border-gray-800 pt-8">
-            <p class="text-gray-400 text-sm mb-4">Um apoio para as primeiras leituras.<br><span class="text-gray-500">Definições introdutórias e exemplos ilustrativos, com referência à legislação brasileira.</span></p>
+            <p class="text-gray-400 text-sm mb-4">Um apoio para as primeiras leituras.<br><span class="text-gray-500">Confira as referências de cada termo e consulte a legislação oficial.</span></p>
             <a href="#conteudo" class="inline-flex items-center gap-2 text-amber-500 hover:text-amber-400 font-semibold text-sm transition">
                 Voltar ao início <i class="fa-solid fa-arrow-up"></i>
             </a>

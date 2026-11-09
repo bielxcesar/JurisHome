@@ -8,29 +8,15 @@ from model.models import Categoria, Conteudo
 
 CATALOGO = {
     "Direito Trabalhista": ("CLT", "emprego", "trabalho", "trabalhista", "serviço", "relações de trabalho"),
-    "Direito do Consumidor": ("CDC", "consumidor", "consumo", "produto", "serviço", "relação de consumo"),
     "Direito Penal": ("criminal", "penal", "crime", "Código Penal", "processo penal", "justiça criminal"),
     "Direito Civil": ("Código Civil", "contratos", "responsabilidade civil", "família", "bens", "obrigações"),
-    "Direito Constitucional": ("Constituição", "direitos fundamentais", "cidadania", "STF", "poderes do Estado"),
-    "Direito Tributário": ("tributos", "impostos", "contribuições", "CTN", "tributário", "fiscal"),
-    "Direito Administrativo": ("administração pública", "servidor público", "licitações", "atos administrativos", "serviço público"),
-    "Direito Previdenciário": ("INSS", "previdência", "aposentadoria", "benefícios", "seguridade social"),
-    "Direito Empresarial": ("empresa", "sociedades", "empresarial", "recuperação judicial", "atividade econômica"),
-    "Direito Ambiental": ("meio ambiente", "ambiental", "sustentabilidade", "licenciamento", "proteção ambiental"),
 }
 
 
 DESCRICOES = {
-    "Direito do Consumidor": "Estuda a proteção de quem compra produtos ou contrata serviços e as responsabilidades dos fornecedores. Abrange temas como publicidade, qualidade dos produtos, atendimento e relações de consumo.",
     "Direito Trabalhista": "Trata das relações de trabalho, especialmente entre empregados e empregadores. Explora temas como contratação, jornada, remuneração, condições de trabalho e direitos e deveres das partes.",
     "Direito Penal": "Estuda os crimes, as penas e os limites do poder de punir do Estado. Reúne temas sobre responsabilidade penal, proteção de bens jurídicos e garantias das pessoas envolvidas.",
     "Direito Civil": "Trata das relações da vida privada entre pessoas e organizações. Inclui assuntos como contratos, família, propriedade, sucessões e responsabilidade por danos.",
-    "Direito Constitucional": "Estuda a Constituição, a organização do Estado e os direitos fundamentais. Ajuda a compreender a cidadania, a divisão dos poderes e as bases do sistema jurídico.",
-    "Direito Tributário": "Examina os tributos e as relações entre o poder público e os contribuintes. Aborda impostos, taxas, contribuições e os limites da tributação.",
-    "Direito Administrativo": "Trata da organização e da atuação da administração pública. Abrange serviços públicos, agentes públicos, licitações e o controle das atividades do Estado.",
-    "Direito Previdenciário": "Estuda a proteção previdenciária e as relações entre segurados, dependentes e os regimes de previdência. Inclui temas como contribuições, aposentadorias e outros benefícios.",
-    "Direito Empresarial": "Estuda a atividade econômica organizada e as relações jurídicas das empresas. Explora sociedades, contratos empresariais, títulos de crédito e situações de crise empresarial.",
-    "Direito Ambiental": "Trata da proteção do meio ambiente e da relação entre atividades humanas e recursos naturais. Abrange prevenção de danos, licenciamento, conservação e responsabilidade ambiental.",
 }
 
 
@@ -54,6 +40,15 @@ ALIASES = {
 
 def categoria_canonica(nome):
     return ALIASES.get(normalizar(nome or ""))
+
+
+def categoria_disponivel(nome):
+    return categoria_canonica(nome) in CATALOGO
+
+
+def categorias_disponiveis(db):
+    return [categoria for categoria in db.query(Categoria).order_by(Categoria.nome).all()
+            if categoria_disponivel(categoria.nome)]
 
 
 def tags_padrao(nome):

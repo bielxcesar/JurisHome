@@ -1,8 +1,9 @@
 import json
+import os
 import sys
 from datetime import datetime, timezone
 
-import model.models
+from auth.sessions import garantir_transacao
 from database import Base, SQLALCHEMY_DATABASE_URL, SessionLocal, engine
 from feedback_database import (
     FEEDBACK_DATABASE_URL,
@@ -18,6 +19,7 @@ from model.models import (
     TipoUsuario,
     Usuario,
 )
+from services.categorias import CATALOGO, categoria_canonica, descricao_categoria
 
 
 AVISO_DEMONSTRACAO = (
@@ -27,6 +29,7 @@ AVISO_DEMONSTRACAO = (
 
 CONTEUDOS_DEMONSTRACAO = (
     {
+        "categoria": "Direito Trabalhista",
         "titulo": "[DEMONSTRAÇÃO] Caso didático sobre jornada de trabalho",
         "sub_titulo": "Registro fictício para testar a leitura de uma matéria.",
         "resumo_home": "Exemplo local fictício; não é notícia ou entendimento jurídico real.",
@@ -35,6 +38,7 @@ CONTEUDOS_DEMONSTRACAO = (
         "tipo_fonte": TipoFonte.DOUTRINA,
     },
     {
+        "categoria": "Direito Civil",
         "titulo": "[DEMONSTRAÇÃO] Exemplo de organização por categoria",
         "sub_titulo": "Registro fictício para testar filtros e listagens.",
         "resumo_home": "Exemplo local fictício para demonstrar a navegação por categorias.",
@@ -43,6 +47,7 @@ CONTEUDOS_DEMONSTRACAO = (
         "tipo_fonte": TipoFonte.LEGISLACAO,
     },
     {
+        "categoria": "Direito Penal",
         "titulo": "[DEMONSTRAÇÃO] Exemplo de conteúdo em destaque",
         "sub_titulo": "Registro fictício para testar os destaques da página inicial.",
         "resumo_home": "Exemplo local fictício para demonstrar os cards da página inicial.",
@@ -50,6 +55,34 @@ CONTEUDOS_DEMONSTRACAO = (
         "tags": "demonstração, destaque",
         "tipo_fonte": TipoFonte.ACORDAO,
     },
+)
+
+TEMAS_ADICIONAIS = (
+    ("Direito Civil", "Cláusulas em um contrato fictício", "contratos"),
+    ("Direito Civil", "Acordo simulado entre vizinhos", "convivência"),
+    ("Direito Civil", "Organização de documentos de família", "família"),
+    ("Direito Penal", "Leitura de um caso penal simulado", "processo penal"),
+    ("Direito Penal", "Personagens de uma audiência simulada", "audiência"),
+    ("Direito Trabalhista", "Registro fictício de horas trabalhadas", "jornada"),
+    ("Direito Trabalhista", "Simulação de admissão em uma empresa", "emprego"),
+)
+
+CONTEUDOS_DEMONSTRACAO += tuple(
+    {
+        "categoria": categoria,
+        "titulo": f"[DEMONSTRAÇÃO] {titulo}",
+        "sub_titulo": "Situação fictícia para explorar o acervo do JurisHome.",
+        "resumo_home": f"Exercício de navegação sobre {tema}.",
+        "corpo_texto": AVISO_DEMONSTRACAO + f"Exercício de leitura sobre {tema} em uma situação simulada.",
+        "tags": f"demonstração, {tema}",
+        "tipo_fonte": TipoFonte.DOUTRINA,
+    }
+    for categoria, titulo, tema in TEMAS_ADICIONAIS
+)
+
+PERFIS_DEMONSTRACAO = (
+    (TipoUsuario.ADMINISTRADOR, "admin", "Administrador", 10),
+    (TipoUsuario.ESTUDANTE, "leitor", "Leitor", 25),
 )
 
 FONTES_LEGADAS_DEMONSTRACAO = (
@@ -94,6 +127,66 @@ def _validar_bancos_locais() -> None:
         )
 
 
+def _criar_usuarios(db):
+    """Completa o conjunto de demonstração sem alterar contas existentes."""
+    perfis = {
+        f"demo-{prefixo}-{numero:02d}@example.invalid": (tipo, rotulo, numero)
+        for tipo, prefixo, rotulo, quantidade in PERFIS_DEMONSTRACAO
+        for numero in range(1, quantidade + 1)
+    }
+    contas = {
+        conta.email: conta
+        for conta in db.query(Usuario).filter(Usuario.email.in_(perfis))
+    }
+    faltantes = perfis.keys() - contas.keys()
+    senha = os.getenv("JURISHOME_SEED_SENHA")
+    senha_hash = None
+    if faltantes and senha:
+        from auth.security import hash_senha
+        from services.validacao import nova_senha
+
+        senha_hash = hash_senha(nova_senha(senha))
+
+    criados = {tipo: 0 for tipo, _, _, _ in PERFIS_DEMONSTRACAO}
+    for email in sorted(faltantes):
+        tipo, rotulo, numero = perfis[email]
+        conta = Usuario(
+            nome=f"{rotulo} de Demonstração {numero:02d}",
+            email=email,
+            tipo_usuario=tipo,
+            e_root_admin=False,
+            senha_hash=senha_hash,
+        )
+        contas[email] = conta
+        db.add(conta)
+        criados[tipo] += 1
+    db.flush()
+    autores = [
+        contas[email]
+        for email, (tipo, _, _) in perfis.items()
+        if tipo == TipoUsuario.ADMINISTRADOR
+        and contas[email].tipo_usuario == tipo
+        and not contas[email].e_root_admin
+    ]
+    if not autores:
+        raise RuntimeError("Nenhum administrador de demonstração disponível para assinar as matérias.")
+    return criados, autores
+
+
+def _obter_categorias(db):
+    categorias = {
+        categoria_canonica(categoria.nome): categoria
+        for categoria in db.query(Categoria).all()
+    }
+    for nome in CATALOGO:
+        if nome not in categorias:
+            categoria = Categoria(nome=nome, descricao=descricao_categoria(nome))
+            categorias[nome] = categoria
+            db.add(categoria)
+    db.flush()
+    return categorias
+
+
 def _marcar_conteudos_legados(db) -> int:
     legados = (
         db.query(Conteudo)
@@ -118,7 +211,7 @@ def _marcar_conteudos_legados(db) -> int:
     return len(legados)
 
 
-def _criar_conteudos(db, categoria: Categoria, autor: Usuario) -> int:
+def _criar_conteudos(db, categorias, autores) -> int:
     existentes = {
         titulo
         for (titulo,) in db.query(Conteudo.titulo)
@@ -127,16 +220,16 @@ def _criar_conteudos(db, categoria: Categoria, autor: Usuario) -> int:
     }
     novos = [
         Conteudo(
-            **demonstracao,
+            **{campo: valor for campo, valor in demonstracao.items() if campo != "categoria"},
             fonte_original=None,
             imagem_miniatura=None,
             imagem_corpo=None,
             fonte_imagem=None,
             status=StatusConteudo.APROVADO,
-            categoria_id=categoria.uuid,
-            autor_id=autor.uuid,
+            categoria_id=categorias[demonstracao["categoria"]].uuid,
+            autor_id=autores[indice % len(autores)].uuid,
         )
-        for demonstracao in CONTEUDOS_DEMONSTRACAO
+        for indice, demonstracao in enumerate(CONTEUDOS_DEMONSTRACAO)
         if demonstracao["titulo"] not in existentes
     ]
     db.add_all(novos)
@@ -253,33 +346,18 @@ def main() -> int:
 
         db = SessionLocal()
         feedback_db = FeedbackSessionLocal()
-        autor = (
-            db.query(Usuario)
-            .filter(Usuario.tipo_usuario == TipoUsuario.ADMINISTRADOR)
-            .order_by(Usuario.criado_em.asc())
-            .first()
-        )
-        if autor is None:
-            raise RuntimeError(
-                "Crie primeiro um administrador local com 'python criar_admin.py'; "
-                "o seed nao cria contas nem credenciais."
-            )
-
-        categoria = db.query(Categoria).filter_by(nome="Direito Trabalhista").first()
-        if categoria is None:
-            categoria = Categoria(
-                nome="Direito Trabalhista",
-                descricao="Categoria usada nos registros ficticios de demonstracao local.",
-            )
-            db.add(categoria)
-            db.flush()
+        garantir_transacao(db)
+        usuarios_criados, autores = _criar_usuarios(db)
+        categorias = _obter_categorias(db)
 
         conteudos_legados = _marcar_conteudos_legados(db)
         feedbacks_legados = _sanitizar_feedbacks_legados(feedback_db)
-        conteudos_criados = _criar_conteudos(db, categoria, autor)
+        conteudos_criados = _criar_conteudos(db, categorias, autores)
         feedbacks_criados = _criar_feedbacks(feedback_db)
         db.commit()
         feedback_db.commit()
+        print(f"{usuarios_criados[TipoUsuario.ADMINISTRADOR]} administrador(es) de demonstração criado(s).")
+        print(f"{usuarios_criados[TipoUsuario.ESTUDANTE]} leitor(es) de demonstração criado(s).")
         print(f"{conteudos_criados} conteudo(s) ficticio(s) criado(s).")
         print(f"{feedbacks_criados} feedback(s) ficticio(s) criado(s).")
         if conteudos_legados or feedbacks_legados:

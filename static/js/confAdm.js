@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const btnVoltar = document.getElementById("btn-voltar");
     const formSenha = document.getElementById("form-troca-senha");
     const alertSucesso = document.getElementById("alert-sucesso");
     const formAnonimizacao = document.getElementById("form-anonimizacao");
@@ -86,12 +85,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const secaoInicial = window.location.hash.slice(1);
     const secaoDisponivel = paineisSecao.some((painel) => painel.dataset.configPanel === secaoInicial);
     exibirSecao(secaoDisponivel ? secaoInicial : "senha", false);
-
-    if (btnVoltar) {
-        btnVoltar.addEventListener("click", () => {
-            window.location.href = document.body.dataset.destinoVoltar || "/home_usuario";
-        });
-    }
 
     document.querySelectorAll(".btn-desconectar-side").forEach((link) => {
         link.addEventListener("click", (evento) => {

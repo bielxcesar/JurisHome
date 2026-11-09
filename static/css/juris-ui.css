@@ -92,19 +92,19 @@ body.juris-ui {
 .juris-ui [data-juris-navbar] nav > a[aria-current="page"] { border-bottom-color: var(--juris-yellow); font-weight: 600; color: var(--juris-text); }
 .juris-ui [data-juris-navbar] nav > span { color: var(--juris-muted); opacity: .5; }
 .juris-ui [data-juris-navbar] > div:last-child { position: relative; flex-shrink: 0; margin-left: 0; }
-.juris-ui #btn-perfil {
+.juris-ui #juris-perfil {
     display: inline-flex; align-items: center; justify-content: center;
     width: 40px; height: 40px; padding: 0; border: 2px solid var(--juris-yellow);
     border-radius: 50%; background: transparent; color: var(--juris-yellow); cursor: pointer;
 }
-.juris-ui #btn-perfil > i { font-size: 18px; line-height: 1; }
-.juris-ui #btn-perfil:hover { background: var(--juris-yellow); color: #111; }
-.juris-ui #dropdown-perfil { position: absolute; top: calc(100% + .75rem); right: 0; min-width: 224px; padding: .5rem; border: 1px solid var(--juris-border); border-radius: .5rem; background: var(--juris-panel); color: var(--juris-text); font-size: .875rem; box-shadow: 0 18px 40px #0005; }
-.juris-ui.juris-list #dropdown-perfil { display: flex; flex-direction: column; }
-.juris-ui #dropdown-perfil.hidden { display: none; }
-.juris-ui #dropdown-perfil > a { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 42px; margin: 0; padding: .6rem .75rem; border-radius: .35rem; font-size: .875rem; font-weight: 400; color: var(--juris-text); text-decoration: none; }
-.juris-ui #dropdown-perfil > a:hover { background: var(--juris-card); }
-.juris-ui #dropdown-perfil > .btn-desconectar { color: #fca5a5; background: rgb(127 29 29 / .18); }
+.juris-ui #juris-perfil > i { font-size: 18px; line-height: 1; }
+.juris-ui #juris-perfil:hover { background: var(--juris-yellow); color: #111; }
+.juris-ui #juris-perfil-menu { position: absolute; top: calc(100% + .75rem); right: 0; min-width: 224px; padding: .5rem; border: 1px solid var(--juris-border); border-radius: .5rem; background: var(--juris-panel); color: var(--juris-text); font-size: .875rem; box-shadow: 0 18px 40px #0005; }
+.juris-ui.juris-list #juris-perfil-menu { display: flex; flex-direction: column; }
+.juris-ui #juris-perfil-menu[hidden] { display: none; }
+.juris-ui #juris-perfil-menu > a { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 42px; margin: 0; padding: .6rem .75rem; border-radius: .35rem; font-size: .875rem; font-weight: 400; color: var(--juris-text); text-decoration: none; }
+.juris-ui #juris-perfil-menu > a:hover { background: var(--juris-card); }
+.juris-ui #juris-perfil-menu > .juris-desconectar { color: #fca5a5; background: rgb(127 29 29 / .18); }
 .juris-ui .legal-footer { position: relative; inset: auto; width: fit-content; max-width: calc(100% - 2rem); margin: 1.5rem 1rem 1rem auto; font-family: inherit; font-size: .75rem; }
 .juris-ui .legal-footer a:hover { color: var(--juris-yellow); background: rgb(245 158 11 / .1); }
 .juris-ui.modo-claro .legal-footer { background: #fff; color: var(--juris-muted); }
@@ -118,4 +118,35 @@ body.juris-ui {
     .juris-ui [data-juris-navbar] nav { gap: 20px; }
     .juris-ui [data-juris-navbar] nav > a, .juris-ui [data-juris-navbar] nav > span { font-size: .875rem; }
     .juris-ui .feedback-admin-page, .juris-ui .audit-header, .juris-ui .audit-main { width: calc(100% - 1.5rem); }
+}
+
+.juris-ui .juris-voltar {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    color: var(--juris-yellow);
+    font-size: .875rem;
+    text-decoration: none;
+}
+
+.juris-ui .juris-voltar-icone {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--juris-yellow);
+    border-radius: 50%;
+    background: var(--juris-panel);
+    color: var(--juris-yellow);
+}
+
+.juris-ui .juris-voltar:hover .juris-voltar-icone {
+    background: var(--juris-yellow);
+    color: #111;
+}
+
+.juris-ui .juris-voltar:focus-visible {
+    outline: 2px solid var(--juris-yellow);
+    outline-offset: 3px;
 }

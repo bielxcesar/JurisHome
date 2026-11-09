@@ -5,15 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Política de Privacidade do sistema JurisHome">
     <title>Política de Privacidade | JurisHome</title>
-    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+    <link rel="stylesheet" href="/static/css/legal.css?v=20261108-documentos">
     <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
 </head>
 <body class="legal-page">
     <a class="legal-skip-link" href="#conteudo-legal">Ir para o conteúdo</a>
-    <header class="legal-header">
-        <a class="legal-brand" href="/" data-legal-return aria-label="Voltar à página anterior"><img src="/static/images/logo.png" alt="JurisHome"></a>
-        <a class="legal-back" href="/" data-legal-return>Voltar</a>
-    </header>
+    {% set documento_legal = 'privacidade' %}
+    {% include "_legal_header.html" %}
 
     <main class="legal-document" id="conteudo-legal">
         <div class="legal-heading">
@@ -49,7 +47,7 @@
                         <tr><td>Feedback e suporte</td><td>Nome, e-mail, tipo, assunto, mensagem, avaliação opcional, protocolo, estado, prioridade, respostas, observações internas e histórico.</td><td>Receber, acompanhar e responder solicitações dos usuários.</td></tr>
                         <tr><td>Prática no Juridle</td><td>Identificador do usuário, rodadas, respostas, datas e progresso pessoal.</td><td>Retomar a prática e calcular nível, sequência de acertos, dias de frequência e coroas. Os registros individuais são removidos na anonimização da conta.</td></tr>
                         <tr><td>Leituras do acervo</td><td>Identificador do estudante, matéria e dia da leitura.</td><td>Apresentar totais agregados das matérias em alta, com no máximo uma contagem por pessoa, matéria e dia. Os registros individuais são removidos na anonimização da conta.</td></tr>
-                        <tr><td>Acessos a categorias</td><td>Identificador do estudante, categoria selecionada e dia do acesso.</td><td>Exibir no perfil as categorias que o próprio estudante mais acessou no mês. A mesma categoria conta no máximo uma vez por estudante em cada dia, mesmo que seja selecionada novamente.</td></tr>
+                        <tr><td>Acessos a categorias</td><td>Identificador do estudante, categoria selecionada e dia do acesso.</td><td>Exibir no perfil as categorias que o próprio estudante mais acessou nos últimos 30 ou 90 dias. A mesma categoria conta no máximo uma vez por estudante em cada dia, mesmo que seja selecionada novamente.</td></tr>
                         <tr><td>Auditoria</td><td>Identificador do usuário quando necessário, perfil, ação, recurso, resultado, data, correlação e detalhes técnicos mínimos.</td><td>Rastrear operações, investigar falhas, prevenir abuso e demonstrar responsabilidade.</td></tr>
                     </tbody>
                 </table>
@@ -74,7 +72,7 @@
 
         <section>
             <h2>5. Pesquisa e navegação</h2>
-            <p>Os termos e filtros de pesquisa são usados para localizar matérias; a aplicação não grava um histórico desses termos. Para a dashboard pessoal, o sistema registra a categoria escolhida explicitamente na página inicial ou no filtro de categorias, no máximo uma vez por categoria e por dia para cada estudante. Esse registro permite exibir as categorias mais acessadas no mês e não é usado para publicidade nem para criar um perfil visível a outros usuários.</p>
+            <p>Os termos e filtros de pesquisa são usados para localizar matérias; a aplicação não grava um histórico desses termos. Para a dashboard pessoal, o sistema registra a categoria escolhida explicitamente na página inicial ou no filtro de categorias, no máximo uma vez por categoria e por dia para cada estudante. Esse registro permite exibir os acessos dos últimos 30 ou 90 dias e não é usado para publicidade nem para criar um perfil visível a outros usuários.</p>
         </section>
 
         <section>
@@ -92,13 +90,13 @@
                     <tbody>
                         <tr><td>Railway</td><td>Hospedagem da versão publicada e do banco PostgreSQL.</td><td>Requisições técnicas e dados armazenados nas tabelas do JurisHome.</td></tr>
                         <tr><td>Google Fonts e cdnjs/Cloudflare</td><td>Entrega de fontes e ícones da interface.</td><td>Metadados técnicos normais da requisição, como endereço IP e agente do navegador.</td></tr>
-                        <tr><td>e-MEC e API pública de IES do CAU/BR</td><td>Consulta opcional de instituição de ensino pelo código informado.</td><td>Somente o código numérico consultado; nome e e-mail da conta não são enviados.</td></tr>
+                        <tr><td>API de Dados Abertos do Senado Federal</td><td>Consulta de legislação federal iniciada no glossário.</td><td>Tipo da norma, número e ano informados; dados da conta e e-mail não são enviados. A busca não é armazenada pelo JurisHome.</td></tr>
                         <tr><td>Origem de imagem externa, quando presente em conteúdo legado</td><td>Carregamento de imagem quando o conteúdo contém uma URL externa.</td><td>Requisição do navegador à origem indicada na URL. As imagens cadastradas em Base64 são entregues pelo próprio JurisHome.</td></tr>
                         <tr><td>WhatsApp</td><td>Compartilhamento iniciado pelo usuário.</td><td>Título e endereço público da matéria preparados no navegador; contatos e mensagens permanecem sob controle do WhatsApp.</td></tr>
                     </tbody>
                 </table>
             </div>
-            <p>Dados também poderão ser compartilhados quando houver obrigação legal, ordem de autoridade competente, necessidade de proteger direitos ou resposta a incidente. O JurisHome não comercializa cadastros nem compartilha dados para publicidade de terceiros.</p>
+            <p>Quando o usuário consulta uma norma, o JurisHome envia à API de Dados Abertos do Senado Federal somente o tipo, o número e o ano informados, para obter a identificação, a ementa e o endereço do texto oficial. Dados da conta e e-mail não são enviados, e a busca não é armazenada pelo JurisHome. A disponibilidade e a atualização dependem do serviço externo; confira o texto vigente na fonte oficial. Outros compartilhamentos podem ocorrer quando houver obrigação legal, ordem de autoridade competente, necessidade de proteger direitos ou resposta a incidente. O JurisHome não comercializa cadastros nem compartilha dados para publicidade de terceiros.</p>
         </section>
 
         <section>
@@ -116,13 +114,13 @@
                         <tr><td>Conteúdo pessoal de feedback</td><td>Até a resolução ou o arquivamento e por mais 180 dias.</td><td>Anonimização de nome, e-mail, assunto, mensagem, avaliação, respostas e observações; preservação do protocolo, estado e datas.</td></tr>
                         <tr><td>Logs gerais de auditoria</td><td>12 meses.</td><td>Remoção do identificador do usuário, do recurso e dos detalhes; preservação de ação, tipo, resultado, correlação e data sem identificação direta.</td></tr>
                         <tr><td>Prova de aceite</td><td>Durante a conta e por 5 anos após seu encerramento ou anonimização.</td><td>Eliminação do indicador, da data e da versão após o prazo.</td></tr>
-                        <tr><td>Acessos a categorias</td><td>Somente os registros do mês corrente. Ao abrir a dashboard ou escolher uma categoria em um novo mês, os registros de meses anteriores do estudante são eliminados. Também são removidos na anonimização da conta.</td><td>Exclusão dos registros por usuário, categoria e dia; não há cópia do histórico em outra tabela do JurisHome.</td></tr>
+                        <tr><td>Acessos a categorias</td><td>Até 90 dias: o dia atual e os 89 dias anteriores. A dashboard permite consultar os últimos 30 ou 90 dias. Registros anteriores são removidos ao consultar a dashboard, registrar uma categoria ou executar a rotina de retenção.</td><td>Exclusão dos registros por usuário, categoria e dia; não há cópia do histórico em outra tabela do JurisHome. Também são removidos na anonimização da conta.</td></tr>
                         <tr><td>Registros de incidente</td><td>5 anos após o encerramento do incidente.</td><td>Eliminação ou minimização dos dados pessoais que deixarem de ser necessários.</td></tr>
                         <tr><td>Conteúdo administrativo</td><td>Enquanto publicado ou necessário à curadoria e à comprovação de autoria.</td><td>Retirada do conteúdo e revisão dos metadados que ainda precisem ser mantidos.</td></tr>
                     </tbody>
                 </table>
             </div>
-            <p>Os prazos de feedback, auditoria e aceite estão configurados no script de retenção. Ele não roda automaticamente: um responsável precisa revisar a simulação e executar a rotina. Prazos de cópias de segurança dependem do provedor de hospedagem.</p>
+            <p>Os prazos de feedback, auditoria, aceite e acessos a categorias estão configurados no script de retenção. Ele não roda automaticamente: um responsável precisa revisar a simulação e executar a rotina. A dashboard e o registro de novas categorias também removem os acessos antigos do próprio estudante. Prazos de cópias de segurança dependem do provedor de hospedagem.</p>
         </section>
 
         <section>

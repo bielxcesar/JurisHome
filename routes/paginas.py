@@ -1,14 +1,15 @@
+from auth.security import get_current_user_optional
+from services.categorias import categoria_disponivel, categorias_disponiveis
 from services.validacao import nome_pessoa, linha, area_interesse, ModeloSeguro
-from fastapi import APIRouter, HTTPException, Depends, Request, Response
+from fastapi import APIRouter, HTTPException, Depends, Request, Response, Query
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field, field_validator
 
 import uuid
-from io import BytesIO
 from pathlib import Path
-from PIL import Image, UnidentifiedImageError
+from services.imagens import normalizar_imagem_bytes
 from fastapi import UploadFile, File, Form
 
 from database import get_db
@@ -154,18 +155,13 @@ def atualizar_perfil(
         if len(conteudo) > limite:
             raise HTTPException(status_code=413, detail="A foto deve ter no máximo 2 MB.")
         try:
-            with Image.open(BytesIO(conteudo)) as imagem:
-                if imagem.format not in {"JPEG", "PNG", "WEBP"} or imagem.width * imagem.height > 16_000_000:
-                    raise ValueError("Formato ou dimensões inválidos")
-                imagem.load()
-                imagem = imagem.convert("RGB")
-                imagem.thumbnail((1024, 1024))
-                pasta = Path("static/uploads")
-                pasta.mkdir(parents=True, exist_ok=True)
-                nome_arquivo = f"{uuid.uuid4().hex}.jpg"
-                imagem.save(pasta / nome_arquivo, format="JPEG", quality=85)
-        except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as erro:
-            raise HTTPException(status_code=422, detail="Envie uma imagem JPEG, PNG ou WebP válida.") from erro
+            jpeg = normalizar_imagem_bytes(conteudo, limite=limite, tamanho=1024, qualidade=85)
+        except ValueError as erro:
+            raise HTTPException(status_code=422, detail=str(erro)) from erro
+        pasta = Path("static/uploads")
+        pasta.mkdir(parents=True, exist_ok=True)
+        nome_arquivo = f"{uuid.uuid4().hex}.jpg"
+        (pasta / nome_arquivo).write_bytes(jpeg)
         usuario.foto_perfil = f"/static/uploads/{nome_arquivo}"
 
     usuario.nome = nome
@@ -244,13 +240,16 @@ def api_dashboard_perfil(
     response: Response,
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
+    periodo: int = Query(default=30, ge=30, le=90),
 ):
     if usuario.tipo_usuario != TipoUsuario.ESTUDANTE:
         raise HTTPException(status_code=404, detail="Página não encontrada.")
+    if periodo not in (30, 90):
+        raise HTTPException(status_code=422, detail="Selecione um período de 30 ou 90 dias.")
 
     response.headers["Cache-Control"] = "no-store, max-age=0"
     response.headers["Pragma"] = "no-cache"
-    return obter_dashboard_estudos(db, str(usuario.uuid))
+    return obter_dashboard_estudos(db, str(usuario.uuid), periodo_dias=periodo)
 
 
 @router.post("/api/perfil/categoria-acesso")
@@ -308,7 +307,7 @@ def pagina_categorias(
         name="listagem_conteudos.html",
         context={"tipo_usuario": usuario.tipo_usuario.value, "visao": "categorias",
                  "categorias_catalogo": [{"nome": c.nome, **conteudo_categoria(c.nome)}
-                                         for c in db.query(Categoria).order_by(Categoria.nome).all()]},
+                                         for c in categorias_disponiveis(db)]},
     )
 
 @router.get("/materia/{conteudo_id}", response_class=HTMLResponse)
@@ -321,6 +320,9 @@ def pagina_materia(
     conteudo = db.query(Conteudo).filter(Conteudo.uuid == conteudo_id).first()
     
     if not conteudo or (
+        usuario.tipo_usuario != TipoUsuario.ADMINISTRADOR
+        and (not conteudo.categoria or not categoria_disponivel(conteudo.categoria.nome))
+    ) or (
         conteudo.status != StatusConteudo.APROVADO
         and usuario.tipo_usuario != TipoUsuario.ADMINISTRADOR
     ):
@@ -373,8 +375,9 @@ def pagina_cadastro(request: Request):
     return templates.TemplateResponse(request=request, name="cadastro.html", context={"areas_interesse": list(CATALOGO)})
 
 @router.get("/preview-materia", response_class=HTMLResponse)
-def pagina_preview_materia(request: Request):
+def pagina_preview_materia(request: Request, usuario: Usuario | None = Depends(get_current_user_optional)):
     return templates.TemplateResponse(
         request=request,
-        name="novaMateriaEX.html"
+        name="novaMateriaEX.html",
+        context={"tipo_usuario": usuario.tipo_usuario.value if usuario else "usuario"},
     )

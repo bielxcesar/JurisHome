@@ -82,7 +82,7 @@ async def adicionar_cabecalhos_seguranca(request: Request, call_next):
         "camera=(), geolocation=(), microphone=()",
     )
 
-    if request.url.path.startswith(("/api/auth/", "/api/usuarios/me", "/api/admin/", "/api/juridle/", "/api/perfil/", "/api/feedbacks", "/api/conteudos/em-alta", "/api/conteudos/interesse", "/admin/auditoria", "/admin/tabela-noticias", "/admin/administradores/")) or request.url.path in {"/home_admin", "/home_usuario", "/home_Usuario.html", "/templates/home_Usuario.html", "/perfil", "/juridle", "/juridle/ampliar", "/conhecimento", "/curiosidades", "/configuracoes-usuario", "/templates/confUsuario.html", "/configuracao", "/admin-feedbacks", "/feedback"} or request.url.path.startswith("/materia/"):
+    if request.url.path.startswith(("/api/auth/", "/api/usuarios/me", "/api/admin/", "/api/juridle/", "/api/perfil/", "/api/feedbacks", "/api/conteudos/em-alta", "/api/conteudos/interesse", "/admin/auditoria", "/admin/tabela-noticias", "/admin/administradores/")) or request.url.path in {"/home_admin", "/home_usuario", "/home_Usuario.html", "/templates/home_Usuario.html", "/perfil", "/juridle", "/juridle/ampliar", "/conhecimento", "/curiosidades", "/configuracoes-usuario", "/templates/confUsuario.html", "/configuracao", "/admin-feedbacks", "/feedback"} or request.url.path in {"/glossario", "/consulta-lei", "/preview-materia"} or request.url.path.startswith("/materia/"):
         response.headers["Cache-Control"] = "no-store, max-age=0"
         response.headers["Pragma"] = "no-cache"
     return response

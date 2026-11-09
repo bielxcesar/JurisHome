@@ -1,3 +1,4 @@
+from services.categorias import categoria_canonica, categoria_disponivel, categorias_disponiveis
 from services.validacao import TextoBusca, padrao_busca
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import or_, func
@@ -29,7 +30,8 @@ def conteudos_em_alta(db: Session = Depends(get_db), usuario: Usuario = Depends(
     inicio = (datetime.now(fuso_br).date() - timedelta(days=6)).isoformat()
     registros = db.query(Conteudo, func.count(ConteudoLeitura.usuario_id).label("leituras")).join(
         ConteudoLeitura, ConteudoLeitura.conteudo_id == Conteudo.uuid,
-    ).filter(Conteudo.status == StatusConteudo.APROVADO, ConteudoLeitura.dia >= inicio).group_by(
+    ).filter(Conteudo.status == StatusConteudo.APROVADO, ConteudoLeitura.dia >= inicio,
+        Conteudo.categoria_id.in_([c.uuid for c in categorias_disponiveis(db)])).group_by(
         Conteudo.uuid,
     ).order_by(func.count(ConteudoLeitura.usuario_id).desc(), Conteudo.criado_em.desc()).limit(4).all()
     return [{"uuid": c.uuid, "titulo": c.editorial.titulo_home if c.editorial and c.editorial.titulo_home else c.titulo, "categoria": c.categoria.nome if c.categoria else "Direito",
@@ -39,10 +41,12 @@ def conteudos_em_alta(db: Session = Depends(get_db), usuario: Usuario = Depends(
 @router.get('/api/conteudos/interesse')
 def materias_interesse(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     area = usuario.especialidade_juridica
-    if not area:
+    if not categoria_disponivel(area):
         return {'area': None, 'itens': []}
-    registros = db.query(Conteudo).join(Categoria).filter(
-        Conteudo.status == StatusConteudo.APROVADO, Categoria.nome == area
+    area = categoria_canonica(area)
+    categorias = [c.uuid for c in categorias_disponiveis(db) if categoria_canonica(c.nome) == area]
+    registros = db.query(Conteudo).filter(
+        Conteudo.status == StatusConteudo.APROVADO, Conteudo.categoria_id.in_(categorias)
     ).order_by(Conteudo.criado_em.desc()).limit(4).all()
     return {'area': area, 'itens': [{'uuid': c.uuid,
         'titulo': c.editorial.titulo_home if c.editorial and c.editorial.titulo_home else c.titulo,
@@ -52,7 +56,7 @@ def materias_interesse(db: Session = Depends(get_db), usuario: Usuario = Depends
 
 @router.get("/api/categorias")
 def listar_categorias(db: Session = Depends(get_db)):
-    return [{"uuid": c.uuid, "nome": c.nome} for c in db.query(Categoria).order_by(Categoria.nome).all()]
+    return [{"uuid": c.uuid, "nome": c.nome} for c in categorias_disponiveis(db)]
 
 
 @router.get("/api/conteudos")
@@ -60,7 +64,7 @@ def buscar_conteudos(
     busca: Annotated[TextoBusca | None, Query(max_length=80)] = None,
     db: Session = Depends(get_db),
 ):
-    consulta = db.query(Conteudo).filter(Conteudo.status == StatusConteudo.APROVADO)
+    consulta = db.query(Conteudo).filter(Conteudo.status == StatusConteudo.APROVADO, Conteudo.categoria_id.in_([c.uuid for c in categorias_disponiveis(db)]))
     termo = (busca or "").strip()
     if termo:
         padrao = padrao_busca(termo)

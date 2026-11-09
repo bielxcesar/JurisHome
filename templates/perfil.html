@@ -20,8 +20,8 @@
             }
         })();
     </script>
-<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261030"><link rel="stylesheet" href="/static/css/home.css?v=20261030"><script src="/static/js/session.js" defer></script><script src="/static/js/curiosidades.js?v=20261030" defer></script>
-{% if mostrar_dashboard %}<link rel="stylesheet" href="/static/css/perfil-dashboard.css?v=20261102-3"><script src="/static/js/perfil-dashboard.js?v=20261102-3" defer></script>{% endif %}
+<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav"><link rel="stylesheet" href="/static/css/home.css?v=20261108-nav"><script src="/static/js/session.js" defer></script><script src="/static/js/curiosidades.js?v=20261108-nav" defer></script>
+{% if mostrar_dashboard %}<link rel="stylesheet" href="/static/css/perfil-dashboard.css?v=20261107-1"><script src="/static/js/perfil-dashboard.js?v=20261107-1" defer></script>{% endif %}
 </head>
 <body class="juris-ui home-shell bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
 
@@ -57,7 +57,7 @@
                     <label for="upload-foto" class="absolute bottom-0 right-0 w-8 h-8 bg-[#25262a] border border-gray-500 hover:border-amber-500 hover:text-amber-500 rounded-full flex items-center justify-center cursor-pointer transition shadow-md">
                         <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </label>
-                    <input type="file" id="upload-foto" accept="image/jpeg,image/png,image/webp" class="hidden">
+                    <input type="file" id="upload-foto" name="foto" form="form-perfil" accept="image/jpeg,image/png,image/webp" class="hidden">
                 </div>
 
                 <div class="text-center md:text-left">
@@ -90,7 +90,7 @@
 
                     <div class="flex flex-col gap-2">
                         <label for="email" class="text-gray-300 font-medium text-lg">E-mail:</label>
-                        <input type="email" id="email" name="email" value="{{ usuario.email | default('gabriel@exemplo.com') }}" readonly class="bg-[#1e1e1e]/50 border border-amber-500/50 rounded-xl px-4 py-3 text-gray-400 cursor-not-allowed">
+                        <input type="email" id="email" value="{{ usuario.email | default('gabriel@exemplo.com') }}" readonly class="bg-[#1e1e1e]/50 border border-amber-500/50 rounded-xl px-4 py-3 text-gray-400 cursor-not-allowed">
                         <small class="text-gray-500 text-xs">O e-mail não pode ser alterado por aqui.</small>
                     </div>
 
@@ -109,28 +109,37 @@
                 <header class="perfil-dashboard-heading">
                     <p class="perfil-dashboard-kicker">Perfil do leitor</p>
                     <h2 id="perfil-dashboard-titulo">Seu histórico de estudos</h2>
-                    <p>Acompanhe as matérias que você consultou e as categorias do Direito que acessou neste mês.</p>
+                    <p>Acompanhe as matérias e categorias que você acessou no período selecionado.</p>
                     <button id="dashboard-tentar-novamente" class="perfil-dashboard-retry" type="button" hidden>Tentar novamente</button>
                 </header>
 
                 <p id="perfil-dashboard-status" class="perfil-dashboard-status" role="status" aria-live="polite">Carregando seus dados de estudo.</p>
 
+                <div class="perfil-dashboard-filter">
+                    <label for="dashboard-periodo">Período</label>
+                    <select id="dashboard-periodo" name="periodo" aria-describedby="dashboard-periodo-ajuda">
+                        <option value="30" selected>Últimos 30 dias</option>
+                        <option value="90">Últimos 90 dias</option>
+                    </select>
+                    <small id="dashboard-periodo-ajuda">Inclui o dia de hoje.</small>
+                </div>
+
                 <div class="perfil-dashboard-cards" aria-label="Indicador do seu estudo">
                     <article class="perfil-dashboard-card">
-                        <span class="perfil-dashboard-card-label"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Matérias consultadas no total</span>
+                        <span class="perfil-dashboard-card-label"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Matérias consultadas no período</span>
                         <strong id="dashboard-materias-total">—</strong>
-                        <small class="perfil-dashboard-card-note">Cada matéria é contada uma vez, mesmo que você a consulte em dias diferentes.</small>
+                        <small class="perfil-dashboard-card-note">Cada matéria conta uma vez, mesmo se você a consultar mais de uma vez.</small>
                     </article>
                 </div>
 
                 <div class="perfil-dashboard-charts">
                     <article class="perfil-dashboard-chart" aria-labelledby="dashboard-categorias-titulo">
-                        <h3 id="dashboard-categorias-titulo">Categorias mais acessadas no mês</h3>
-                        <p id="dashboard-categorias-periodo" class="perfil-dashboard-chart-note">Mês atual</p>
+                        <h3 id="dashboard-categorias-titulo">Categorias mais acessadas no período</h3>
+                        <p id="dashboard-categorias-periodo" class="perfil-dashboard-chart-note">Últimos 30 dias</p>
                         <div class="perfil-bar-layout">
-                            <ul id="dashboard-categorias-barras" class="perfil-bar-chart" aria-label="Acessos por categoria no mês" hidden></ul>
+                            <ul id="dashboard-categorias-barras" class="perfil-bar-chart" aria-label="Acessos por categoria no período" hidden></ul>
                         </div>
-                        <p id="dashboard-categorias-vazio" class="perfil-dashboard-empty">Você ainda não acessou nenhuma categoria neste mês. Quando acessar uma, ela aparecerá aqui.</p>
+                        <p id="dashboard-categorias-vazio" class="perfil-dashboard-empty">Você ainda não acessou nenhuma categoria nos últimos 30 dias.</p>
                     </article>
                 </div>
             </section>
@@ -197,7 +206,7 @@
                 e.preventDefault();
                 
                 const formData = new FormData(formPerfil);
-                if (inputFoto.files[0]) formData.append('foto', inputFoto.files[0]);
+                if (!inputFoto.files.length) formData.delete('foto');
 
                 try {
                     const resposta = await fetch("/api/perfil/atualizar", {
@@ -205,7 +214,8 @@
                         body: formData
                     });
 
-                    if (resposta.ok) {
+                    const dados = await resposta.json().catch(() => ({}));
+                    if (resposta.ok && dados.status === "sucesso") {
                         toastSucesso.classList.remove("hidden");
                         toastSucesso.classList.add("animate-pulse");
 
@@ -214,7 +224,7 @@
                             window.location.reload();
                         }, 1500);
                     } else {
-                        const erro = await resposta.json().catch(()=>({}));
+                        const erro = dados;
                         alert(typeof erro.detail === 'string' ? erro.detail : 'Confira os campos do perfil.');
                     }
                 } catch (erro) {

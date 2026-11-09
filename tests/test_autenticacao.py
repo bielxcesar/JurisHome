@@ -4,12 +4,9 @@ import time
 import importlib.util
 import json
 import os
-import sys
 import unittest
 from datetime import datetime, timezone
-from io import BytesIO
 from http.cookies import SimpleCookie
-from types import ModuleType
 from unittest.mock import patch
 
 os.environ.setdefault("JurisHome_senha", "segredo-de-teste-jurishome-com-mais-de-32-bytes")
@@ -34,8 +31,6 @@ from routes.auth import (
     atualizar_senha,
     ativar_2fa_no_cadastro,
     cadastrar_usuario,
-    consultar_ies_api_publica,
-    consultar_instituicao_emec,
     login,
     validar_2fa,
 )
@@ -610,72 +605,6 @@ class AutenticacaoTests(unittest.TestCase):
         codigo, headers, _ = self.requisicao_http("GET", "/favicon.ico")
         self.assertEqual(307, codigo)
         self.assertIn(("location", "/static/images/logo.png"), headers)
-
-    def test_consulta_emec_mapeia_o_retorno_da_biblioteca(self):
-        pacote = ModuleType("emec_api")
-        api = ModuleType("emec_api.api")
-        cliente = ModuleType("emec_api.api.client")
-
-        class InstituicaoFalsa:
-            def __init__(self, codigo):
-                self.codigo = codigo
-
-            def parse(self):
-                return None
-
-            def get_full_json(self):
-                return {
-                    "nome_da_ies": "Universidade de Mogi das Cruzes",
-                    "sigla": "UMC",
-                    "situacao": "ATIVA",
-                    "campus": [{"code": "1", "city": "Mogi das Cruzes", "uf": "SP"}],
-                }
-
-        cliente.Institution = InstituicaoFalsa
-        with patch.dict(
-            sys.modules,
-            {"emec_api": pacote, "emec_api.api": api, "emec_api.api.client": cliente},
-        ):
-            resultado = consultar_instituicao_emec(123)
-
-        self.assertEqual("Universidade de Mogi das Cruzes", resultado["nome"])
-        self.assertEqual("UMC", resultado["sigla"])
-        self.assertEqual("SP", resultado["campus"][0]["uf"])
-
-    def test_consulta_emec_usa_fonte_publica_se_biblioteca_nao_importar(self):
-        resultado_publico = {"nome": "Universidade pública"}
-        with patch.dict(sys.modules, {"emec_api": None}):
-            with patch("routes.auth.consultar_ies_api_publica", return_value=resultado_publico) as consulta:
-                resultado = consultar_instituicao_emec(123)
-
-        self.assertEqual(resultado_publico, resultado)
-        consulta.assert_called_once_with(123)
-
-    def test_consulta_api_externa_mapeia_codigo_emec(self):
-        resposta_externa = {
-            "features": [
-                {
-                    "attributes": {
-                        "ies_cdg_mec_ies": 521,
-                        "ies_nome": "UNIVERSIDADE DE MOGI DAS CRUZES",
-                        "ies_sigla": "UMC",
-                        "ies_campus": "Centro Cívico",
-                        "ies_municipio": "MOGI DAS CRUZES",
-                        "ies_uf": "SP",
-                        "curso_situacao": "CADASTRADO",
-                    }
-                }
-            ]
-        }
-        import json
-
-        with patch("routes.auth.urlopen", return_value=BytesIO(json.dumps(resposta_externa).encode("utf-8"))):
-            resultado = consultar_ies_api_publica(521)
-
-        self.assertIsNotNone(resultado)
-        self.assertEqual("UNIVERSIDADE DE MOGI DAS CRUZES", resultado["nome"])
-        self.assertEqual("UMC", resultado["sigla"])
-        self.assertEqual("SP", resultado["campus"][0]["uf"])
 
 if __name__ == "__main__":
     unittest.main()

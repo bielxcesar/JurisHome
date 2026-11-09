@@ -12,7 +12,6 @@ import sys
 
 from auth.security import hash_senha
 from database import Base, SessionLocal, engine
-from model.models import TipoUsuario, Usuario  # registra os modelos no metadata
 from auth.sessions import garantir_transacao
 from services.root_unico import garantir_root_unico
 from sqlalchemy.exc import IntegrityError

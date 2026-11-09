@@ -50,8 +50,7 @@ class LgpdAuditoriaTests(unittest.TestCase):
         self.assertNotIn("Cloudinary", politica)
         self.assertNotIn("Render", politica)
         self.assertIn("Railway", politica)
-        self.assertIn("e-MEC", politica)
-        self.assertIn("CAU/BR", politica)
+        self.assertIn("Dados Abertos do Senado", politica)
         self.assertIn("Configurações do usuário &gt; Privacidade e dados", politica)
         self.assertIn("12 meses", politica)
         self.assertIn("Erick Santos Barbosa", termos)
@@ -63,7 +62,8 @@ class LgpdAuditoriaTests(unittest.TestCase):
         self.assertIn("nem verifica a idade por outro meio", politica)
         self.assertIn("não grava um histórico desses termos", politica)
         self.assertIn("no máximo uma vez por categoria e por dia", politica)
-        self.assertIn("categorias mais acessadas no mês", politica)
+        self.assertIn("categorias que o próprio estudante mais acessou nos últimos 30 ou 90 dias", politica)
+        self.assertIn("Até 90 dias: o dia atual e os 89 dias anteriores", politica)
         self.assertIn("não grava um histórico de pesquisas em suas tabelas", politica)
         self.assertIn("não roda automaticamente", politica.lower())
         self.assertNotIn("controladores conjuntos", termos)
@@ -128,17 +128,17 @@ class LgpdAuditoriaTests(unittest.TestCase):
         feedbacks = (self.raiz / "templates" / "admin-feedbacks.html").read_text(encoding="utf-8")
         self.assertIn('/static/css/auditoria.css?', auditoria)
         self.assertNotIn('/static/css/homeAdmin.css', auditoria)
-        self.assertIn('class="navbar audit-navbar"', auditoria)
-        self.assertIn('href="/admin/auditoria" class="nav-link active"', auditoria)
-        self.assertIn('id="btn-perfil"', auditoria)
-        self.assertIn('href="/exibir-mais" class="nav-link"><i class="fa-solid fa-square-plus" aria-hidden="true"></i> Exibir mais', auditoria)
-        self.assertIn('href="/exibir-mais" class="nav-link"><i class="fa-solid fa-square-plus" aria-hidden="true"></i> Exibir mais', feedbacks)
+        for tela in (auditoria, feedbacks):
+            self.assertIn('{% include "_juris_nav.html" %}', tela)
+        menu = (self.raiz / "templates" / "_juris_nav.html").read_text(encoding="utf-8")
+        for destino in ("/admin/auditoria", "/admin/tabela-noticias", "/exibir-mais"):
+            self.assertIn(f'href="{destino}"', menu)
 
     def test_navegacao_dos_perfis_nao_aponta_para_paginas_inexistentes(self):
         telas = {
             "home_Admin.html": ("/home_admin", "/configuracao", "/admin-feedbacks", "/admin/auditoria"),
             "home_Usuario.html": ("/home_usuario", "/configuracoes-usuario", "/glossario"),
-            "feedback-suporte.html": ("/home_usuario", "/configuracoes-usuario#feedback"),
+            "feedback-suporte.html": ("/configuracoes-usuario#feedback",),
             "materia.html": ("/exibir-mais", "/categorias"),
             "pesquisa.html": ("/exibir-mais", "/categorias"),
         }
@@ -149,6 +149,8 @@ class LgpdAuditoriaTests(unittest.TestCase):
                 conteudo = Environment(loader=FileSystemLoader(self.raiz / 'templates'), autoescape=select_autoescape()).get_template(arquivo).render()
             else:
                 conteudo = (self.raiz / "templates" / arquivo).read_text(encoding="utf-8")
+            if '{% include "_juris_nav.html" %}' in conteudo:
+                conteudo += (self.raiz / "templates" / "_juris_nav.html").read_text(encoding="utf-8")
             with self.subTest(arquivo=arquivo):
                 self.assertNotIn("/static/pages/", conteudo)
                 self.assertNotIn('href="#"', conteudo)

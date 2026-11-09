@@ -72,7 +72,7 @@ class ConteudosApiTests(unittest.TestCase):
         self.assertEqual("https://g1.globo.com/direito/noticia", resposta[0]["fonte_original"])
 
     def test_todas_as_categorias_têm_os_tres_pilares_e_fontes_oficiais(self):
-        self.assertEqual(set(CATALOGO), set(CONTEUDO_PEDAGOGICO))
+        self.assertTrue(set(CATALOGO) <= set(CONTEUDO_PEDAGOGICO))
         for nome in CATALOGO:
             with self.subTest(categoria=nome):
                 conteudo = conteudo_categoria(nome)

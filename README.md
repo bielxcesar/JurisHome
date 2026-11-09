@@ -35,8 +35,8 @@ Em pesquisa realizada com acadêmicos, evidenciou-se a frustração com o excess
 
 - 🔒 **Autenticação Segura & Múltiplos Perfis**: Cadastro de estudantes, login com senha e segundo fator de autenticação por aplicativo (2FA/TOTP).
 - 📚 **Acervo Organizado & Pesquisa**: Navegação, filtros e listagem de matérias aprovadas.
-- 📖 **Glossário Jurídico (Funcionalidade 4)**: Página dedicada com 25 termos introdutórios, explicações simples, exemplos e referências legais (CPC e CF). A busca é inteligente (ignora acentos e maiúsculas) e funciona mesmo sem JavaScript.
-- 🏛️ **Integração e-MEC**: Consulta opcional da instituição de ensino pelo código e-MEC (usando a API pública do CAU/BR).
+- 📖 **Glossário Jurídico (Funcionalidade 4)**: Catálogo local com 50 termos introdutórios, exemplos e referências legais. A busca ignora acentos e maiúsculas e funciona sem JavaScript. A página também permite consultar legislação federal pela API de Dados Abertos do Senado.
+- ⚖️ **Consulta de legislação**: Pesquisa de leis e leis complementares por tipo, número e ano. A integração e o formato da resposta estão descritos em [`docs/INTEGRACAO_API_SENADO.md`](docs/INTEGRACAO_API_SENADO.md).
 - 💬 **Canal de Feedback e Auditoria**: Envio de dúvidas e sugestões pelos alunos, com painel administrativo para respostas, organização de atendimentos e consulta de registros de auditoria.
 - 🛡️ **Privacidade (LGPD)**: Rotina de retenção e manutenção de dados disponível no sistema.
 
@@ -90,6 +90,7 @@ Rode o arquivo de configuração. Ele criará automaticamente o seu arquivo .env
 ```bash
 python setup_local.py
 ```
+O glossário consulta a API pública do Senado sem chave de acesso. É necessária conexão com a internet para pesquisar legislação; o catálogo local de termos continua disponível sem essa consulta.
 
 ### Passo 3: Criar Contas e Dados de Teste
 O projeto não vem com uma senha administrativa padrão. Para criar o seu acesso de Administrador, rode:
@@ -99,10 +100,12 @@ python criar_admin.py
 
 (Informe o e-mail e a senha desejada. No primeiro login, o sistema pedirá para configurar o aplicativo autenticador).
 
-Para carregar os 25 termos do glossário, 3 matérias e feedbacks de demonstração para não começar com a plataforma vazia, rode o alimentador:
+Para gerar 10 administradores de suporte, 25 leitores, 10 matérias fictícias e feedbacks de demonstração no SQLite local, execute:
 ```bash
 python seed.py
 ```
+
+O seed pode ser executado novamente sem duplicar os exemplos. As contas de demonstração são criadas sem senha por padrão. Para habilitar login nas novas contas fictícias, defina JURISHOME_SEED_SENHA antes de executar. O primeiro acesso continua exigindo 2FA. O administrador principal é criado separadamente com criar_admin.py.
 
 ### Passo 4: Iniciar o Servidor
 ```bash
@@ -190,10 +193,10 @@ O envio exige o aceite explícito das regras editoriais (versão 2026-10-30): ve
 
 ### Juridle diário e banco de questões (06/11/2026)
 
-- `/juridle`: cinco perguntas por conta por dia, inclusive para administradores. O desafio é reservado ao iniciar e pode ser retomado até a meia-noite de Brasília. Respostas repetidas não duplicam pontos. Abrir outra aba ou terminar a rodada não libera novo sorteio.
+- `/juridle`: cinco perguntas por conta por dia, inclusive para administradores. O desafio é reservado ao iniciar e pode ser retomado até as 5h de Brasília, quando começa o próximo desafio. Uma rodada perfeita ativa a coroa diária e conta para o recorde pessoal de dias seguidos. Respostas repetidas não duplicam pontos. Abrir outra aba ou terminar a rodada não libera novo sorteio.
 - Tabelas aditivas `juridle_questoes`, `juridle_dias` (chave única pessoa/dia) e `juridle_questao_usos`. Não há remoção de rodadas antigas; jogos legados do dia também bloqueiam novo sorteio.
 - Questões aprovadas e alternativas são sorteadas no servidor. Cada pessoa fica 30 dias sem repetir uma questão sorteada; abandonar não libera os itens. No 31º dia, os itens do primeiro dia podem voltar. A resposta correta e a fonte explicativa só são entregues após responder.
-- Inicialização idempotente aproveita os 25 termos do glossário já publicado como questões aprovadas de origem `glossario`. Não cria 150 questões artificiais: o painel mostra a meta de 150 aprovadas (30 dias de 5 questões). Se houver menos de cinco inéditas para a conta, o sistema avisa e aguarda o banco crescer.
+- Inicialização idempotente aproveita os 50 termos do glossário já publicado como questões aprovadas de origem `glossario`. Não cria questões artificiais: o painel mostra a meta de 150 aprovadas (30 dias de 5 questões). Se houver menos de cinco inéditas para a conta, o sistema avisa e aguarda o banco crescer.
 - `/juridle/ampliar`: administradores criam perguntas com uma alternativa certa, três erradas distintas, explicação e fonte. Imagem opcional em JPEG/PNG/WebP (mesma compactação/validação das matérias), com crédito e descrição acessível.
 - Toda contribuição administrativa, inclusive do root, nasce pendente. Apenas o root aprova, rejeita ou arquiva, com controle de versão e auditoria. Administradores comuns só consultam suas contribuições. Rodadas em andamento preservam o enunciado/gabarito sorteados mesmo se uma questão for arquivada.
 - O histórico legado pode exibir várias rodadas antigas no mesmo dia. Elas são preservadas; a nova regra impede rodadas adicionais.
@@ -204,7 +207,7 @@ O envio exige o aceite explícito das regras editoriais (versão 2026-10-30): ve
 
 - Cadastro: nome de 2–40 e sobrenome de 2–50 letras (acentos e espaços); e-mail até 150 caracteres com sintaxe usual; interesse obrigatório em uma das dez áreas. Nome completo continua armazenado em `usuarios.nome`; interesse usa `especialidade_juridica`, sem recriar o banco. O perfil permite mudar a preferência; a Home mostra até quatro matérias aprovadas dessa área, ou um aviso/atalho quando não há conteúdo.
 - Senhas novas e alteradas: 8–25 caracteres, maiúscula, número e símbolo; limite adicional de 72 bytes do bcrypt. Senhas não são normalizadas nem aparadas. Login e confirmação da senha atual continuam aceitando as senhas legadas; não é feita alteração forçada.
-- Removidos a consulta e-MEC do cadastro, o código de consulta no navegador e a rota HTTP pública. Rotinas legadas de consulta permanecem isoladas para compatibilidade interna; a escolha de interesse não depende de serviço externo.
+- A consulta de instituições foi removida do cadastro, do backend e das dependências. A integração externa do glossário consulta legislação federal no Senado por tipo, número e ano. Os parâmetros não são gravados pelo JurisHome; detalhes em [`docs/INTEGRACAO_API_SENADO.md`](docs/INTEGRACAO_API_SENADO.md).
 - `services/validacao.py`: modelos recusam campos JSON extras, objetos/listas/números em campos de texto, caracteres de controle e tamanhos excessivos. Campos curtos não aceitam HTML. Matérias continuam aceitando pontuação e texto livre no corpo, escapado ao exibir; a formatação editorial permitida é aplicada depois do escape.
 - Títulos: 180; subtítulo/resumo: 500; corpo: 50.000; tags: 500; links de fontes: 2.000; buscas: 80 caracteres. Links HTTP/HTTPS sem credenciais. Nomes não aceitam comandos, HTML, números ou símbolos; e-mails conservam ponto, hífen, sublinhado e `+`, necessários em endereços usuais.
 - `EntradaSeguraMiddleware`: JSON máximo 8 MB (cobre quatro imagens), demais envios 3 MB, query 4 KB/30 parâmetros, sem chaves JSON ou parâmetros repetidos, JSON não padrão ou profundidade maior que 12. O formulário de perfil também recusa campos extras/repetidos.

@@ -1,15 +1,17 @@
+{% from "_voltar_principal.html" import voltar_principal %}
 <!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel administrativo | JurisHome</title>
 <link rel="icon" href="/static/images/micrologo.png.png">
-<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261028">
-<link rel="stylesheet" href="/static/css/admin-tabelas.css?v=20261030-4">
+<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-voltar">
+<link rel="stylesheet" href="/static/css/admin-tabelas.css?v=20261108-retorno">
 <script src="/static/js/session.js" defer></script><script src="/static/js/admin-tabelas.js?v=20261030-4" defer></script>
 <script>(()=>{try{document.documentElement.dataset.theme=localStorage.getItem('tema_juris')==='claro'?'light':'dark';}catch(_){}})();</script>
 </head><body class="juris-ui admin-tabelas" data-root="{{ 'true' if usuario.e_root_admin else 'false' }}">
 <a class="skip" href="#painel">Pular para o conteúdo</a>
-<header class="admin-top"><a href="/home_admin" class="admin-label">JurisHome · ADMIN</a><nav aria-label="Painel administrativo"><a href="#painel" aria-current="page">Visão geral</a><a href="#usuarios">Usuários</a><a href="#materias">Matérias</a><a href="/admin/auditoria">Auditoria</a></nav><a href="/home_admin">Voltar à Home →</a></header>
-<main id="painel"><p class="breadcrumb">Administração / Visão geral</p><div class="intro"><div><h1>Painel administrativo</h1><p>Gerencie usuários, conteúdos e permissões em um só lugar.</p></div><time id="painel-data"></time></div>
+<main id="painel">
+{{ voltar_principal("/home_admin", "painel-retorno", com_seta_circular=true) }}
+<p class="breadcrumb">Administração / Visão geral</p><div class="intro"><div><h1>Painel administrativo</h1><p>Gerencie usuários, conteúdos e permissões em um só lugar.</p></div><time id="painel-data"></time></div>
 <div class="summary"><article><span>Total de usuários</span><strong id="total-usuarios">—</strong><small>Cadastros na plataforma</small></article><article><span>Administradores</span><strong id="total-admins">—</strong><small>Com acesso administrativo</small></article><article><span>Matérias publicadas</span><strong>{{ materias | selectattr('status.value', 'equalto', 'aprovado') | list | length }}</strong><small>Conteúdos disponíveis no site</small></article><article><span>Aguardando revisão</span><strong>{{ materias | rejectattr('status.value', 'equalto', 'aprovado') | list | length }}</strong><small>Matérias pendentes de análise</small></article></div>
 <p id="painel-aviso" role="status" hidden></p>
 <section id="usuarios" class="panel"><div class="section-head"><div><h2>Gestão de usuários</h2><p>Controle de acesso e segurança da plataforma.</p></div><div class="toolbar"><div class="filters" role="group" aria-label="Filtrar usuários"><button data-user-filter="" aria-pressed="true">Todos</button><button data-user-filter="administrador" aria-pressed="false">Administradores</button><button data-user-filter="estudante" aria-pressed="false">Leitores</button></div><label class="search"><span class="sr-only">Buscar usuário por nome ou e-mail</span><input id="busca-usuarios" type="search" placeholder="Buscar por nome ou e-mail" maxlength="80"></label><button id="atualizar-usuarios">Atualizar</button>{% if usuario.e_root_admin %}<button class="primary" id="novo-admin">+ Novo administrador</button>{% endif %}</div></div>

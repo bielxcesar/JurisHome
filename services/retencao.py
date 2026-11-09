@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
-from model.models import FeedbackAtendimento, LogAuditoria, Usuario
+from model.models import CategoriaAcesso, FeedbackAtendimento, LogAuditoria, Usuario, fuso_br
 from services.auditoria import registrar_auditoria
+from services.dashboard_usuario import DIAS_RETENCAO_CATEGORIA
 from services.direitos_titular import anonimizar_feedback_atendimento
 
 
@@ -29,6 +30,13 @@ def aplicar_retencao(
 ) -> dict[str, int | bool]:
 
     referencia = _sem_fuso(agora or datetime.now(timezone.utc))
+    instante_categoria = agora or datetime.now(fuso_br)
+    if instante_categoria.tzinfo is None:
+        instante_categoria = instante_categoria.replace(tzinfo=timezone.utc)
+    limite_categoria = (
+        instante_categoria.astimezone(fuso_br).date()
+        - timedelta(days=DIAS_RETENCAO_CATEGORIA - 1)
+    ).isoformat()
     limite_feedback = referencia - timedelta(days=DIAS_FEEDBACK_APOS_ENCERRAMENTO)
     limite_log = referencia - timedelta(days=DIAS_LOG_GERAL)
     limite_incidente = referencia - timedelta(days=DIAS_LOG_INCIDENTE)
@@ -55,12 +63,18 @@ def aplicar_retencao(
         Usuario.token_validos_apos < limite_aceite,
         Usuario.consentimento_lgpd.is_(True),
     ).all()
+    acessos_categoria_para_excluir = (
+        db.query(CategoriaAcesso)
+        .filter(CategoriaAcesso.dia < limite_categoria)
+        .count()
+    )
 
     resultado: dict[str, int | bool] = {
         "execucao_realizada": executar,
         "feedbacks_para_anonimizar": len(feedbacks),
         "logs_para_minimizar": len(logs_para_minimizar),
         "aceites_para_descartar": len(aceites),
+        "acessos_categoria_para_excluir": acessos_categoria_para_excluir,
     }
     if not executar:
         return resultado
@@ -78,6 +92,10 @@ def aplicar_retencao(
         usuario.data_consentimento = None
         usuario.versao_termos = None
 
+    db.query(CategoriaAcesso).filter(CategoriaAcesso.dia < limite_categoria).delete(
+        synchronize_session=False
+    )
+
     registrar_auditoria(
         db,
         acao="retencao_aplicada",
@@ -87,6 +105,7 @@ def aplicar_retencao(
             "feedbacks_anonimizados": len(feedbacks),
             "logs_minimizados": len(logs_para_minimizar),
             "aceites_descartados": len(aceites),
+            "acessos_categoria_excluidos": acessos_categoria_para_excluir,
         },
     )
     db.commit()

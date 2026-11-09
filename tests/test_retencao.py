@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database import Base
-from model.models import FeedbackAtendimento, LogAuditoria, TipoUsuario, Usuario
+from model.models import Categoria, CategoriaAcesso, FeedbackAtendimento, LogAuditoria, TipoUsuario, Usuario
 from services.retencao import aplicar_retencao
 
 
@@ -64,6 +64,35 @@ class RetencaoTests(unittest.TestCase):
         self.assertEqual(1, resultado["feedbacks_para_anonimizar"])
         self.assertEqual("Pessoa Exemplo", antigo.usuario_nome)
         self.assertEqual("Mensagem identificável do titular.", antigo.mensagem)
+
+    def test_acessos_categoria_mantem_90_dias_no_fuso_brasilia(self):
+        leitor = Usuario(
+            uuid="leitor-retencao-categoria",
+            nome="Leitor Retenção",
+            email="leitor-retencao@example.invalid",
+            tipo_usuario=TipoUsuario.ESTUDANTE,
+        )
+        categoria = Categoria(nome="Direito Civil")
+        self.db.add_all([leitor, categoria])
+        self.db.flush()
+        # 25/09/2026 às 00:00 UTC ainda é 24/09 em Brasília.
+        limite_inclusivo = "2026-06-27"
+        anterior_ao_limite = "2026-06-26"
+        self.db.add_all([
+            CategoriaAcesso(usuario_id=leitor.uuid, categoria_id=categoria.uuid, dia=limite_inclusivo),
+            CategoriaAcesso(usuario_id=leitor.uuid, categoria_id=categoria.uuid, dia=anterior_ao_limite),
+        ])
+        self.db.commit()
+
+        simulacao = aplicar_retencao(self.db, self.db, agora=self.agora, executar=False)
+        self.assertEqual(1, simulacao["acessos_categoria_para_excluir"])
+        self.assertEqual(2, self.db.query(CategoriaAcesso).count())
+
+        execucao = aplicar_retencao(self.db, self.db, agora=self.agora, executar=True)
+        self.assertEqual(1, execucao["acessos_categoria_para_excluir"])
+        self.assertEqual(1, self.db.query(CategoriaAcesso).count())
+        self.assertEqual(1, self.db.query(CategoriaAcesso).filter_by(dia=limite_inclusivo).count())
+        self.assertEqual(0, self.db.query(CategoriaAcesso).filter_by(dia=anterior_ao_limite).count())
 
     def test_aplicacao_anonimiza_e_minimiza_sem_apagar_rastreabilidade(self):
         antigo = self._feedback("old", "Arquivado", 181)

@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -11,6 +11,14 @@ from model.models import (
     fuso_br,
 )
 
+DIAS_RETENCAO_CATEGORIA = 90
+
+
+def inicio_periodo(data_final: date, periodo_dias: int) -> date:
+    if periodo_dias not in (30, DIAS_RETENCAO_CATEGORIA):
+        raise ValueError("O período da dashboard deve ser de 30 ou 90 dias.")
+    return data_final - timedelta(days=periodo_dias - 1)
+
 
 def registrar_acesso_categoria(
     db: Session,
@@ -21,8 +29,8 @@ def registrar_acesso_categoria(
     """Registra no máximo um acesso por usuário, categoria e dia local."""
     data_atual = hoje or datetime.now(fuso_br).date()
     data_acesso = data_atual.isoformat()
-    inicio_mes = data_atual.replace(day=1).isoformat()
-    limpar_acessos_categoria_antigos(db, usuario_id, inicio_mes)
+    inicio_retencao = (data_atual - timedelta(days=DIAS_RETENCAO_CATEGORIA - 1)).isoformat()
+    limpar_acessos_categoria_antigos(db, usuario_id, inicio_retencao)
     chave = {
         "usuario_id": usuario_id,
         "categoria_id": categoria_id,
@@ -48,12 +56,12 @@ def registrar_acesso_categoria(
     return True
 
 
-def limpar_acessos_categoria_antigos(db: Session, usuario_id: str, inicio_mes: str) -> None:
+def limpar_acessos_categoria_antigos(db: Session, usuario_id: str, inicio_inclusivo: str) -> None:
     removidos = (
         db.query(CategoriaAcesso)
         .filter(
             CategoriaAcesso.usuario_id == usuario_id,
-            CategoriaAcesso.dia < inicio_mes,
+            CategoriaAcesso.dia < inicio_inclusivo,
         )
         .delete(synchronize_session=False)
     )
@@ -61,16 +69,30 @@ def limpar_acessos_categoria_antigos(db: Session, usuario_id: str, inicio_mes: s
         db.commit()
 
 
-def obter_dashboard_estudos(db: Session, usuario_id: str, hoje: date | None = None) -> dict:
+def obter_dashboard_estudos(
+    db: Session,
+    usuario_id: str,
+    hoje: date | None = None,
+    periodo_dias: int = 30,
+) -> dict:
     """Calcula as matérias consultadas e categorias acessadas pelo próprio usuário."""
     data_final = hoje or datetime.now(fuso_br).date()
-    inicio_mes = data_final.replace(day=1).isoformat()
-    fim_mes = data_final.isoformat()
-    limpar_acessos_categoria_antigos(db, usuario_id, inicio_mes)
+    data_inicio = inicio_periodo(data_final, periodo_dias)
+    inicio = data_inicio.isoformat()
+    fim = data_final.isoformat()
+    limpar_acessos_categoria_antigos(
+        db,
+        usuario_id,
+        (data_final - timedelta(days=DIAS_RETENCAO_CATEGORIA - 1)).isoformat(),
+    )
 
     materias_total = (
         db.query(func.count(func.distinct(ConteudoLeitura.conteudo_id)))
-        .filter(ConteudoLeitura.usuario_id == usuario_id)
+        .filter(
+            ConteudoLeitura.usuario_id == usuario_id,
+            ConteudoLeitura.dia >= inicio,
+            ConteudoLeitura.dia <= fim,
+        )
         .scalar()
         or 0
     )
@@ -83,8 +105,8 @@ def obter_dashboard_estudos(db: Session, usuario_id: str, hoje: date | None = No
         .join(Categoria, Categoria.uuid == CategoriaAcesso.categoria_id)
         .filter(
             CategoriaAcesso.usuario_id == usuario_id,
-            CategoriaAcesso.dia >= inicio_mes,
-            CategoriaAcesso.dia <= fim_mes,
+            CategoriaAcesso.dia >= inicio,
+            CategoriaAcesso.dia <= fim,
         )
         .group_by(Categoria.uuid, Categoria.nome)
         .order_by(func.count(CategoriaAcesso.categoria_id).desc(), Categoria.nome.asc())
@@ -95,9 +117,14 @@ def obter_dashboard_estudos(db: Session, usuario_id: str, hoje: date | None = No
         "indicadores": {
             "materias_total": int(materias_total),
         },
-        "categorias_mes": [
+        "categorias": [
             {"categoria": nome, "quantidade": int(quantidade)}
             for nome, quantidade in acessos_por_categoria
         ],
-        "periodo": {"inicio": inicio_mes, "fim": fim_mes},
+        "periodo": {
+            "dias": periodo_dias,
+            "rotulo": f"Últimos {periodo_dias} dias",
+            "inicio": inicio,
+            "fim": fim,
+        },
     }

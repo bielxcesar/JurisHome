@@ -6,6 +6,22 @@ from services.glossario import consultar_glossario, normalizar
 
 
 class GlossarioTests(unittest.TestCase):
+    def test_consulta_por_tipo_numero_e_ano_no_glossario(self):
+        from unittest.mock import patch
+        from routes.glossario import ConsultaLegislacao, consultar_legislacao, pagina_glossario, redirecionar_consulta_lei
+        from starlette.requests import Request
+
+        resposta = {"encontrado": True, "norma": {"numero": "15211"}}
+        with patch("routes.glossario.buscar_legislacao", return_value=resposta) as buscar:
+            resultado = consultar_legislacao(ConsultaLegislacao(tipo="LEI", numero="15211", ano=2025))
+            buscar.assert_called_once_with("LEI", "15211", 2025)
+        self.assertEqual(resultado, resposta)
+        request = Request({"type": "http", "method": "GET", "path": "/glossario", "headers": []})
+        html = pagina_glossario(request, usuario=None, origem="").body.decode()
+        for campo in ("consulta-lei", "legislacao-tipo", "legislacao-numero", "legislacao-ano"):
+            self.assertIn(f'id="{campo}"', html)
+        self.assertEqual(redirecionar_consulta_lei().headers["location"], "/glossario#consulta-lei")
+
     def test_menu_usa_perfil_real_e_preserva_ordem(self):
         from types import SimpleNamespace
         from starlette.requests import Request

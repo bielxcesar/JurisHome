@@ -4,7 +4,7 @@
 |---|---|---|
 | Railway | hospedagem da versão publicada e do PostgreSQL | requisições técnicas e dados armazenados nas tabelas do JurisHome |
 | Google Fonts e cdnjs / Cloudflare | fontes e ícones da interface | metadados técnicos normais da requisição |
-| e-MEC / API pública CAU/BR | consulta opcional de IES por código | apenas o código numérico consultado |
+| API de Dados Abertos do Senado Federal | consulta de legislação federal no glossário | tipo de norma, número e ano; não são enviados dados da conta ou e-mail. Os parâmetros não são armazenados pelo JurisHome |
 | WhatsApp | compartilhamento iniciado pelo usuário | título e endereço público da matéria |
 | Origem de imagem em conteúdo legado | carregamento externo somente quando houver URL | requisição do navegador à origem indicada; as imagens novas em Base64 são armazenadas no banco e entregues pelo JurisHome |
 

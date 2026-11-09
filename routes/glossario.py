@@ -1,15 +1,17 @@
-from services.validacao import TextoBusca, padrao_busca
+from services.validacao import ModeloSeguro, TextoBusca
 from string import ascii_uppercase
-from typing import Annotated
+from typing import Annotated, Literal
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Query, Request
+from pydantic import Field
 from auth.security import get_current_user_optional
 from model.models import Usuario
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from services.glossario import consultar_glossario
+from services.legislacao_senado import buscar_legislacao
 
 router = APIRouter(tags=["Glossário"])
 templates = Jinja2Templates(directory="templates")
@@ -18,6 +20,22 @@ Busca = Annotated[TextoBusca, Query(max_length=80, description="Termo ou palavra
 Pagina = Annotated[int, Query(ge=1, description="Página de seis termos")]
 
 Letra = Annotated[str, Query(pattern="^[A-Za-z]?$", description="Inicial de A a Z")]
+
+
+class ConsultaLegislacao(ModeloSeguro):
+    tipo: Literal["LEI", "LCP", "DEL"]
+    numero: Annotated[str, Field(min_length=1, max_length=8, pattern=r"^\d+$")]
+    ano: Annotated[int, Field(ge=1800, le=2100)]
+
+
+@router.get("/consulta-lei", include_in_schema=False)
+def redirecionar_consulta_lei():
+    return RedirectResponse("/glossario#consulta-lei")
+
+
+@router.post("/api/glossario/legislacao")
+def consultar_legislacao(dados: ConsultaLegislacao):
+    return buscar_legislacao(dados.tipo, dados.numero, dados.ano)
 
 
 def paginar(q, letra, pagina):

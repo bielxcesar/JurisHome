@@ -1,12 +1,11 @@
-from services.validacao import ModeloSeguro, TextoBusca, fonte_http, linha
 import json
 import unicodedata
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BeforeValidator, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy.orm import Session
 
 from auth.security import get_current_user
@@ -15,7 +14,8 @@ from database import get_db
 from model.models import Usuario, TipoUsuario, JuridleQuestao
 from services import juridle
 from services.auditoria import registrar_auditoria
-from services.imagens import normalizar_imagem, url_fonte_segura
+from services.imagens import normalizar_imagem
+from services.validacao import ModeloSeguro, TextoBusca, fonte_http, linha, padrao_busca, texto_simples
 
 router = APIRouter(tags=['Juridle'])
 templates = Jinja2Templates(directory='templates')
@@ -38,6 +38,11 @@ def estado(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current
     return juridle.estado(db, usuario.uuid)
 
 
+@router.get('/api/juridle/coroa')
+def coroa(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
+    return JSONResponse(juridle.coroa_diaria(db, usuario.uuid), headers={'Cache-Control': 'no-store'})
+
+
 @router.post('/api/juridle/rodadas')
 def iniciar(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     rodada = juridle.iniciar(db, usuario.uuid)
@@ -50,18 +55,22 @@ def responder(rodada_id: str, dados: Resposta, db: Session = Depends(get_db), us
     return {**juridle.estado(db, usuario.uuid), 'rodada': juridle.serializar(rodada), 'resultado': resultado}
 
 
+TextoQuestao = Annotated[str, BeforeValidator(texto_simples)]
+Alternativa = Annotated[str, Field(min_length=1, max_length=300), BeforeValidator(lambda valor: linha(valor, 300))]
+
+
 class QuestaoEntrada(ModeloSeguro):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
-    enunciado: str = Field(min_length=10, max_length=1000)
-    area: str = Field(default='Conhecimentos jurídicos', min_length=3, max_length=100)
-    correta: str = Field(min_length=1, max_length=300)
-    erradas: list[str] = Field(min_length=3, max_length=3)
-    explicacao: str = Field(min_length=20, max_length=2000)
-    fonte_url: str = Field(max_length=2000)
-    referencia: str = Field(default='', max_length=200)
+    enunciado: TextoQuestao = Field(min_length=10, max_length=1000)
+    area: TextoQuestao = Field(default='Conhecimentos jurídicos', min_length=3, max_length=100)
+    correta: Alternativa
+    erradas: list[Alternativa] = Field(min_length=3, max_length=3)
+    explicacao: TextoQuestao = Field(min_length=20, max_length=2000)
+    fonte_url: str = Field(min_length=1, max_length=2000)
+    referencia: TextoQuestao = Field(default='', max_length=200)
     imagem: str | None = None
-    imagem_alt: str = Field(default='', max_length=200)
-    imagem_credito: str = Field(default='', max_length=1000)
+    imagem_alt: TextoQuestao = Field(default='', max_length=200)
+    imagem_credito: TextoQuestao = Field(default='', max_length=1000)
 
     @field_validator('fonte_url')
     @classmethod
@@ -76,8 +85,6 @@ class QuestaoEntrada(ModeloSeguro):
     @model_validator(mode='after')
     def alternativas_validas(self):
         opcoes = [self.correta, *self.erradas]
-        if any(not o.strip() or len(o) > 300 for o in opcoes):
-            raise ValueError('Preencha quatro alternativas de até 300 caracteres.')
         normalizadas = [' '.join(unicodedata.normalize('NFKC', o).casefold().split()) for o in opcoes]
         if len(set(normalizadas)) != 4:
             raise ValueError('As quatro alternativas devem ser diferentes.')
@@ -90,7 +97,7 @@ class Revisao(ModeloSeguro):
     model_config = ConfigDict(extra='forbid')
     decisao: Literal['aprovar', 'rejeitar', 'arquivar']
     versao: int = Field(strict=True, ge=1)
-    motivo: str = Field(default='', max_length=500)
+    motivo: TextoQuestao = Field(default='', max_length=500)
 
 
 @router.get('/juridle/ampliar', response_class=HTMLResponse)
@@ -114,7 +121,7 @@ def listar(status: Literal['todas', 'pendente', 'aprovada', 'rejeitada', 'arquiv
     if status != 'todas':
         consulta = consulta.filter_by(status=status)
     if busca.strip():
-        consulta = consulta.filter(JuridleQuestao.enunciado.ilike('%' + busca.strip().replace('%', '\\%').replace('_', '\\_') + '%', escape='\\'))
+        consulta = consulta.filter(JuridleQuestao.enunciado.ilike(padrao_busca(busca), escape='\\'))
     total = consulta.count()
     itens = consulta.order_by(JuridleQuestao.criada_em.desc(), JuridleQuestao.uuid).offset((pagina-1)*10).limit(10).all()
     aprovadas = db.query(JuridleQuestao).filter_by(status='aprovada').count()

@@ -4,12 +4,6 @@
         document.body.classList.toggle('modo-claro', document.documentElement.dataset.theme === 'light');
         const data = document.getElementById('data-atual');
         if (data) data.textContent = new Intl.DateTimeFormat('pt-BR').format(new Date());
-        const botao = document.getElementById('btn-perfil');
-        const menu = document.getElementById('dropdown-perfil');
-        function fecharMenu() { menu.hidden = true; botao.setAttribute('aria-expanded', 'false'); }
-        botao.addEventListener('click', () => { menu.hidden = !menu.hidden; botao.setAttribute('aria-expanded', String(!menu.hidden)); });
-        document.addEventListener('click', evento => { if (!menu.contains(evento.target) && !botao.contains(evento.target)) fecharMenu(); });
-        document.addEventListener('keydown', evento => { if (evento.key === 'Escape' && !menu.hidden) { fecharMenu(); botao.focus(); } });
         const copiar = document.getElementById('btn-copiar-link');
         const mensagem = document.getElementById('msg-copiado');
         copiar.addEventListener('click', async () => {

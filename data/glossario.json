@@ -1,5 +1,5 @@
 {
-  "revisado_em": "2026-09-11",
+  "revisado_em": "2026-11-08",
   "fontes": {
     "cpc": {
       "nome": "Código de Processo Civil · Planalto",
@@ -8,6 +8,10 @@
     "cf": {
       "nome": "Constituição Federal · Planalto",
       "url": "https://www.planalto.gov.br/ccivil_03/constituicao/constituicao.htm"
+    },
+    "arbitragem": {
+      "nome": "Lei de Arbitragem · Planalto",
+      "url": "https://www.planalto.gov.br/ccivil_03/leis/l9307.htm"
     }
   },
   "termos": [
@@ -235,6 +239,231 @@
       "exemplo": "Uma parte pede uma providência imediata para evitar um prejuízo enquanto o processo continua.",
       "fonte_id": "cpc",
       "referencia": "Art. 300"
+    },
+    {
+      "id": "agravo-de-instrumento",
+      "termo": "Agravo de instrumento",
+      "area": "Processo civil",
+      "definicao": "Recurso usado para pedir ao tribunal a revisão de determinadas decisões tomadas pelo juiz durante o processo, nas hipóteses previstas em lei.",
+      "exemplo": "Uma parte recorre de uma decisão sobre tutela provisória por meio de agravo de instrumento.",
+      "fonte_id": "cpc",
+      "referencia": "Art. 1.015"
+    },
+    {
+      "id": "apelacao",
+      "termo": "Apelação",
+      "area": "Processo civil",
+      "definicao": "Recurso apresentado contra uma sentença para que o tribunal reexamine a decisão, conforme os limites do pedido feito pela parte.",
+      "exemplo": "Após uma sentença em uma ação de cobrança, uma das partes apresenta apelação para pedir sua revisão.",
+      "fonte_id": "cpc",
+      "referencia": "Arts. 1.009 e 1.010"
+    },
+    {
+      "id": "arbitragem",
+      "termo": "Arbitragem",
+      "area": "Formas de resolução de conflitos",
+      "definicao": "Forma de resolver certos conflitos fora do julgamento comum pelo Poder Judiciário, por decisão de árbitro escolhido pelas partes. A lei permite seu uso para direitos patrimoniais disponíveis.",
+      "exemplo": "Duas empresas podem submeter uma divergência contratual à arbitragem quando a lei permitir.",
+      "fonte_id": "arbitragem",
+      "referencia": "Art. 3º, § 1º, do CPC e art. 1º da Lei nº 9.307/1996"
+    },
+    {
+      "id": "audiencia-conciliacao",
+      "termo": "Audiência de conciliação ou mediação",
+      "area": "Processo civil",
+      "definicao": "Encontro previsto no processo para que as partes tentem chegar a um acordo com a ajuda de um conciliador ou mediador, quando cabível.",
+      "exemplo": "Em uma ação de cobrança, as partes participam de uma audiência para tentar combinar uma forma de pagamento.",
+      "fonte_id": "cpc",
+      "referencia": "Arts. 165 e 334"
+    },
+    {
+      "id": "capacidade-processual",
+      "termo": "Capacidade processual",
+      "area": "Processo civil",
+      "definicao": "Aptidão para participar de um processo e praticar atos em nome próprio. Em algumas situações, a pessoa precisa ser representada ou assistida conforme a lei.",
+      "exemplo": "Uma pessoa maior e capaz pode participar do processo em nome próprio, com representação por advogado quando exigida.",
+      "fonte_id": "cpc",
+      "referencia": "Arts. 70 a 76"
+    },
+    {
+      "id": "competencia",
+      "termo": "Competência",
+      "area": "Processo civil",
+      "definicao": "Conjunto de regras que indica qual órgão do Judiciário pode analisar determinado processo.",
+      "exemplo": "A lei e as características do caso ajudam a definir em qual foro a ação deve ser apresentada.",
+      "fonte_id": "cpc",
+      "referencia": "Arts. 42 a 66"
+    },
+    {
+      "id": "conexao",
+      "termo": "Conexão",
+      "area": "Processo civil",
+      "definicao": "Relação entre processos que têm em comum o pedido ou a causa de pedir. A lei prevê a reunião de processos conexos em certas situações para evitar decisões incompatíveis.",
+      "exemplo": "Duas ações ligadas ao mesmo contrato podem ser analisadas em conjunto se os requisitos legais estiverem presentes.",
+      "fonte_id": "cpc",
+      "referencia": "Art. 55"
+    },
+    {
+      "id": "cumprimento-de-sentenca",
+      "termo": "Cumprimento de sentença",
+      "area": "Processo civil",
+      "definicao": "Etapa em que se busca realizar na prática uma obrigação reconhecida em uma decisão judicial, seguindo o procedimento previsto para cada caso.",
+      "exemplo": "Depois de uma condenação definitiva ao pagamento, a parte vencedora pode pedir o cumprimento da sentença.",
+      "fonte_id": "cpc",
+      "referencia": "Arts. 513 e seguintes"
+    },
+    {
+      "id": "embargos-de-declaracao",
+      "termo": "Embargos de declaração",
+      "area": "Processo civil",
+      "definicao": "Recurso usado para pedir que o órgão julgador esclareça obscuridade, elimine contradição, supra uma omissão ou corrija erro material em uma decisão.",
+      "exemplo": "A parte apresenta embargos de declaração porque a decisão não analisou um pedido feito no processo.",
+      "fonte_id": "cpc",
+      "referencia": "Arts. 1.022 e 1.023"
+    },
+    {
+      "id": "embargos-a-execucao",
+      "termo": "Embargos à execução",
+      "area": "Processo civil",
+      "definicao": "Meio de defesa pelo qual a pessoa cobrada em uma execução pode apresentar ao Judiciário as questões previstas em lei.",
+      "exemplo": "O devedor apresenta embargos à execução para discutir, entre outros pontos permitidos, o valor cobrado.",
+      "fonte_id": "cpc",
+      "referencia": "Arts. 914 e 917"
+    },
+    {
+      "id": "execucao",
+      "termo": "Execução",
+      "area": "Processo civil",
+      "definicao": "Procedimento destinado a buscar o cumprimento de uma obrigação que consta de um título executivo, conforme as regras legais aplicáveis.",
+      "exemplo": "Se uma obrigação documentada em título executivo não é cumprida, o credor pode pedir sua execução judicial.",
+      "fonte_id": "cpc",
+      "referencia": "Arts. 771 e seguintes"
+    },
+    {
+      "id": "incidente-desconsideracao-personalidade-juridica",
+      "termo": "Incidente de desconsideração da personalidade jurídica",
+      "area": "Processo civil",
+      "definicao": "Procedimento que permite discutir, dentro do processo, se estão presentes os requisitos legais para estender determinados efeitos a sócios ou à pessoa jurídica.",
+      "exemplo": "Durante uma execução, uma parte pede a abertura do incidente e os envolvidos podem se manifestar antes da decisão.",
+      "fonte_id": "cpc",
+      "referencia": "Arts. 133 a 137"
+    },
+    {
+      "id": "intervencao-de-terceiros",
+      "termo": "Intervenção de terceiros",
+      "area": "Processo civil",
+      "definicao": "Participação no processo de alguém que inicialmente não era parte, nas situações e formas autorizadas pela lei.",
+      "exemplo": "Uma pessoa com interesse jurídico no resultado pode pedir para atuar como assistente de uma das partes.",
+      "fonte_id": "cpc",
+      "referencia": "Arts. 119 a 138"
+    },
+    {
+      "id": "litisconsorcio",
+      "termo": "Litisconsórcio",
+      "area": "Processo civil",
+      "definicao": "Participação de duas ou mais pessoas como autoras ou rés no mesmo processo, quando a lei permite ou quando há relação entre os pedidos ou direitos discutidos.",
+      "exemplo": "Duas pessoas que sofreram o mesmo dano podem, se os requisitos forem atendidos, apresentar uma ação juntas.",
+      "fonte_id": "cpc",
+      "referencia": "Arts. 113 a 118"
+    },
+    {
+      "id": "litispendencia",
+      "termo": "Litispendência",
+      "area": "Processo civil",
+      "definicao": "Situação em que já existe um processo em andamento com as mesmas partes, o mesmo pedido e a mesma causa de pedir. A lei trata essa repetição como matéria que pode impedir o prosseguimento da nova ação.",
+      "exemplo": "Uma parte não pode simplesmente iniciar outra ação idêntica enquanto a primeira ainda está em andamento.",
+      "fonte_id": "cpc",
+      "referencia": "Art. 337, VI e §§ 1º a 3º"
+    },
+    {
+      "id": "litigancia-de-ma-fe",
+      "termo": "Litigância de má-fé",
+      "area": "Processo civil",
+      "definicao": "Conduta processual que se enquadra nas hipóteses legais de deslealdade, como alterar intencionalmente a verdade dos fatos. Pode levar às consequências previstas no CPC.",
+      "exemplo": "A parte que altera de propósito um fato relevante pode estar sujeita às medidas previstas em lei.",
+      "fonte_id": "cpc",
+      "referencia": "Arts. 79 a 81"
+    },
+    {
+      "id": "negocio-juridico-processual",
+      "termo": "Negócio jurídico processual",
+      "area": "Processo civil",
+      "definicao": "Acordo pelo qual as partes, nos limites previstos em lei, ajustam aspectos do procedimento ou de seus deveres processuais. O juiz pode controlar a validade do acordo.",
+      "exemplo": "Em uma causa sobre direito que admite acordo, as partes podem combinar um calendário para determinados atos do processo.",
+      "fonte_id": "cpc",
+      "referencia": "Art. 190"
+    },
+    {
+      "id": "preclusao",
+      "termo": "Preclusão",
+      "area": "Processo civil",
+      "definicao": "Perda da possibilidade de praticar um ato ou discutir uma questão no processo, por motivo previsto em lei, como o fim do prazo ou a prática anterior do ato.",
+      "exemplo": "Se uma parte deixa passar o prazo para apresentar uma manifestação, pode perder a oportunidade de fazê-la naquele momento.",
+      "fonte_id": "cpc",
+      "referencia": "Arts. 223 e 507"
+    },
+    {
+      "id": "producao-antecipada-da-prova",
+      "termo": "Produção antecipada da prova",
+      "area": "Processo civil",
+      "definicao": "Procedimento para produzir uma prova antes do momento habitual, nas situações previstas em lei, como quando ela pode se tornar impossível ou quando seu conhecimento pode ajudar a evitar uma ação.",
+      "exemplo": "Uma pessoa pede uma perícia antes do processo principal porque há risco de a situação examinada mudar.",
+      "fonte_id": "cpc",
+      "referencia": "Art. 381"
+    },
+    {
+      "id": "reconvencao",
+      "termo": "Reconvenção",
+      "area": "Processo civil",
+      "definicao": "Pedido feito pelo réu contra o autor dentro do mesmo processo, junto à contestação, desde que exista relação com a ação ou com o fundamento da defesa.",
+      "exemplo": "Em uma ação de cobrança, o réu também pode apresentar um pedido relacionado ao mesmo contrato, se a lei permitir.",
+      "fonte_id": "cpc",
+      "referencia": "Art. 343"
+    },
+    {
+      "id": "revelia",
+      "termo": "Revelia",
+      "area": "Processo civil",
+      "definicao": "Situação em que o réu não apresenta contestação. Isso pode gerar efeitos sobre os fatos alegados pelo autor, mas a própria lei prevê exceções.",
+      "exemplo": "Mesmo sem contestação, o juiz verifica se há alguma exceção legal antes de considerar verdadeiros os fatos alegados.",
+      "fonte_id": "cpc",
+      "referencia": "Arts. 344 e 345"
+    },
+    {
+      "id": "saneamento-do-processo",
+      "termo": "Saneamento e organização do processo",
+      "area": "Processo civil",
+      "definicao": "Etapa em que o juiz resolve questões pendentes e organiza o que ainda precisa ser esclarecido, como os fatos discutidos e as provas a produzir.",
+      "exemplo": "Após as primeiras manifestações, o juiz define quais fatos ainda precisam de prova e quais provas serão produzidas.",
+      "fonte_id": "cpc",
+      "referencia": "Art. 357"
+    },
+    {
+      "id": "tutela-de-evidencia",
+      "termo": "Tutela de evidência",
+      "area": "Processo civil",
+      "definicao": "Medida provisória que pode ser concedida quando a situação se enquadra nas hipóteses legais e as provas apresentadas justificam a proteção do direito, sem exigir demonstração de perigo de dano.",
+      "exemplo": "Uma parte pede uma medida com base em prova documental e em uma das hipóteses previstas no CPC.",
+      "fonte_id": "cpc",
+      "referencia": "Art. 311"
+    },
+    {
+      "id": "tutela-cautelar",
+      "termo": "Tutela cautelar",
+      "area": "Processo civil",
+      "definicao": "Medida provisória de urgência voltada a proteger o resultado útil do processo, sem antecipar necessariamente o resultado final pedido pela parte.",
+      "exemplo": "Uma parte pede o bloqueio provisório de um bem para evitar que ele desapareça antes do fim do processo, se os requisitos legais forem atendidos.",
+      "fonte_id": "cpc",
+      "referencia": "Arts. 300 e 301"
+    },
+    {
+      "id": "tutela-antecipada",
+      "termo": "Tutela antecipada",
+      "area": "Processo civil",
+      "definicao": "Medida provisória de urgência que antecipa, total ou parcialmente, efeitos do que foi pedido no processo, quando os requisitos legais estão presentes.",
+      "exemplo": "Uma pessoa pede o restabelecimento provisório de um serviço enquanto a ação ainda está sendo julgada.",
+      "fonte_id": "cpc",
+      "referencia": "Arts. 300 e 303"
     }
   ]
 }

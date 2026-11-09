@@ -6,14 +6,12 @@
     <meta name="description" content="Termo de Aceite para utilização do sistema JurisHome">
     <title>Termo de Aceite | JurisHome</title>
     <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
-    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+    <link rel="stylesheet" href="/static/css/legal.css?v=20261108-documentos">
 </head>
 <body class="legal-page">
     <a class="legal-skip-link" href="#conteudo-legal">Ir para o conteúdo</a>
-    <header class="legal-header">
-        <a class="legal-brand" href="/" data-legal-return aria-label="Voltar à página anterior"><img src="/static/images/logo.png" alt="JurisHome"></a>
-        <a class="legal-back" href="/" data-legal-return>Voltar</a>
-    </header>
+    {% set documento_legal = 'termos' %}
+    {% include "_legal_header.html" %}
 
     <main class="legal-document" id="conteudo-legal">
         <div class="legal-heading">
@@ -37,7 +35,7 @@
 
         <section>
             <h2>3. Perfis e funcionalidades</h2>
-            <p>O estudante pode consultar o acervo, pesquisar e filtrar matérias, usar o glossário, alterar o tema, compartilhar links e enviar feedback. Também pode atualizar o nome, trocar a senha e solicitar a anonimização dos dados da própria conta.</p>
+            <p>O estudante pode consultar o acervo, pesquisar e filtrar matérias, usar o glossário, consultar legislação federal pela API de Dados Abertos do Senado, alterar o tema, compartilhar links e enviar feedback. A consulta de legislação envia ao Senado somente o tipo da norma, o número e o ano informados; o JurisHome não armazena esses parâmetros nem envia dados da conta. Também pode atualizar o nome, trocar a senha e solicitar a anonimização dos dados da própria conta.</p>
             <p>O administrador pode consultar e responder feedbacks e acessar os registros de auditoria. A aplicação não oferece, nesta versão, telas para gerenciar contas, criar matérias ou editar categorias. O primeiro administrador é configurado por um script local.</p>
         </section>
 

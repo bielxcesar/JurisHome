@@ -639,10 +639,13 @@ class TestesSeguranca(unittest.TestCase):
         from PIL import Image
         admin = self._usuario(TipoUsuario.ADMINISTRADOR)
         token = criar_access_token(admin)
-        dados = {'enunciado': '<img src=x onerror=alert(1)> Pergunta de teste', 'correta': 'Alternativa correta',
+        dados = {'enunciado': 'Qual é a alternativa correta nesta pergunta de teste?', 'correta': 'Alternativa correta',
             'erradas': ['Alternativa incorreta 1', 'Alternativa incorreta 2', 'Alternativa incorreta 3'],
             'explicacao': 'Explicação fictícia para testar o cadastro.', 'fonte_url': 'https://example.test/fonte'}
-        for extras in ({'erradas': ['Alternativa correta','B','C']}, {'erradas': ['B',' B ','C']},
+        for extras in ({'enunciado': '<img src=x onerror=alert(1)> Pergunta de teste'},
+                       {'explicacao': '<script>alert(1)</script>'}, {'erradas': ['<b>B</b>', 'C', 'D']},
+                       {'correta': {'texto': 'Resposta'}}, {'fonte_url': ''},
+                       {'erradas': ['Alternativa correta','B','C']}, {'erradas': ['B',' B ','C']},
                        {'fonte_url': 'javascript:alert(1)'}, {'status': 'aprovada'}, {'correta': True}, {'imagem': 'data:image/svg+xml;base64,PHN2Zz4='}):
             status, _, _ = self._request('POST', '/api/juridle/questoes', {**dados, **extras}, token=token)
             self.assertEqual(status, 422)
@@ -983,7 +986,7 @@ class TestesSeguranca(unittest.TestCase):
         from io import BytesIO
         from PIL import Image
         from model.models import Categoria, Conteudo
-        categoria = Categoria(uuid=str(uuid.uuid4()), nome="Direito de teste")
+        categoria = Categoria(uuid=str(uuid.uuid4()), nome="Direito Civil")
         self.db.add(categoria)
         self.db.commit()
         admin = self._usuario(TipoUsuario.ADMINISTRADOR)
@@ -1152,7 +1155,7 @@ class TestesSeguranca(unittest.TestCase):
         status, _, corpo = self._request("GET", "/nova-materia", token=criar_access_token(admin))
         self.assertEqual(200, status)
         html = corpo.decode()
-        self.assertIn("Direito do Consumidor", html)
+        self.assertNotIn("Direito do Consumidor", html)
         self.assertIn("Direito Penal (Criminal)", html)
         self.assertIn(existente.uuid, html)
         self.assertIn('id="categorias-tags"', html)
@@ -1164,7 +1167,7 @@ class TestesSeguranca(unittest.TestCase):
         from services.categorias import garantir_categorias
         garantir_categorias(self.db)
         trabalhista = self.db.query(Categoria).filter_by(nome="Direito Trabalhista").one()
-        consumidor = self.db.query(Categoria).filter_by(nome="Direito do Consumidor").one()
+        civil = self.db.query(Categoria).filter_by(nome="Direito Civil").one()
         admin = self._usuario(TipoUsuario.ADMINISTRADOR)
         token = criar_access_token(admin)
         status, _, _ = self._request("POST", "/criar-materia", {"aceite_editorial": True, "versao_termos": "2026-10-30", "titulo": "Tags por categoria", "corpo_texto": "Texto da matéria para teste.", "categoria_id": trabalhista.uuid, "tipo_fonte": "legislacao", "tags": "clt, Trabalho, bolsa de estudo"}, token=token)
@@ -1178,10 +1181,10 @@ class TestesSeguranca(unittest.TestCase):
         self.assertEqual(200, status)
         self.assertIn(b'Tags da mat', corpo)
         self.assertIn(b'>CLT</span>', corpo)
-        status, _, _ = self._request("PUT", f"/editar-materia/{materia.uuid}", {"categoria_id": consumidor.uuid}, token=token)
+        status, _, _ = self._request("PUT", f"/editar-materia/{materia.uuid}", {"categoria_id": civil.uuid}, token=token)
         self.assertEqual(200, status)
         self.db.refresh(materia)
-        self.assertIn("CDC", materia.tags)
+        self.assertIn("Código Civil", materia.tags)
         self.assertIn("bolsa de estudo", materia.tags)
         self.assertNotIn("CLT", materia.tags)
 
@@ -1558,7 +1561,7 @@ class TestesSeguranca(unittest.TestCase):
         from model.models import Categoria, Conteudo, StatusConteudo, TipoFonte
 
         autor = self._usuario()
-        categoria = Categoria(uuid=str(uuid.uuid4()), nome="Teste SQL")
+        categoria = Categoria(uuid=str(uuid.uuid4()), nome="Direito Civil")
         self.db.add(categoria)
         self.db.flush()
         self.db.add(
