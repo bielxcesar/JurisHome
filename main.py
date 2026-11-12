@@ -23,6 +23,13 @@ from routes import auth, paginas, admin, auditoria, conteudos, glossario, feedba
 from services.auditoria import iniciar_contexto_auditoria, finalizar_contexto_auditoria
 
 Base.metadata.create_all(bind=engine)
+# create_all não adiciona índices a tabelas existentes.
+if engine.dialect.name in {"sqlite", "postgresql"}:
+    with engine.begin() as conexao:
+        conexao.exec_driver_sql(
+            "CREATE INDEX IF NOT EXISTS ix_conteudos_categoria_status_criado_em "
+            "ON conteudos (categoria_id, status, criado_em)"
+        )
 garantir_root_unico(engine)
 with SessionLocal() as db_catalogo:
     garantir_categorias(db_catalogo)

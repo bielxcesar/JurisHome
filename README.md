@@ -86,45 +86,37 @@ Instale as dependências necessárias:
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
-Rode o arquivo de configuração. Ele criará automaticamente o seu arquivo .env com uma chave segura e preparará o banco de dados local (SQLite):
-```bash
-python setup_local.py
-```
-O glossário consulta a API pública do Senado sem chave de acesso. É necessária conexão com a internet para pesquisar legislação; o catálogo local de termos continua disponível sem essa consulta.
+Configure as variáveis de ambiente a partir de '.env.example'. No Railway, configure 'DATABASE_URL' no serviço da aplicação com a referência privada do PostgreSQL do mesmo ambiente. Defina também 'JurisHome_senha', 'TOTP_ENCRYPTION_KEY', 'COOKIE_SECURE=true' e 'PUBLIC_ORIGIN' com a URL pública HTTPS da aplicação. Mantenha os valores reais nas variáveis do serviço.
 
-### Passo 3: Criar Contas e Dados de Teste
-O projeto não vem com uma senha administrativa padrão. Para criar o seu acesso de Administrador, rode:
+O glossário consulta a API pública do Senado sem chave de acesso. O catálogo local de termos funciona independentemente dessa consulta.
+
+### Passo 3 Criar o administrador
+
+No terminal do ambiente de destino, execute:
+
 ```bash
 python criar_admin.py
 ```
 
-(Informe o e-mail e a senha desejada. No primeiro login, o sistema pedirá para configurar o aplicativo autenticador).
+Informe nome, e-mail e senha no terminal. O script oculta a senha durante a digitação. O primeiro administrador é o root, e os seguintes são administradores de suporte. O primeiro acesso exige configurar o autenticador de dois fatores.
 
-Para gerar 10 administradores de suporte, 25 leitores, 10 matérias fictícias e feedbacks de demonstração no SQLite local, execute:
+### Passo 4 Iniciar o servidor
+
+No Railway, configure o comando de início:
+
 ```bash
-python seed.py
+python -m uvicorn main:app --host 0.0.0.0 --port "$PORT"
 ```
 
-O seed pode ser executado novamente sem duplicar os exemplos. As contas de demonstração são criadas sem senha por padrão. Para habilitar login nas novas contas fictícias, defina JURISHOME_SEED_SENHA antes de executar. O primeiro acesso continua exigindo 2FA. O administrador principal é criado separadamente com criar_admin.py.
+Na inicialização, o SQLAlchemy cria as tabelas ausentes no banco configurado. Se 'FEEDBACK_DATABASE_URL' estiver ausente, os feedbacks usam a mesma conexão principal.
 
-### Passo 4: Iniciar o Servidor
-```bash
-python -m uvicorn main:app --reload
-```
-Acesse http://127.0.0.1:8000 no seu navegador. A documentação interativa da API (Swagger) fica em http://127.0.0.1:8000/docs.
+### Validação e testes
 
----
+A suíte utiliza um banco SQLite em memória, separado do banco da aplicação. No PowerShell, execute em um terminal de teste:
 
-### Banco de Dados (Avançado)
-Por padrão, o projeto roda perfeitamente em SQLite (jurishome_local.db). Caso deseje utilizar o PostgreSQL, crie o banco manualmente no seu serviço local, abra o arquivo .env gerado e altere a linha do banco para o formato:
-DATABASE_URL=postgresql+psycopg2://postgres:SUA_SENHA@localhost:5432/juris_home
-(Atenção: O script seed.py foi feito apenas para alimentar o banco local SQLite).
-
-
-
-### Validação e Testes
-Para rodar a bateria de testes automatizados do sistema, certifique-se de que o ambiente virtual está ativo e execute:
-```bash
+```powershell
+$env:DATABASE_URL = 'sqlite://'
+Remove-Item Env:FEEDBACK_DATABASE_URL -ErrorAction SilentlyContinue
 python -m unittest discover -s tests -v
 ```
 

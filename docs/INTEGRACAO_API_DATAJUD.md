@@ -15,7 +15,7 @@ O serviço oficial expõe consultas Elasticsearch por tribunal; por isso, o núm
 
 ## Chave pública
 
-O backend lê `DATAJUD_API_KEY` do ambiente. O `setup_local.py` copia a chave pública atual indicada pela wiki oficial para um `.env` novo, que está ignorado pelo Git. Se você já tinha `.env`, a rotina o preserva; nesse caso, copie a linha `DATAJUD_API_KEY` do `.env.example` para o `.env`. O CNJ pode alterar essa chave; quando uma consulta retornar indisponibilidade, confira a versão vigente em [Acesso à API Pública](https://datajud-wiki.cnj.jus.br/api-publica/acesso/) e atualize somente essa variável.
+O backend lê a variável DATAJUD_API_KEY do ambiente. Configure o valor publicado pelo CNJ nas variáveis do serviço. Em caso de indisponibilidade, confira a chave vigente em [Acesso à API Pública](https://datajud-wiki.cnj.jus.br/api-publica/acesso/).
 
 A chave publicada pelo CNJ é uma chave pública compartilhada, não uma credencial privada do JurisHome. Ainda assim, ela é mantida no servidor para evitar enviar o cabeçalho de autenticação ao navegador.
 

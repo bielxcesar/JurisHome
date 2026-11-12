@@ -13,10 +13,14 @@ ENV/
 *.py[cod]
 *$py.class
 
-# Banco de dados local de teste
+# Bancos, arquivos auxiliares e exportações
 *.db
+*.db-*
+*.sqlite
+*.sqlite-*
 *.sqlite3
-juris_home.db
+*.sqlite3-*
+*.dump
 
 # Rascunhos e Arquivos Pessoais
 anotacao.txt
@@ -33,6 +37,3 @@ backups/
 .DS_Store
 Thumbs.db
 desktop.ini
-
-# Ocultar o script de criação do administrador principal
-scripts/

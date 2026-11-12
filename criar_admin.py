@@ -1,4 +1,3 @@
-from services.validacao import nome_pessoa, email_valido, nova_senha
 """Cria o primeiro administrador como root e os seguintes como suporte.
 
 Defina JURISHOME_ADMIN_EMAIL, JURISHOME_ADMIN_SENHA e JURISHOME_ADMIN_NOME 
@@ -7,14 +6,15 @@ antes de executar, ou informe os dados interativamente no terminal.
 
 import os
 import getpass
-import re
 import sys
 
 from auth.security import hash_senha
 from database import Base, SessionLocal, engine
 from auth.sessions import garantir_transacao
 from services.root_unico import garantir_root_unico
-from sqlalchemy.exc import IntegrityError
+from model.models import TipoUsuario, Usuario
+from services.validacao import email_valido, nome_pessoa, nova_senha
+from sqlalchemy.exc import SQLAlchemyError
 
 
 def obrigatorio(nome: str, prompt: str, oculto: bool = False) -> str:
@@ -31,10 +31,6 @@ def main() -> int:
         email = obrigatorio("JURISHOME_ADMIN_EMAIL", "E-mail do administrador: ").lower()
         senha = obrigatorio("JURISHOME_ADMIN_SENHA", "Senha do administrador: ", oculto=True)
         
-        if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
-            raise ValueError("Informe um e-mail válido para o administrador.")
-        
-        # Agora exige o nome interativamente se a variável de ambiente não estiver preenchida
         nome = obrigatorio("JURISHOME_ADMIN_NOME", "Nome do administrador (publicador): ")
         
         nome = nome_pessoa(nome)
@@ -45,9 +41,9 @@ def main() -> int:
         print(f"Erro: {erro}", file=sys.stderr)
         return 2
 
-    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
+        Base.metadata.create_all(bind=engine)
         garantir_root_unico(engine)
         garantir_transacao(db)
         root = db.query(Usuario).filter(Usuario.e_root_admin != False).first()
@@ -81,9 +77,9 @@ def main() -> int:
             )
         db.commit()
         perfil = "principal (root)" if primeiro_root else "de suporte (sem privilégios root)"
-        print(f"Administrador {perfil} '{nome}' criado. O primeiro acesso exige a configuração do 2FA.")
+        print(f"Administrador {perfil} criado. O primeiro acesso exige a configuração do 2FA.")
         return 0
-    except (IntegrityError, RuntimeError) as erro:
+    except (SQLAlchemyError, RuntimeError):
         db.rollback()
         print("Erro: não foi possível cadastrar a conta. Verifique e-mail duplicado ou criação simultânea e tente novamente; a regra de root único foi preservada.", file=sys.stderr)
         return 1

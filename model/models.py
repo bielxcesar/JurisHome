@@ -191,6 +191,9 @@ class Subcategoria(Base):
 # Area de adição de conteudo 
 class Conteudo(Base):
     __tablename__ = "conteudos"
+    __table_args__ = (
+        Index("ix_conteudos_categoria_status_criado_em", "categoria_id", "status", "criado_em"),
+    )
 
     uuid = Column(String, primary_key=True, default=gerar_uuid)
     titulo = Column(String, nullable=False)
