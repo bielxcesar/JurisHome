@@ -1,16 +1,25 @@
 import enum
 import uuid as uuid_lib
 from datetime import datetime, timezone
+from dateutil import tz
 
 from sqlalchemy import (
     Column, Integer, String, Text, DateTime, Enum, ForeignKey, Boolean,
-    CheckConstraint, UniqueConstraint, func
+    CheckConstraint, UniqueConstraint, Index, case
 )
 from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import relationship
 
 from database import Base
 
+# =====================================================================
+# Configuração do Fuso Horário Local (São Paulo / Brasília)
+# =====================================================================
+fuso_br = tz.gettz("America/Sao_Paulo")
+
+def obter_hora_local():
+    """Retorna a data e hora atual no fuso horário do Brasil."""
+    return datetime.now(fuso_br)
 
 class TipoUsuario(str, enum.Enum):
     ESTUDANTE = "estudante"
@@ -21,6 +30,11 @@ class TipoFonte(str, enum.Enum):
     ACORDAO = "acordao"
     DOUTRINA = "doutrina"
     LEGISLACAO = "legislacao"
+    G1 = "g1"
+    TERRA = "terra"
+    UOL = "uol"
+    X = "x"
+    INSTAGRAM = "instagram"
 
 
 class StatusConteudo(str, enum.Enum):
@@ -41,7 +55,8 @@ class Usuario(Base):
     nome = Column(String(100), nullable=False)
     email = Column(String(150), unique=True, index=True, nullable=False)
     senha_hash = Column(String(255), nullable=True)
-
+    foto_perfil = Column(String, nullable=True)
+    
     tipo_usuario = Column(
         Enum(TipoUsuario, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
@@ -67,21 +82,63 @@ class Usuario(Base):
     data_consentimento = Column(DateTime, nullable=True)
     versao_termos = Column(String(50), default="1.0")
 
-    criado_em = Column(DateTime, server_default=func.now(), nullable=False)
-    atualizado_em = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+    criado_em = Column(DateTime, default=obter_hora_local, nullable=False)
+    atualizado_em = Column(DateTime, default=obter_hora_local, onupdate=obter_hora_local, nullable=False)
 
     conteudos_criados = relationship("Conteudo", back_populates="autor")
     feedbacks = relationship("Feedback", back_populates="usuario")
 
     __table_args__ = (
         CheckConstraint("tentativas_login_falhas >= 0", name="ck_usuarios_tentativas_nao_negativas"),
+        CheckConstraint("NOT e_root_admin OR tipo_usuario = 'administrador'", name="ck_root_deve_ser_administrador"),
+        # Roots produzem a mesma chave 1; as outras contas produzem NULL.
+        # Um índice único aceita vários NULLs, mas nunca dois roots.
+        Index("uq_usuarios_root_unico", case((e_root_admin, 1), else_=None), unique=True).ddl_if(dialect=("sqlite", "postgresql")),
     )
+
+
+class DesafioConsumido(Base):
+    __tablename__ = "auth_desafios_consumidos"
+    digest = Column(String(64), primary_key=True)
+    usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), nullable=False, index=True)
+    expira_em = Column(DateTime, nullable=False, index=True)
+
+
+class AdministradorExcluido(Base):
+    """Preserva vínculos editoriais sem manter uma conta de acesso ativa."""
+    __tablename__ = "administradores_excluidos"
+    usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), primary_key=True)
+    excluido_por = Column(CHAR(36), ForeignKey("usuarios.uuid"), nullable=False)
+    excluido_em = Column(DateTime, nullable=False)
+
+
+class CodigoTotpConsumido(Base):
+    __tablename__ = "auth_totp_consumidos"
+    usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), primary_key=True)
+    segredo_digest = Column(String(64), primary_key=True)
+    intervalo = Column(Integer, primary_key=True)
+
+
+class SessaoAutenticada(Base):
+    __tablename__ = "auth_sessoes"
+    id = Column(String(36), primary_key=True, default=gerar_uuid)
+    usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), nullable=False, index=True)
+    criada_em = Column(DateTime, nullable=False)
+    expira_em = Column(DateTime, nullable=False, index=True)
+    revogada = Column(Boolean, nullable=False, default=False)
+
+
+class RefreshToken(Base):
+    __tablename__ = "auth_refresh_tokens"
+    digest = Column(String(64), primary_key=True)
+    sessao_id = Column(String(36), ForeignKey("auth_sessoes.id"), nullable=False, index=True)
+    usado = Column(Boolean, nullable=False, default=False)
 
 
 class Categoria(Base):
     __tablename__ = "categorias"
 
-    uuid = Column(CHAR(36), primary_key=True, default=lambda: str(uuid_lib.uuid4()))
+    uuid = Column(CHAR(36), primary_key=True, default=gerar_uuid)
     nome = Column(String(100), nullable=False, unique=True)
     descricao = Column(Text, nullable=True)
 
@@ -89,10 +146,38 @@ class Categoria(Base):
     conteudos = relationship("Conteudo", back_populates="categoria")
 
 
+class JuridleRodada(Base):
+    __tablename__ = "juridle_rodadas"
+    uuid = Column(String(36), primary_key=True, default=gerar_uuid)
+    usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), nullable=False, index=True)
+    # Apenas uma rodada ativa por pessoa; NULL permite manter o histórico concluído.
+    ativa_chave = Column(String(36), unique=True, nullable=True)
+    perguntas_json = Column(Text, nullable=False)
+    respostas_json = Column(Text, nullable=False, default="[]")
+    respondidas = Column(Integer, nullable=False, default=0)
+    criada_em = Column(DateTime, nullable=False)
+    expira_em = Column(DateTime, nullable=False)
+    concluida_em = Column(DateTime, nullable=True)
+
+
+class ConteudoLeitura(Base):
+    __tablename__ = "conteudo_leituras"
+    usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), primary_key=True)
+    conteudo_id = Column(String, ForeignKey("conteudos.uuid", ondelete="CASCADE"), primary_key=True)
+    dia = Column(String(10), primary_key=True)
+
+
+class CategoriaAcesso(Base):
+    __tablename__ = "categoria_acessos"
+    usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), primary_key=True)
+    categoria_id = Column(CHAR(36), ForeignKey("categorias.uuid"), primary_key=True)
+    dia = Column(String(10), primary_key=True)
+
+
 class Subcategoria(Base):
     __tablename__ = "subcategorias"
 
-    uuid = Column(CHAR(36), primary_key=True, default=lambda: str(uuid_lib.uuid4()))
+    uuid = Column(CHAR(36), primary_key=True, default=gerar_uuid)
     nome = Column(String(100), nullable=False)
     categoria_id = Column(CHAR(36), ForeignKey("categorias.uuid"), nullable=False)
 
@@ -106,20 +191,24 @@ class Subcategoria(Base):
 # Area de adição de conteudo 
 class Conteudo(Base):
     __tablename__ = "conteudos"
+    __table_args__ = (
+        Index("ix_conteudos_categoria_status_criado_em", "categoria_id", "status", "criado_em"),
+    )
 
-    uuid = Column(CHAR(36), unique=True, primary_key=True, index=True, nullable=False, default=gerar_uuid)
-
-    titulo = Column(String(200), nullable=False)
-    sub_titulo = Column(String(200), nullable=True)
-    resumo_home = Column(String(500), nullable=False)
+    uuid = Column(String, primary_key=True, default=gerar_uuid)
+    titulo = Column(String, nullable=False)
+    sub_titulo = Column(String, nullable=True)
+    resumo_home = Column(String, nullable=False)
     corpo_texto = Column(Text, nullable=False)
-    fonte_original = Column(String(500), nullable=True)
     
-    tags = Column(String(255), nullable=True)
-
-    imagem_miniatura = Column(String(500), nullable=True)
-    imagem_corpo = Column(String(500), nullable=True)
-    fonte_imagem = Column(String(200), nullable=True)
+    # Colunas de imagem grandes (Text)
+    imagem_miniatura = Column(Text, nullable=True)
+    imagem_corpo = Column(Text, nullable=True)
+    imagem_extra_2 = Column(Text, nullable=True)
+    imagem_extra_3 = Column(Text, nullable=True)
+    
+    fonte_original = Column(String, nullable=True)
+    fonte_imagem = Column(String, nullable=True)
 
     tipo_fonte = Column(
         Enum(TipoFonte, values_callable=lambda x: [e.value for e in x]),
@@ -136,14 +225,24 @@ class Conteudo(Base):
     subcategoria_id = Column(CHAR(36), ForeignKey("subcategorias.uuid"), nullable=True)
     autor_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), nullable=False)
 
-    criado_em = Column(DateTime, server_default=func.now(), nullable=False)
+    # Corrigido para pegar a hora do Brasil na criação do conteúdo
+    criado_em = Column(DateTime, default=obter_hora_local, nullable=False)
 
     categoria = relationship("Categoria", back_populates="conteudos")
     subcategoria = relationship("Subcategoria", back_populates="conteudos")
     autor = relationship("Usuario", back_populates="conteudos_criados")
     feedbacks = relationship("Feedback", back_populates="conteudo", cascade="all, delete-orphan")
+    tags = Column(String, nullable=True)
+    editorial = relationship("ConteudoEditorial", back_populates="conteudo", uselist=False, cascade="all, delete-orphan")
 
 
+class ConteudoEditorial(Base):
+    __tablename__ = "conteudo_editorial"
+    conteudo_id = Column(String, ForeignKey("conteudos.uuid", ondelete="CASCADE"), primary_key=True)
+    titulo_home = Column(String(180), nullable=True)
+    configuracao_json = Column(Text, nullable=False, default="{}")
+    conteudo = relationship("Conteudo", back_populates="editorial")
+    
 class Feedback(Base):
     __tablename__ = "feedbacks"
 
@@ -153,14 +252,14 @@ class Feedback(Base):
 
     usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), nullable=True)
     conteudo_id = Column(CHAR(36), ForeignKey("conteudos.uuid"), nullable=True)
-    criado_em = Column(DateTime, server_default=func.now(), nullable=False)
+    
+    criado_em = Column(DateTime, default=obter_hora_local, nullable=False)
 
     usuario = relationship("Usuario", back_populates="feedbacks")
     conteudo = relationship("Conteudo", back_populates="feedbacks")
 
 
 class FeedbackAtendimento(Base):
-
     __tablename__ = "feedback_atendimentos"
 
     id = Column(String(50), primary_key=True)
@@ -179,8 +278,9 @@ class FeedbackAtendimento(Base):
     historico_json = Column(Text, nullable=False, default="[]")
     novo = Column(Boolean, nullable=False, default=True)
     arquivado = Column(Boolean, nullable=False, default=False)
-    criado_em = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-    atualizado_em = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    
+    criado_em = Column(DateTime, default=obter_hora_local, nullable=False)
+    atualizado_em = Column(DateTime, default=obter_hora_local, onupdate=obter_hora_local, nullable=False)
 
     __table_args__ = (
         CheckConstraint("avaliacao IS NULL OR (avaliacao >= 1 AND avaliacao <= 5)", name="ck_feedback_avaliacao"),
@@ -201,4 +301,61 @@ class LogAuditoria(Base):
     resultado = Column(String(20), nullable=False, index=True)
     correlacao_id = Column(String(36), nullable=False, index=True)
     detalhes_json = Column(Text, nullable=False, default="{}")
+    
     criado_em = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+
+
+class JuridleQuestao(Base):
+    __tablename__ = 'juridle_questoes'
+    uuid = Column(String(36), primary_key=True, default=gerar_uuid)
+    chave_origem = Column(String(120), unique=True, nullable=True)
+    enunciado = Column(Text, nullable=False)
+    definicao = Column(Text, nullable=True)
+    area = Column(String(100), nullable=False)
+    opcoes_json = Column(Text, nullable=False)
+    correta = Column(Integer, nullable=False)
+    explicacao = Column(Text, nullable=False)
+    exemplo = Column(Text, nullable=True)
+    fonte_url = Column(Text, nullable=False)
+    referencia = Column(String(200), nullable=True)
+    imagem = Column(Text, nullable=True)
+    imagem_alt = Column(String(200), nullable=True)
+    imagem_credito = Column(Text, nullable=True)
+    status = Column(String(15), nullable=False, default='pendente', index=True)
+    origem = Column(String(20), nullable=False, default='administrador')
+    autor_id = Column(CHAR(36), ForeignKey('usuarios.uuid'), nullable=True, index=True)
+    revisor_id = Column(CHAR(36), ForeignKey('usuarios.uuid'), nullable=True)
+    motivo_revisao = Column(String(500), nullable=True)
+    versao = Column(Integer, nullable=False, default=1)
+    criada_em = Column(DateTime, nullable=False)
+    atualizada_em = Column(DateTime, nullable=False)
+    revisada_em = Column(DateTime, nullable=True)
+    __table_args__ = (CheckConstraint('correta >= 0 AND correta <= 3', name='ck_juridle_gabarito'),
+        CheckConstraint("status IN ('pendente','aprovada','rejeitada','arquivada')", name='ck_juridle_status'),)
+
+
+class JuridleDia(Base):
+    __tablename__ = 'juridle_dias'
+    usuario_id = Column(CHAR(36), ForeignKey('usuarios.uuid'), primary_key=True)
+    dia = Column(String(10), primary_key=True)
+    rodada_id = Column(String(36), ForeignKey('juridle_rodadas.uuid'), nullable=False, unique=True)
+
+
+class JuridleQuestaoUso(Base):
+    __tablename__ = 'juridle_questao_usos'
+    rodada_id = Column(String(36), ForeignKey('juridle_rodadas.uuid'), primary_key=True)
+    questao_id = Column(String(36), ForeignKey('juridle_questoes.uuid'), primary_key=True)
+    usuario_id = Column(CHAR(36), ForeignKey('usuarios.uuid'), nullable=False)
+    dia = Column(String(10), nullable=False)
+    __table_args__ = (Index('ix_juridle_uso_pessoa_dia', 'usuario_id', 'dia'),)
+
+
+
+class LimiteAutenticacao(Base):
+    __tablename__ = 'auth_limites_tentativas'
+    chave = Column(String(64), primary_key=True)
+    tipo = Column(String(16), nullable=False)
+    falhas = Column(Integer, nullable=False, default=0)
+    ultima_em = Column(DateTime, nullable=False, index=True)
+    bloqueado_ate = Column(DateTime, nullable=True)
+    __table_args__ = (CheckConstraint('falhas >= 0', name='ck_auth_limite_falhas'),)

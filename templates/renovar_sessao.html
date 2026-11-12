@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Renovando sessão | JurisHome</title></head>
+<body><p id="estado">Renovando sua sessão…</p>
+<script src="/static/js/session.js?v=20261028-1"></script>
+<script>
+    window.JurisHomeRenovarSessao().then(resposta => {
+        location.replace(resposta.ok ? {{ destino | tojson }} : '/?sessao=expirada');
+    }).catch(() => { document.getElementById('estado').textContent = 'Não foi possível conectar. Recarregue a página para tentar novamente.'; });
+</script></body></html>

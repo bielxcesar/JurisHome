@@ -1,63 +1,69 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Pesquise matérias jurídicas no JurisHome">
     <title>Pesquisa | JurisHome</title>
+    <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
+    
+    <!-- Tailwind via CDN substituindo os CSS bloqueados -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/homeAdmin.css?v=20260925-1">
-    <link rel="stylesheet" href="/static/css/figma-app.css?v=20260925-2">
-    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+
+    <script>
+        (function() {
+            const temaSalvo = localStorage.getItem("tema_juris");
+            if (temaSalvo === "claro") {
+                document.documentElement.classList.remove("dark");
+                document.documentElement.setAttribute("data-theme", "light");
+            } else {
+                document.documentElement.classList.add("dark");
+                document.documentElement.setAttribute("data-theme", "dark");
+            }
+        })();
+    </script>
+<link rel="stylesheet" href="/static/css/legal.css?v=20261108-documentos">
+<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav">
 </head>
-<body class="search-shell" data-tipo-usuario="{{ tipo_usuario }}">
-    <header class="navbar">
-        <div class="nav-data" id="data-atual" aria-label="Data atual">--/--/----</div>
-        <nav class="nav-menu" aria-label="Navegação principal">
-            <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="nav-link"><i class="fa-solid fa-house" aria-hidden="true"></i> Home</a>
-            <a href="/exibir-mais" class="nav-link"><i class="fa-solid fa-square-plus" aria-hidden="true"></i> Exibir mais</a>
-            {% if tipo_usuario == 'administrador' %}
-            <a href="/admin-feedbacks" class="nav-link"><i class="fa-solid fa-inbox" aria-hidden="true"></i> Feedbacks</a>
-            <a href="/admin/auditoria" class="nav-link"><i class="fa-solid fa-list-check" aria-hidden="true"></i> Auditoria</a>
-            {% else %}
-            <a href="/configuracoes-usuario#feedback" class="nav-link"><i class="fa-solid fa-headset" aria-hidden="true"></i> Suporte</a>
-            {% endif %}
-            <span class="nav-link nav-link-indisponivel" aria-disabled="true"><i class="fa-solid fa-user-group" aria-hidden="true"></i> Sobre nós</span>
-            <a href="/categorias" class="nav-link"><i class="fa-solid fa-newspaper" aria-hidden="true"></i> Categorias</a>
-            <a href="/glossario{% if tipo_usuario != 'administrador' %}?origem=usuario{% endif %}" class="nav-link"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Glossário</a>
-            <a href="/pesquisa" class="nav-link active" aria-current="page"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Pesquisa</a>
-        </nav>
-        <div class="nav-perfil">
-            <button class="avatar-icon" id="btn-perfil" type="button" aria-label="Abrir configurações" aria-expanded="false" aria-controls="dropdown-perfil">
-                <i class="fa-solid fa-user" aria-hidden="true"></i>
+<body class="juris-ui bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col" data-tipo-usuario="{{ tipo_usuario }}">
+    
+    <!-- Barra de Navegação -->
+    {% include "_juris_nav.html" %}
+
+    <!-- Área Principal de Pesquisa -->
+    <main class="w-full max-w-3xl mx-auto px-4 py-12 flex-1 flex flex-col items-center">
+        
+        <!-- Barra de Busca -->
+        <form id="form-pesquisa" class="w-full relative mb-10 group">
+            <i class="fa-solid fa-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-amber-500 text-lg"></i>
+            <input id="campo-pesquisa" name="q" type="search" placeholder="Pesquisa" autocomplete="off" class="w-full bg-[#2a2b30] border border-gray-800 rounded-xl py-4 pl-14 pr-14 text-white text-lg focus:outline-none focus:border-amber-500 focus:bg-[#25262a] transition shadow-lg placeholder-gray-500" maxlength="80">
+            <button type="submit" class="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-500 transition text-xl">
+                <i class="fa-solid fa-arrow-right"></i>
             </button>
-            <div class="menu-perfil-dropdown" id="dropdown-perfil">
-                <a href="{% if tipo_usuario == 'administrador' %}/configuracao{% else %}/configuracoes-usuario{% endif %}" class="dropdown-item">Configurações <i class="fa-solid fa-gear" aria-hidden="true"></i></a>
-                <a href="/termos-de-aceite" class="dropdown-item">Termo de Aceite <i class="fa-regular fa-file-lines" aria-hidden="true"></i></a>
-                <a href="/politica-de-privacidade" class="dropdown-item">Privacidade <i class="fa-solid fa-shield-halved" aria-hidden="true"></i></a>
-                <a href="/" class="dropdown-item btn-desconectar">Sair <i class="fa-solid fa-power-off" aria-hidden="true"></i></a>
-            </div>
-        </div>
-    </header>
-    <main class="search-page" id="conteudo-principal">
-        <form class="search-form" id="form-pesquisa" role="search">
-            <label class="sr-only" for="campo-pesquisa">Pesquisar matérias</label>
-            <div class="search-control">
-                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-                <input id="campo-pesquisa" name="q" type="search" maxlength="120" placeholder="Pesquisa" autocomplete="off">
-                <button type="submit" aria-label="Pesquisar"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
-            </div>
         </form>
-        <section class="search-results" id="search-results" aria-live="polite" hidden>
-            <div class="search-results-heading">
-                <h1>Resultados</h1>
-                <span id="search-count"></span>
+
+        <!-- Container de Resultados -->
+        <section id="search-results" class="w-full hidden">
+            <div class="flex justify-between items-end border-b border-gray-800 pb-3 mb-6">
+                <h1 class="text-xl font-bold text-white">Resultados</h1>
+                <span id="search-count" class="text-sm font-medium text-amber-500"></span>
             </div>
-            <div class="search-result-list" id="search-result-list"></div>
-            <p id="search-empty" hidden>Nenhuma matéria encontrada para esta pesquisa.</p>
+            
+            <div id="search-result-list" class="flex flex-col gap-4">
+                <!-- Cards de resultado injetados pelo JS -->
+            </div>
+            
+            <div id="search-empty" class="hidden text-center py-10">
+                <i class="fa-solid fa-magnifying-glass-minus text-4xl text-gray-600 mb-4 block"></i>
+                <p class="text-gray-400 text-lg">Nenhuma matéria encontrada para esta pesquisa.</p>
+            </div>
         </section>
     </main>
+
     {% include "_legal_links.html" %}
-    <script src="/static/js/pesquisa.js?v=20260925-1"></script>
+
+    <!-- Script de Funcionalidade da Pesquisa com Novo Layout (Figma) -->
+    <script src="/static/js/pesquisa.js?v=20261106-seguro" defer></script>
 </body>
 </html>

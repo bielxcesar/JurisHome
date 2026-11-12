@@ -222,49 +222,6 @@ body.bg-recovery .overlay-login {
     color: #bcbcbc;
 }
 
-.university-lookup {
-    padding-top: 12px;
-    border-top: 1px solid #41321d;
-}
-
-.university-lookup .input-group > label span {
-    color: #bcbcbc;
-    font-weight: 400;
-}
-
-.emec-control {
-    grid-template-columns: minmax(0, 1fr) auto;
-}
-
-.btn-secundario {
-    min-height: 48px;
-    border-color: #db8f00;
-    border-radius: 10px;
-    background: #db8f00;
-    color: #151515;
-}
-
-.emec-result {
-    margin-top: 10px;
-    padding: 12px;
-    border-left: 3px solid #db8f00;
-    background: #1c1c1c;
-    color: #f1f1f1;
-    font-size: 14px;
-    line-height: 1.5;
-    overflow-wrap: anywhere;
-}
-
-.emec-result strong {
-    display: block;
-    color: #f3b32e;
-}
-
-.emec-result p {
-    margin: 3px 0 0;
-    color: #c9c9c9;
-}
-
 .checkbox-lgpd {
     margin-top: 3px;
     font-size: 13px;
@@ -551,10 +508,6 @@ body.bg-recovery .overlay-login {
         border-radius: 32px;
     }
 
-    .emec-control {
-        grid-template-columns: 1fr;
-    }
-
     .auth-panel {
         padding: 18px 16px 20px;
         border-width: 6px;
@@ -594,3 +547,9 @@ body.bg-recovery .overlay-login {
         font-size: 20px;
     }
 }
+
+.cadastro-container{max-width:640px!important}.cadastro-container .form-login{display:grid;grid-template-columns:1fr 1fr;gap:16px}.cadastro-container .input-group{margin:0;min-width:0}.cadastro-container .input-group:has(#cadastro-email),.cadastro-container .input-group:has(#cadastro-interesse),.cadastro-container .checkbox-lgpd,.cadastro-container #auth-message,.cadastro-container .btn-entrar{grid-column:1/-1}.cadastro-container select{display:block;width:100%;padding:13px 14px;color:#f5f6f8;background:#191919;border:1px solid #a57816;border-radius:10px;font:inherit}.cadastro-container small{display:block;font-size:12px;line-height:1.6;margin-top:7px;color:#bfc4cd}.cadastro-container .input-group input{width:100%;box-sizing:border-box}.cadastro-container .password-input-wrap input{padding-right:70px}@media(max-width:560px){.cadastro-container .form-login{grid-template-columns:1fr}.cadastro-container .input-group{grid-column:1/-1}}
+
+body.cadastro-page{flex-direction:column;min-height:100svh;height:auto;overflow-y:auto;background-attachment:fixed;padding-bottom:24px}.cadastro-page .cadastro-container{max-height:none;overflow:visible}.cadastro-page>.legal-footer{position:relative;inset:auto;margin:20px auto 0;z-index:2;text-align:center;max-width:100%;flex-shrink:0}.cadastro-page>.legal-footer nav{justify-content:center}
+
+.auth-lock-panel{padding:18px;margin:14px 0;border:1px solid #e8ae37;border-radius:12px;background:#f5a00e10;text-align:center;grid-column:1/-1}.auth-lock-panel[hidden]{display:none}.auth-lock-panel p{font-size:14px;line-height:1.6;margin:0}.auth-lock-panel strong{display:block;color:#ffca58;font:750 36px/1.3 ui-monospace,monospace;letter-spacing:3px;margin:10px 0}.auth-lock-panel small{display:block;color:#ccc;font-size:12px;line-height:1.6}.form-login button:disabled,.form-2fatores button:disabled{opacity:.6;cursor:not-allowed}

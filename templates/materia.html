@@ -1,163 +1,59 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ materia.titulo }} - JurisHome</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ materia.titulo }} | JurisHome</title>
+    <link rel="icon" href="/static/images/micrologo.png.png" type="image/png">
+    <script>try { document.documentElement.dataset.theme = localStorage.getItem('tema_juris') === 'claro' ? 'light' : 'dark'; document.documentElement.classList.toggle('dark', document.documentElement.dataset.theme !== 'light'); } catch {}</script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
-  
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="{{ url_for('static', path='/css/materia.css') }}?v=20260925-1" />
-  <link rel="stylesheet" href="/static/css/figma-app.css?v=20260925-2">
-
-  <script>
-    (function() {
-      const temaSalvo = localStorage.getItem("tema_juris");
-      if (temaSalvo === "claro") {
-        document.documentElement.classList.remove("dark");
-        document.documentElement.setAttribute("data-theme", "light");
-      } else {
-        document.documentElement.classList.add("dark");
-        document.documentElement.setAttribute("data-theme", "dark");
-      }
-    })();
-  </script>
+    <link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav">
+    <link rel="stylesheet" href="/static/css/materia.css?v=20261030-5-4">
+    <script defer src="/static/js/materia.js?v=20261108-nav"></script>
 </head>
-<body>
-
-  <header class="navbar">
-    
-    <div style="display: flex; align-items: center; gap: 1rem;">
-      <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="btn-voltar">
-        <i class="fa-solid fa-arrow-left"></i>
-        <span>Voltar ao início</span>
-      </a>
-
-      <span id="data-atual" class="nav-data">--/--/----</span>
-    </div>
-
-    <nav class="nav-menu">
-      <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="nav-link"><i class="fa-solid fa-house"></i> Início</a>
-      <a href="/exibir-mais" class="nav-link"><i class="fa-solid fa-square-plus"></i> Exibir mais</a>
-      <a href="{% if tipo_usuario == 'administrador' %}/admin-feedbacks{% else %}/configuracoes-usuario#feedback{% endif %}" class="nav-link"><i class="fa-solid fa-headset"></i> Feedback e Suporte</a>
-      <span class="nav-link nav-link-indisponivel" aria-disabled="true" title="Página ainda não disponível"><i class="fa-solid fa-user-group"></i> Sobre nós</span>
-      <a href="/categorias" class="nav-link active"><i class="fa-solid fa-newspaper"></i> Categorias</a>
-      <a href="/pesquisa" class="nav-link"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Pesquisa</a>
-    </nav>
-
-    <div class="nav-perfil">
-      <div id="btn-perfil" class="avatar-icon">
-        <i class="fa-solid fa-user-group"></i>
-      </div>
-
-      <div id="dropdown-perfil" class="menu-perfil-dropdown hidden">
-        <a href="{% if tipo_usuario == 'administrador' %}/configuracao{% else %}/configuracoes-usuario{% endif %}" class="dropdown-item">Perfil <i class="fa-solid fa-user"></i></a>
-        <a href="{% if tipo_usuario == 'administrador' %}/admin-feedbacks{% else %}/configuracoes-usuario#feedback{% endif %}" class="dropdown-item">Feedback e suporte <i class="fa-solid fa-headset"></i></a>
-        <a href="/" class="dropdown-item btn-desconectar">Desconectar <i class="fa-solid fa-power-off"></i></a>
-      </div>
-    </div>
-
-  </header>
-
-  <main class="main-content">
-    
-    <h1 class="titulo-materia">
-      {{ materia.titulo }}
-    </h1>
-
-    {% if materia.sub_titulo %}
-      <h2 class="subtitulo-materia">
-        {{ materia.sub_titulo }}
-      </h2>
-    {% endif %}
-
-    <div class="meta-info">
-      <div>
-        <span>Divulgado por: <strong class="autor-destaque">{{ materia.autor.nome if materia.autor else 'Redação' }}</strong></span>
-        <span style="margin: 0 0.5rem;">•</span>
-        <span>{{ materia.criado_em.strftime('%d/%m/%Y %H:%M') if materia.criado_em else '' }}</span>
-      </div>
-
-      {% if materia.fonte_original %}
-        <div>
-          <span>Fonte original: </span>
-          <a href="{{ materia.fonte_original }}" target="_blank" rel="noopener noreferrer">
-            {{ materia.fonte_original }}
-          </a>
+<body class="juris-ui materia-shell">
+    <a class="materia-skip" href="#conteudo-materia">Ir para o conteúdo da matéria</a>
+    {% include "_juris_nav.html" %}
+    <main class="materia-main" id="conteudo-principal">
+        <nav class="materia-breadcrumb" aria-label="Localização"><a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}">Home</a><span aria-hidden="true">/</span><a href="/exibir-mais">Matérias</a><span aria-hidden="true">/</span><span>{{ materia.categoria.nome if materia.categoria else 'Direito' }}</span></nav>
+        <header class="materia-heading" id="visao-geral">
+            <div class="materia-kicker"><span>{{ materia.categoria.nome if materia.categoria else 'Direito' }}</span><small>Conteúdo jurídico</small></div>
+            <h1>{{ materia.titulo }}</h1>
+            {% if materia.sub_titulo %}<p class="materia-subtitle">{{ materia.sub_titulo }}</p>{% endif %}
+            <div class="materia-meta">
+                <span><i class="fa-solid fa-pen-nib" aria-hidden="true"></i> Curadoria: <strong>{{ materia.autor.nome if materia.autor else 'Equipe JurisHome' }}</strong></span>
+                {% if materia.criado_em %}<time datetime="{{ materia.criado_em.isoformat() }}"><i class="fa-regular fa-calendar" aria-hidden="true"></i> {{ materia.criado_em.strftime('%d/%m/%Y') }}</time>{% endif %}
+                <span><i class="fa-regular fa-clock" aria-hidden="true"></i> {{ tempo_leitura }} min de leitura</span>
+                <div class="materia-reading-controls" role="group" aria-label="Tamanho do texto">
+                    <button type="button" id="materia-font-decrease" aria-label="Diminuir tamanho do texto">A−</button>
+                    <button type="button" id="materia-font-increase" aria-label="Aumentar tamanho do texto">A+</button>
+                </div>
+            </div>
+        </header>
+        <div class="materia-layout">
+            <div class="materia-column">
+                {% include "_materia_editorial.html" %}
+                <section class="materia-share" id="compartilhar" aria-labelledby="titulo-compartilhar">
+                    <div><h2 id="titulo-compartilhar">Compartilhe com seu grupo de estudos</h2><p>Envie o link para que outras pessoas consultem a matéria.</p></div>
+                    <div class="materia-share-actions">
+                        <a href="{{ compartilhar_whatsapp }}" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> WhatsApp</a>
+                        <a href="{{ compartilhar_email }}"><i class="fa-regular fa-envelope" aria-hidden="true"></i> E-mail</a>
+                        <button type="button" id="btn-copiar-link"><i class="fa-solid fa-link" aria-hidden="true"></i> Copiar link</button>
+                    </div>
+                    <p id="msg-copiado" role="status" aria-live="polite" hidden></p>
+                </section>
+                {% if tags %}<section class="materia-tags" aria-labelledby="materia-tags-title"><h2 id="materia-tags-title">Tags da matéria</h2>{% for tag in tags %}<span>{{ tag }}</span>{% endfor %}</section>{% endif %}
+            </div>
+            <aside class="materia-sidebar" aria-labelledby="materia-sidebar-title">
+                <h2 id="materia-sidebar-title">Nesta matéria</h2>
+                <nav aria-label="Seções da matéria"><a href="#visao-geral">01 <span>Visão geral</span></a><a href="#conteudo-materia">02 <span>Conteúdo</span></a><a href="#compartilhar">03 <span>Compartilhar</span></a></nav>
+                {% if fonte_materia %}<a class="materia-source" href="{{ fonte_materia }}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Consultar fonte original</a>{% endif %}
+                <p>Material selecionado para apoiar seus estudos. Consulte a fonte original para verificar o contexto completo.</p>
+            </aside>
         </div>
-      {% endif %}
-    </div>
-
-    {% if materia.imagem_corpo or materia.imagem_miniatura %}
-      <figure class="figura-materia">
-        <img 
-          src="{{ materia.imagem_corpo or materia.imagem_miniatura }}" 
-          alt="{{ materia.titulo }}" 
-        />
-        {% if materia.fonte_imagem %}
-          <figcaption class="legenda-imagem">
-            Imagem proporcionada por: {{ materia.fonte_imagem }}
-          </figcaption>
-        {% endif %}
-      </figure>
-    {% endif %}
-
-    <article class="corpo-artigo">
-      {{ materia.corpo_texto }}
-    </article>
-<div class="share-container">
-  <span class="share-title">Compartilhar:</span>
-  
-  <div class="share-buttons">
-    <a href="https://api.whatsapp.com/send?text={{ materia.titulo|urlencode }}%20{{ request.url }}" 
-       target="_blank" 
-       rel="noopener noreferrer" 
-       class="btn-share btn-whatsapp" 
-       title="Compartilhar no WhatsApp">
-      <i class="fa-brands fa-whatsapp"></i>
-    </a>
-
-    <a href="mailto:?subject={{ materia.titulo|urlencode }}&body=Confira%20esta%20mat%C3%A9ria:%20{{ request.url }}" 
-       class="btn-share btn-email" 
-       title="Compartilhar por E-mail">
-      <i class="fa-solid fa-envelope"></i>
-    </a>
-
-    <button type="button" id="btn-copiar-link" class="btn-share btn-copiar" title="Copiar Link">
-      <i class="fa-solid fa-share-nodes"></i>
-    </button>
-  </div>
-
-  <span id="msg-copiado" class="msg-copiado hidden">
-    <i class="fa-solid fa-check"></i> Link copiado com sucesso!
-  </span>
-</div>
-
-    <footer>
-      {% if tags %}
-        <div class="tags-container">
-          <span style="font-weight: 700; font-size: 0.9rem;">Tags:</span>
-          {% for tag in tags %}
-            <span class="tag-item">
-              {{ tag }}
-            </span>
-          {% endfor %}
-        </div>
-      {% endif %}
-
-      {% if materia.fonte_original %}
-        <p style="font-size: 0.8rem; color: var(--text-muted);">
-          Consulte a matéria fonte original: 
-          <a href="{{ materia.fonte_original }}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color);">
-            {{ materia.fonte_original }}
-          </a>
-        </p>
-      {% endif %}
-    </footer>
-
-  </main>
-
-  {% include "_legal_links.html" %}
-  <script src="{{ url_for('static', path='/js/materia.js') }}"></script>
+        <p id="materia-alert" role="alert" hidden></p>
+    </main>
+    {% include "_legal_links.html" %}
 </body>
 </html>

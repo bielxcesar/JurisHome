@@ -1,6 +1,8 @@
+from services.validacao import ModeloSeguro
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from auth.sessions import garantir_transacao
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
@@ -9,7 +11,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from feedback_database import get_feedback_db
 from auth.security import get_current_user
-from model.models import FeedbackAtendimento, Usuario
+from model.models import FeedbackAtendimento, Usuario, TipoUsuario
 from services.auditoria import registrar_auditoria
 
 
@@ -29,11 +31,11 @@ STATUS = ("Recebido", "Em análise", "Respondido", "Resolvido", "Arquivado")
 PRIORIDADES = ("Baixa", "Normal", "Alta", "Urgente")
 
 
-class FeedbackCriacao(BaseModel):
+class FeedbackCriacao(ModeloSeguro):
     tipo: str
     assunto: str = Field(min_length=5, max_length=120)
     mensagem: str = Field(min_length=10, max_length=2000)
-    avaliacao: int | None = Field(default=None, ge=1, le=5)
+    avaliacao: int | None = Field(default=None, ge=1, le=5, strict=True)
 
     @field_validator("tipo")
     @classmethod
@@ -59,7 +61,7 @@ class FeedbackCriacao(BaseModel):
         return valor
 
 
-class AlteracaoStatus(BaseModel):
+class AlteracaoStatus(ModeloSeguro):
     status: str
 
     @field_validator("status")
@@ -70,7 +72,7 @@ class AlteracaoStatus(BaseModel):
         return valor
 
 
-class AlteracaoPrioridade(BaseModel):
+class AlteracaoPrioridade(ModeloSeguro):
     prioridade: str
 
     @field_validator("prioridade")
@@ -81,13 +83,16 @@ class AlteracaoPrioridade(BaseModel):
         return valor
 
 
-class MensagemAdministrativa(BaseModel):
+class MensagemAdministrativa(ModeloSeguro):
     mensagem: str = Field(min_length=1, max_length=2000)
 
     @field_validator("mensagem")
     @classmethod
     def limpar_mensagem(cls, valor: str) -> str:
-        return valor.strip()
+        valor = valor.strip()
+        if not valor:
+            raise ValueError("Digite uma mensagem antes de enviar.")
+        return valor
 
 
 def _agora() -> datetime:
@@ -115,7 +120,7 @@ def _salvar_json(valor: list[dict]) -> str:
 def _gerar_protocolo(db: Session) -> str:
     data = _agora().strftime("%Y%m%d")
     while True:
-        sufixo = str(uuid.uuid4().int)[-4:]
+        sufixo = uuid.uuid4().hex[:8].upper()
         protocolo = f"JH-{data}-{sufixo}"
         existe = db.query(FeedbackAtendimento).filter_by(protocolo=protocolo).first()
         if not existe:
@@ -188,8 +193,6 @@ def _confirmar_alteracao(db: Session, feedback: FeedbackAtendimento) -> dict:
 
 
 def _auditar_se_disponivel(audit_db, **dados) -> None:
-    # As funções também são chamadas diretamente pelos testes unitários, onde
-    # o valor padrão ainda é um objeto Depends em vez de uma sessão real.
     if isinstance(audit_db, Session):
         registrar_auditoria(audit_db, commit=True, **dados)
 
@@ -202,6 +205,17 @@ def criar_feedback(
     audit_db: Session = Depends(get_db),
 ):
     agora = _agora()
+    if isinstance(usuario, Usuario):
+        garantir_transacao(db)
+        recentes = db.query(FeedbackAtendimento).filter(
+            FeedbackAtendimento.usuario_id == usuario.uuid,
+            FeedbackAtendimento.criado_em >= agora - timedelta(minutes=10),
+        ).all()
+        for item in recentes:
+            if (item.tipo, item.assunto, item.mensagem, item.avaliacao) == (dados.tipo, dados.assunto, dados.mensagem, dados.avaliacao):
+                return _serializar(item, incluir_interno=False)
+        if len(recentes) >= 5:
+            raise HTTPException(429, "Você já enviou cinco atendimentos em dez minutos. Aguarde um pouco ou complemente um protocolo existente.")
     feedback_id = f"fb-{uuid.uuid4()}"
     historico = [
         {
@@ -252,6 +266,55 @@ def criar_feedback(
 def listar_feedbacks(db: Session = Depends(get_feedback_db)):
     registros = db.query(FeedbackAtendimento).order_by(FeedbackAtendimento.criado_em.desc()).all()
     return [_serializar(item) for item in registros]
+
+
+@public_router.get("/me")
+def listar_meus_feedbacks(
+    db: Session = Depends(get_feedback_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    registros = db.query(FeedbackAtendimento).filter(
+        FeedbackAtendimento.usuario_id == usuario.uuid,
+    ).order_by(FeedbackAtendimento.criado_em.desc()).all()
+    return [_serializar(item, incluir_interno=False) for item in registros]
+
+
+@public_router.get("/resumo")
+def resumo_atendimentos(db: Session = Depends(get_feedback_db), usuario: Usuario = Depends(get_current_user)):
+    if usuario.tipo_usuario == TipoUsuario.ADMINISTRADOR:
+        quantidade = db.query(FeedbackAtendimento).filter_by(novo=True, arquivado=False).count()
+        return {"quantidade": quantidade, "mensagem": f"Há {quantidade} atendimento(s) novo(s) aguardando leitura", "destino": "/admin-feedbacks"}
+    quantidade = db.query(FeedbackAtendimento).filter_by(usuario_id=usuario.uuid, status="Respondido").count()
+    return {"quantidade": quantidade, "mensagem": f"A equipe respondeu {quantidade} atendimento(s) seu(s)", "destino": "/configuracoes-usuario#feedback"}
+
+
+@public_router.post("/{feedback_id}/mensagens")
+def complementar_feedback(feedback_id: str, dados: MensagemAdministrativa,
+                         db: Session = Depends(get_feedback_db), usuario: Usuario = Depends(get_current_user),
+                         audit_db: Session = Depends(get_db)):
+    garantir_transacao(db)
+    feedback = db.query(FeedbackAtendimento).filter_by(id=feedback_id, usuario_id=usuario.uuid).with_for_update().first()
+    if not feedback:
+        raise HTTPException(404, "Atendimento não encontrado.")
+    if feedback.arquivado:
+        raise HTTPException(409, "Este protocolo foi arquivado. Abra um novo atendimento.")
+    respostas = _ler_json(feedback.respostas_json)
+    minhas = [r for r in respostas if r.get("papel") == "leitor"]
+    if minhas and minhas[-1]["mensagem"] == dados.mensagem:
+        return _serializar(feedback, incluir_interno=False)
+    recentes = [r for r in minhas if datetime.fromisoformat(r["criadoEm"]) >= _agora() - timedelta(minutes=10)]
+    if len(recentes) >= 5:
+        raise HTTPException(429, "Aguarde alguns minutos antes de enviar mais mensagens neste protocolo.")
+    respostas.append({"id": f"msg-{uuid.uuid4()}", "autor": usuario.nome, "papel": "leitor",
+                      "mensagem": dados.mensagem, "criadoEm": _iso(_agora())})
+    feedback.respostas_json = _salvar_json(respostas)
+    feedback.status = "Em análise"
+    feedback.novo = True
+    _adicionar_historico(feedback, "mensagem_usuario", "O usuário complementou o atendimento.", "publica")
+    _confirmar_alteracao(db, feedback)
+    _auditar_se_disponivel(audit_db, acao="feedback_complementado", recurso_tipo="feedback", recurso_id=feedback.id,
+                          resultado="sucesso", usuario=usuario)
+    return _serializar(feedback, incluir_interno=False)
 
 
 @admin_router.get("/{feedback_id}")

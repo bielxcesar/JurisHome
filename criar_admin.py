@@ -1,17 +1,20 @@
-"""Cria o primeiro administrador do JurisHome de forma explícita e segura.
+"""Cria o primeiro administrador como root e os seguintes como suporte.
 
-Defina JURISHOME_ADMIN_EMAIL e JURISHOME_ADMIN_SENHA antes de executar.
-Nenhuma credencial padrão é gravada no código.
+Defina JURISHOME_ADMIN_EMAIL, JURISHOME_ADMIN_SENHA e JURISHOME_ADMIN_NOME 
+antes de executar, ou informe os dados interativamente no terminal.
 """
 
 import os
 import getpass
-import re
 import sys
 
 from auth.security import hash_senha
 from database import Base, SessionLocal, engine
-from model.models import TipoUsuario, Usuario  # registra os modelos no metadata
+from auth.sessions import garantir_transacao
+from services.root_unico import garantir_root_unico
+from model.models import TipoUsuario, Usuario
+from services.validacao import email_valido, nome_pessoa, nova_senha
+from sqlalchemy.exc import SQLAlchemyError
 
 
 def obrigatorio(nome: str, prompt: str, oculto: bool = False) -> str:
@@ -27,32 +30,40 @@ def main() -> int:
     try:
         email = obrigatorio("JURISHOME_ADMIN_EMAIL", "E-mail do administrador: ").lower()
         senha = obrigatorio("JURISHOME_ADMIN_SENHA", "Senha do administrador: ", oculto=True)
-        if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
-            raise ValueError("Informe um e-mail válido para o administrador.")
-        nome = os.getenv("JURISHOME_ADMIN_NOME", "Administrador JurisHome").strip()
-        if len(nome) < 3:
-            raise ValueError("JURISHOME_ADMIN_NOME deve ter ao menos 3 caracteres.")
-        if len(senha) < 8:
-            raise ValueError("JURISHOME_ADMIN_SENHA deve ter ao menos 8 caracteres.")
+        
+        nome = obrigatorio("JURISHOME_ADMIN_NOME", "Nome do administrador (publicador): ")
+        
+        nome = nome_pessoa(nome)
+        email = email_valido(email)
+        nova_senha(senha)
+
     except (EOFError, ValueError) as erro:
         print(f"Erro: {erro}", file=sys.stderr)
         return 2
 
-    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
+        Base.metadata.create_all(bind=engine)
+        garantir_root_unico(engine)
+        garantir_transacao(db)
+        root = db.query(Usuario).filter(Usuario.e_root_admin != False).first()
+        if root:
+            if root.email.lower() == email:
+                print("O administrador principal já está configurado. Nenhum dado foi alterado.")
+                return 0
+        primeiro_root = root is None
         existente = db.query(Usuario).filter(Usuario.email == email).first()
         if existente and existente.tipo_usuario != TipoUsuario.ADMINISTRADOR:
             print("Erro: o e-mail informado já pertence a um estudante.", file=sys.stderr)
             return 1
         if existente and existente.senha_hash:
-            print("Já existe um administrador com senha configurada para este e-mail.")
-            return 0
+            print("Erro: este e-mail já pertence a uma conta configurada. O script não promove contas de suporte automaticamente.", file=sys.stderr)
+            return 1
 
         if existente:
             existente.nome = nome
             existente.senha_hash = hash_senha(senha)
-            existente.e_root_admin = True
+            existente.e_root_admin = primeiro_root
         else:
             db.add(
                 Usuario(
@@ -60,13 +71,18 @@ def main() -> int:
                     email=email,
                     senha_hash=hash_senha(senha),
                     tipo_usuario=TipoUsuario.ADMINISTRADOR,
-                    e_root_admin=True,
+                    e_root_admin=primeiro_root,
                     consentimento_lgpd=True,
                 )
             )
         db.commit()
-        print("Administrador configurado com sucesso.")
+        perfil = "principal (root)" if primeiro_root else "de suporte (sem privilégios root)"
+        print(f"Administrador {perfil} criado. O primeiro acesso exige a configuração do 2FA.")
         return 0
+    except (SQLAlchemyError, RuntimeError):
+        db.rollback()
+        print("Erro: não foi possível cadastrar a conta. Verifique e-mail duplicado ou criação simultânea e tente novamente; a regra de root único foi preservada.", file=sys.stderr)
+        return 1
     finally:
         db.close()
 

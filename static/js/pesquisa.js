@@ -1,86 +1,13 @@
-(function () {
-    "use strict";
-
-    document.addEventListener("DOMContentLoaded", () => {
-        document.getElementById("data-atual").textContent = new Intl.DateTimeFormat("pt-BR").format(new Date());
-        configurarMenuPerfil();
-        configurarSaida();
-        const parametros = new URLSearchParams(window.location.search);
-        const termo = parametros.get("q") || "";
-        document.getElementById("campo-pesquisa").value = termo;
-        if (termo.trim()) pesquisar(termo.trim());
-    });
-
-    document.getElementById("form-pesquisa").addEventListener("submit", (evento) => {
-        evento.preventDefault();
-        const termo = document.getElementById("campo-pesquisa").value.trim();
-        const destino = new URL(window.location.href);
-        if (termo) destino.searchParams.set("q", termo);
-        else destino.searchParams.delete("q");
-        history.replaceState({}, "", destino);
-        if (termo) pesquisar(termo);
-        else document.getElementById("search-results").hidden = true;
-    });
-
-    async function pesquisar(termo) {
-        const area = document.getElementById("search-results");
-        const lista = document.getElementById("search-result-list");
-        const vazio = document.getElementById("search-empty");
-        const contador = document.getElementById("search-count");
-        area.hidden = false;
-        lista.replaceChildren();
-        vazio.hidden = true;
-        contador.textContent = "Buscando...";
-        try {
-            const resposta = await fetch(`/api/conteudos?busca=${encodeURIComponent(termo)}`);
-            const materias = await resposta.json();
-            if (!resposta.ok) throw new Error(materias.detail || "Não foi possível concluir a pesquisa.");
-            contador.textContent = `${materias.length} ${materias.length === 1 ? "resultado" : "resultados"}`;
-            vazio.hidden = materias.length > 0;
-            materias.forEach((materia) => {
-                const link = document.createElement("a");
-                link.className = "search-result";
-                link.href = `/materia/${encodeURIComponent(materia.uuid)}`;
-                const categoria = document.createElement("span");
-                categoria.textContent = materia.categoria || "Direito";
-                const titulo = document.createElement("h2");
-                titulo.textContent = materia.titulo;
-                const resumo = document.createElement("p");
-                resumo.textContent = materia.resumo_home || materia.sub_titulo || "";
-                const data = document.createElement("time");
-                data.textContent = materia.criado_em || "";
-                link.append(categoria, titulo, resumo, data);
-                lista.append(link);
-            });
-        } catch (erro) {
-            contador.textContent = "";
-            vazio.hidden = false;
-            vazio.textContent = erro.message;
-        }
-    }
-
-    function configurarMenuPerfil() {
-        const botao = document.getElementById("btn-perfil");
-        const menu = document.getElementById("dropdown-perfil");
-        botao.addEventListener("click", (evento) => {
-            evento.stopPropagation();
-            const aberto = menu.classList.toggle("ativo");
-            botao.setAttribute("aria-expanded", String(aberto));
-        });
-        document.addEventListener("click", (evento) => {
-            if (!menu.contains(evento.target) && !botao.contains(evento.target)) {
-                menu.classList.remove("ativo");
-                botao.setAttribute("aria-expanded", "false");
-            }
-        });
-    }
-
-    function configurarSaida() {
-        document.querySelectorAll(".btn-desconectar").forEach((link) => {
-            link.addEventListener("click", (evento) => {
-                evento.preventDefault();
-                fetch("/api/auth/logout", { method: "POST" }).finally(() => { window.location.href = "/"; });
-            });
-        });
-    }
+(() => {
+'use strict';
+const $=id=>document.getElementById(id);
+const criar=(tag,texto,classe)=>{const e=document.createElement(tag);if(texto!==undefined)e.textContent=texto;if(classe)e.className=classe;return e;};
+let pedido=0,controlador;
+function imagemSegura(v){if(typeof v!=='string')return null;if(/^data:image\/(jpeg|png|webp);base64,[a-zA-Z0-9+/=]+$/.test(v))return v;try{const u=new URL(v,location.origin);return ['http:','https:'].includes(u.protocol)?u.href:null;}catch(_){return null;}}
+async function pesquisar(termo){const atual=++pedido;controlador?.abort();controlador=new AbortController();const area=$('search-results'),lista=$('search-result-list'),vazio=$('search-empty'),contador=$('search-count');area.hidden=false;area.classList.remove('hidden');lista.replaceChildren();vazio.hidden=true;vazio.classList.add('hidden');contador.textContent='Buscando…';try{const r=await fetch('/api/conteudos?busca='+encodeURIComponent(termo),{signal:controlador.signal,credentials:'same-origin'});const itens=await r.json();if(atual!==pedido)return;if(!r.ok)throw new Error(typeof itens.detail==='string'?itens.detail:'Confira a busca: até 80 caracteres, sem HTML ou estruturas JSON.');contador.textContent=`${itens.length} resultado${itens.length===1?'':'s'}`;vazio.hidden=itens.length>0;vazio.classList.toggle('hidden',itens.length>0);if(!itens.length)vazio.textContent='Nenhuma matéria encontrada para esta pesquisa.';for(const m of itens){const a=criar('a',undefined,'flex items-center gap-4 p-3 bg-[#2a2b30] border border-gray-800 rounded-xl hover:border-amber-500 transition group');a.href='/materia/'+encodeURIComponent(m.uuid);const capa=criar('div',undefined,'w-28 h-20 sm:w-36 sm:h-24 flex-shrink-0 bg-[#1e1e1e] rounded-lg overflow-hidden');const segura=imagemSegura(m.imagem_miniatura);if(segura){const img=criar('img');img.alt='Capa da matéria';img.loading='lazy';img.className='w-full h-full object-cover';img.src=segura;capa.append(img);}const info=criar('div',undefined,'flex-1 min-w-0');info.append(criar('span',m.categoria||'Direito','text-xs font-bold text-amber-500 uppercase'),criar('h3',m.titulo,'text-base font-bold text-gray-200 break-words'));if(m.resumo_home||m.sub_titulo)info.append(criar('p',m.resumo_home||m.sub_titulo,'text-sm text-gray-400 break-words'));a.append(capa,info);lista.append(a);}}catch(e){if(e.name==='AbortError'||atual!==pedido)return;contador.textContent='';vazio.hidden=false;vazio.classList.remove('hidden');vazio.textContent=e.message;}}
+const perfil=$('btn-perfil'),menu=$('dropdown-perfil');function fechar(){menu.classList.add('hidden');perfil.setAttribute('aria-expanded','false');}if(perfil&&menu){perfil.addEventListener('click',()=>{menu.classList.toggle('hidden');perfil.setAttribute('aria-expanded',String(!menu.classList.contains('hidden')));});document.addEventListener('click',e=>{if(!menu.contains(e.target)&&!perfil.contains(e.target))fechar();});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!menu.classList.contains('hidden')){fechar();perfil.focus();}});}
+const data=$('data-atual');if(data)data.textContent=new Intl.DateTimeFormat('pt-BR').format(new Date());
+$('form-pesquisa').addEventListener('submit',e=>{e.preventDefault();const termo=$('campo-pesquisa').value.trim();const u=new URL(location.href);if(termo)u.searchParams.set('q',termo);else u.searchParams.delete('q');history.replaceState({},'',u);if(termo)pesquisar(termo);else{++pedido;controlador?.abort();$('search-results').hidden=true;}});
+let saindo=false;document.querySelectorAll('.btn-desconectar').forEach(b=>b.addEventListener('click',async e=>{e.preventDefault();if(saindo)return;saindo=true;try{const r=await fetch('/api/auth/logout',{method:'POST',credentials:'same-origin'});if(!r.ok)throw new Error();location.assign('/');}catch(_){$('search-results').hidden=false;$('search-results').classList.remove('hidden');$('search-empty').hidden=false;$('search-empty').classList.remove('hidden');$('search-empty').textContent='Não foi possível encerrar sua sessão. Tente novamente.';}finally{saindo=false;}}));
+const termo=new URLSearchParams(location.search).get('q')||'';$('campo-pesquisa').value=termo;if(termo)pesquisar(termo);
 })();

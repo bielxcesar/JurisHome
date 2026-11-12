@@ -1,0 +1,132 @@
+{% from "_voltar_principal.html" import voltar_principal %}
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Juridle | JurisHome</title>
+        <link rel="icon" href="/static/images/micrologo.png.png">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link rel="stylesheet" href="/static/css/legal.css">
+        <link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav">
+        <link rel="stylesheet" href="/static/css/home.css?v=20261108-nav">
+        <link rel="stylesheet" href="/static/css/juridle.css?v=20261108-metricas">
+        <script>(()=>{try{document.documentElement.dataset.theme=localStorage.getItem('tema_juris')==='claro'?'light':'dark';}catch(_){}})();</script>
+        <script src="/static/js/session.js" defer></script>
+        <script src="/static/js/curiosidades.js?v=20261108-nav" defer></script>
+        <script src="/static/js/juridle.js?v=20261108-metricas" defer></script>
+    </head>
+    <body class="juris-ui home-shell">
+        <a class="home-skip" href="#conteudo-principal">Pular para o conteúdo</a>
+        {% include "_juris_nav.html" %}
+        <main class="quiz-page" id="conteudo-principal">
+            <header class="quiz-header">
+                <div>
+                    <span class="home-eyebrow">SEU DESAFIO DIÁRIO DE DIREITO</span>
+                    <h1>
+                        <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+                        Juridle
+                        <span class="quiz-title-dot">.</span>
+                    </h1>
+                    <p>Cinco perguntas. Uma pausa para aprender algo novo.</p>
+                </div>
+                {% if tipo_usuario == 'administrador' %}
+                    <a class="quiz-outline" href="/juridle/ampliar">
+                        <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                        Ampliar game
+                    </a>
+                {% endif %}
+            </header>
+            <p id="home-aviso" role="status" hidden></p>
+            <div class="quiz-metrics" aria-label="Seu progresso">
+                <div>
+                    <i class="fa-solid fa-fire-flame-curved" aria-hidden="true"></i>
+                    <span>
+                        Frequência
+                        <strong id="j-frequencia">—</strong>
+                    </span>
+                </div>
+                <div>
+                    <i id="j-coroa-icone" class="fa-solid fa-crown" aria-hidden="true" style="opacity:.22;filter:grayscale(1)"></i>
+                    <span>
+                        Coroas diárias
+                        <strong id="j-coroas">—</strong>
+                        <small id="j-coroas-recorde"></small>
+                    </span>
+                </div>
+            </div>
+            <section class="quiz-arena" aria-label="Palco do Juridle">
+                <div class="quiz-arena-top">
+                    <span>
+                        <span class="quiz-live-dot"></span>
+                        DESAFIO DO DIA
+                    </span>
+                    <span id="j-dia">Horário de Brasília</span>
+                </div>
+                <div id="j-inicio" class="quiz-welcome">
+                    <div class="quiz-emblem" aria-hidden="true">
+                        <i class="fa-solid fa-scale-balanced"></i>
+                    </div>
+                    <span class="quiz-kicker">CONHECIMENTO É A SUA CONQUISTA</span>
+                    <h2>Vamos testar o que você sabe?</h2>
+                    <p>Uma pergunta por vez, quatro alternativas e uma resposta correta. Depois de responder, descubra a explicação.</p>
+                    <button type="button" class="quiz-primary" id="j-play" disabled>Carregando desafio…</button>
+                    <p class="quiz-small" id="j-disponibilidade">Uma rodada por dia · 5 perguntas · sem cronômetro</p>
+                </div>
+                <section id="j-jogo" hidden tabindex="-1" aria-labelledby="j-pergunta-titulo">
+                    <div class="quiz-question-meta">
+                        <span id="j-andamento"></span>
+                        <div id="j-passos" class="quiz-steps" aria-label="Progresso da rodada"></div>
+                    </div>
+                    <div class="quiz-question-box">
+                        <span class="quiz-kicker">LEIA COM ATENÇÃO</span>
+                        <h2 id="j-pergunta-titulo"></h2>
+                        <p id="j-definicao"></p>
+                        <figure id="j-figura" hidden>
+                            <img id="j-imagem" alt="">
+                            <figcaption id="j-credito"></figcaption>
+                        </figure>
+                    </div>
+                    <div class="quiz-options" id="j-opcoes" role="group" aria-label="Escolha uma resposta"></div>
+                    <div id="j-retorno" class="quiz-feedback" role="status" hidden>
+                        <h3 id="j-resultado"></h3>
+                        <p id="j-explicacao"></p>
+                        <p id="j-exemplo"></p>
+                        <a id="j-fonte" target="_blank" rel="noopener noreferrer">Consultar fonte ↗</a>
+                        <button class="quiz-primary" type="button" id="j-proxima">Próxima pergunta →</button>
+                    </div>
+                </section>
+                <section id="j-final" class="quiz-welcome" hidden tabindex="-1" aria-labelledby="j-final-titulo">
+                    <div class="quiz-emblem" aria-hidden="true">
+                        <i class="fa-solid fa-flag-checkered"></i>
+                    </div>
+                    <span class="quiz-kicker">DESAFIO DO DIA FINALIZADO</span>
+                    <h2 id="j-final-titulo"></h2>
+                    <p id="j-final-texto"></p>
+                    <strong class="quiz-score" id="j-placar"></strong>
+                    <p class="quiz-small">Seu próximo desafio chega na próxima virada, às 5h de Brasília.</p>
+                    <a class="quiz-outline" href="/glossario">Continuar estudando ↗</a>
+                </section>
+                <div class="quiz-arena-footer">
+                    <i class="fa-solid fa-lightbulb" aria-hidden="true"></i>
+                    Aprender é o objetivo. Sem dinheiro, competição ou ranking.
+                </div>
+            </section>
+            <div class="quiz-bottom-grid">
+                <details class="quiz-panel">
+                    <summary>Como funciona o Juridle?</summary>
+                    <p>Você tem uma rodada com cinco perguntas por dia, tanto como leitor quanto como administrador. Pode sair e continuar até a próxima virada, às 5h de Brasília. Começar a rodada já reserva o desafio do dia.</p>
+                    <p>As perguntas e a ordem das alternativas são sorteadas pelo servidor. Questões aprovadas não se repetem para você durante 30 dias. Se faltarem cinco questões inéditas, o jogo aguarda a ampliação do banco.</p>
+                    <p>Concluir rodadas em dias consecutivos aumenta sua frequência. Acertar as cinco perguntas vale uma coroa. A coroa apaga às 5h. Você tem até a próxima virada para renová-la e manter a sequência. Seu recorde pessoal fica salvo.</p>
+                </details>
+                <section class="quiz-panel">
+                    <h2>Suas últimas rodadas</h2>
+                    <ul id="j-historico">
+                        <li>Carregando histórico…</li>
+                    </ul>
+                </section>
+            </div>
+        </main>
+        {% include "_legal_links.html" %}
+    </body>
+</html>

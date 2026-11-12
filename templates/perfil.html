@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Perfil do usuário no JurisHome">
+    <title>Perfil | JurisHome</title>
+    <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        (function() {
+            const temaSalvo = localStorage.getItem("tema_juris");
+            if (temaSalvo === "claro") {
+                document.documentElement.classList.remove("dark");document.documentElement.dataset.theme="light";
+            } else {
+                document.documentElement.classList.add("dark");document.documentElement.dataset.theme="dark";
+            }
+        })();
+    </script>
+<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav"><link rel="stylesheet" href="/static/css/home.css?v=20261108-nav"><script src="/static/js/session.js" defer></script><script src="/static/js/curiosidades.js?v=20261108-nav" defer></script>
+{% if mostrar_dashboard %}<link rel="stylesheet" href="/static/css/perfil-dashboard.css?v=20261107-1"><script src="/static/js/perfil-dashboard.js?v=20261107-1" defer></script>{% endif %}
+</head>
+<body class="juris-ui home-shell bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
+
+{% include "_juris_nav.html" %}
+
+    <p id="home-aviso" role="status" hidden></p>
+    <main class="w-full max-w-4xl mx-auto px-4 py-12 flex-1">
+        
+        <div class="flex items-center gap-4 mb-6">
+            <button onclick="history.back()" class="w-10 h-10 bg-[#25262a] border border-gray-600 rounded-full text-gray-300 hover:border-amber-500 hover:text-amber-500 transition flex items-center justify-center text-lg shadow-lg">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <h1 class="text-2xl font-bold text-white tracking-wide">Perfil</h1>
+        </div>
+
+        <div class="bg-[#25262a] border-[3px] border-amber-500 rounded-3xl p-6 md:p-10 shadow-[0_10px_30px_rgba(0,0,0,0.5)] relative">
+            
+            <div id="toast-sucesso" class="hidden absolute top-6 right-6 bg-[#bbf7d0] text-green-800 font-bold px-4 py-2 rounded-lg text-sm shadow-lg flex items-center gap-2 transition-all duration-300">
+                <i class="fa-solid fa-check-circle"></i> Alterado com sucesso
+            </div>
+
+            <div class="flex flex-col md:flex-row items-center md:items-start gap-6 mb-10 border-b border-gray-700 pb-8">
+                
+                <div class="relative group">
+                    <div class="w-24 h-24 rounded-full border-[3px] border-amber-500 bg-[#1e1e1e] flex items-center justify-center text-4xl text-amber-500 font-bold overflow-hidden shadow-inner">
+                        {% if usuario.foto_perfil %}
+                            <img id="avatar-preview" src="{{ usuario.foto_perfil }}" alt="Sua foto" class="w-full h-full object-cover">
+                        {% else %}
+                            <span id="avatar-inicial">{{ usuario.nome[0]|upper if usuario.nome else 'G' }}</span>
+                            <img id="avatar-preview" src="" alt="Sua foto" class="w-full h-full object-cover hidden">
+                        {% endif %}
+                    </div>
+                    <label for="upload-foto" class="absolute bottom-0 right-0 w-8 h-8 bg-[#25262a] border border-gray-500 hover:border-amber-500 hover:text-amber-500 rounded-full flex items-center justify-center cursor-pointer transition shadow-md">
+                        <i class="fa-solid fa-pen-to-square text-xs"></i>
+                    </label>
+                    <input type="file" id="upload-foto" name="foto" form="form-perfil" accept="image/jpeg,image/png,image/webp" class="hidden">
+                </div>
+
+                <div class="text-center md:text-left">
+                    <h2 class="text-3xl font-bold text-white mb-1">{{ usuario.nome | default('Gabriel') }}</h2>
+                    <p class="text-gray-400 mb-4">{{ usuario.email | default('gabriel@exemplo.com') }}</p>
+                    
+                    <div class="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                        <span class="border border-amber-500 text-amber-500 px-3 py-1 rounded-full text-xs font-semibold tracking-wide bg-amber-500/10">
+                            {{ 'Administrador' if tipo_usuario == 'administrador' else 'Leitor' }}
+                        </span>
+                        <span class="border border-amber-500 text-amber-500 px-3 py-1 rounded-full text-xs font-semibold tracking-wide bg-amber-500/10">
+                            Conta desde {{ usuario.criado_em.strftime('%d/%m/%Y') if usuario.criado_em else 'Data não disponível' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <form id="form-perfil" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <div class="flex flex-col gap-2">
+                        <label for="nome" class="text-gray-300 font-medium text-lg">Nome:</label>
+                        <input type="text" id="nome" name="nome" minlength="3" maxlength="100" required value="{{ usuario.nome | default('Gabriel') }}" class="bg-transparent border border-amber-500 rounded-xl px-4 py-3 text-white focus:outline-none focus:bg-[#1e1e1e] transition">
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <label for="faculdade" class="text-gray-300 font-medium text-lg">Faculdade:</label>
+                        <input type="text" id="faculdade" name="faculdade" maxlength="150" value="{{ usuario.universidade or '' }}" placeholder="Nome da instituição" class="bg-transparent border border-amber-500 rounded-xl px-4 py-3 text-white focus:outline-none focus:bg-[#1e1e1e] transition placeholder-gray-600">
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <label for="email" class="text-gray-300 font-medium text-lg">E-mail:</label>
+                        <input type="email" id="email" value="{{ usuario.email | default('gabriel@exemplo.com') }}" readonly class="bg-[#1e1e1e]/50 border border-amber-500/50 rounded-xl px-4 py-3 text-gray-400 cursor-not-allowed">
+                        <small class="text-gray-500 text-xs">O e-mail não pode ser alterado por aqui.</small>
+                    </div>
+
+                    <div class="flex flex-col gap-2"><label for="interesse" class="text-gray-300 font-medium text-lg">Área de interesse</label><select id="interesse" name="interesse" class="bg-[#25262a] border border-amber-500 rounded-xl px-4 py-3 text-white"><option value="">Selecione uma área</option>{% for area in categorias_perfil %}<option value="{{ area }}" {% if usuario.especialidade_juridica == area %}selected{% endif %}>{{ area }}</option>{% endfor %}</select></div>
+                </div>
+
+                <div class="flex justify-end pt-4">
+                    <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-black font-bold text-lg py-3 px-8 rounded-xl transition shadow-lg w-full md:w-auto">
+                        Salvar Alteração
+                    </button>
+                </div>
+            </form>
+
+            {% if mostrar_dashboard %}
+            <section id="perfil-dashboard" class="perfil-dashboard" aria-labelledby="perfil-dashboard-titulo" aria-busy="true">
+                <header class="perfil-dashboard-heading">
+                    <p class="perfil-dashboard-kicker">Perfil do leitor</p>
+                    <h2 id="perfil-dashboard-titulo">Seu histórico de estudos</h2>
+                    <p>Acompanhe as matérias e categorias que você acessou no período selecionado.</p>
+                    <button id="dashboard-tentar-novamente" class="perfil-dashboard-retry" type="button" hidden>Tentar novamente</button>
+                </header>
+
+                <p id="perfil-dashboard-status" class="perfil-dashboard-status" role="status" aria-live="polite">Carregando seus dados de estudo.</p>
+
+                <div class="perfil-dashboard-filter">
+                    <label for="dashboard-periodo">Período</label>
+                    <select id="dashboard-periodo" name="periodo" aria-describedby="dashboard-periodo-ajuda">
+                        <option value="30" selected>Últimos 30 dias</option>
+                        <option value="90">Últimos 90 dias</option>
+                    </select>
+                    <small id="dashboard-periodo-ajuda">Inclui o dia de hoje.</small>
+                </div>
+
+                <div class="perfil-dashboard-cards" aria-label="Indicador do seu estudo">
+                    <article class="perfil-dashboard-card">
+                        <span class="perfil-dashboard-card-label"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Matérias consultadas no período</span>
+                        <strong id="dashboard-materias-total">—</strong>
+                        <small class="perfil-dashboard-card-note">Cada matéria conta uma vez, mesmo se você a consultar mais de uma vez.</small>
+                    </article>
+                </div>
+
+                <div class="perfil-dashboard-charts">
+                    <article class="perfil-dashboard-chart" aria-labelledby="dashboard-categorias-titulo">
+                        <h3 id="dashboard-categorias-titulo">Categorias mais acessadas no período</h3>
+                        <p id="dashboard-categorias-periodo" class="perfil-dashboard-chart-note">Últimos 30 dias</p>
+                        <div class="perfil-bar-layout">
+                            <ul id="dashboard-categorias-barras" class="perfil-bar-chart" aria-label="Acessos por categoria no período" hidden></ul>
+                        </div>
+                        <p id="dashboard-categorias-vazio" class="perfil-dashboard-empty">Você ainda não acessou nenhuma categoria nos últimos 30 dias.</p>
+                    </article>
+                </div>
+            </section>
+            {% endif %}
+
+            <div class="mt-12 bg-[#1e1e1e] rounded-2xl p-6 border border-gray-800 shadow-inner">
+                <h3 class="text-white font-bold mb-6 border-b border-gray-700 pb-2">Segurança e consentimentos</h3>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="flex flex-col gap-1">
+                        <span class="text-gray-300 font-semibold flex items-center gap-2">
+                            <i class="fa-solid fa-circle-check text-green-500"></i> Verificação em duas etapas
+                        </span>
+                        <span class="text-gray-500 text-sm ml-6">Ativa no autenticador</span>
+                    </div>
+
+                    <div class="flex flex-col gap-1">
+                        <span class="text-gray-300 font-semibold flex items-center gap-2">
+                            <i class="fa-solid fa-circle-check text-green-500"></i> Consentimento LGPD
+                        </span>
+                        <span class="text-gray-500 text-sm ml-6">Aceito</span>
+                    </div>
+
+                    <div class="flex flex-col gap-1">
+                        <span class="text-gray-300 font-semibold flex items-center gap-2">
+                            <i class="fa-solid fa-circle-check text-green-500"></i> Versão dos termos
+                        </span>
+                        <span class="text-gray-500 text-sm ml-6">1.0 • atualizado em 12/08/2026</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    {% include "_legal_links.html" %}
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Preview da Nova Foto de Perfil
+            const inputFoto = document.getElementById("upload-foto");
+            const imgPreview = document.getElementById("avatar-preview");
+            const avatarInicial = document.getElementById("avatar-inicial");
+
+            inputFoto.addEventListener("change", function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024) { alert('Escolha uma imagem JPEG, PNG ou WebP de até 2 MB.'); inputFoto.value=''; return; }
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imgPreview.src = e.target.result;
+                        imgPreview.classList.remove("hidden");
+                        if(avatarInicial) avatarInicial.classList.add("hidden");
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // Submissão real do Formulário com Fetch para o Banco de Dados
+            const formPerfil = document.getElementById("form-perfil");
+            const toastSucesso = document.getElementById("toast-sucesso");
+
+            formPerfil.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                
+                const formData = new FormData(formPerfil);
+                if (!inputFoto.files.length) formData.delete('foto');
+
+                try {
+                    const resposta = await fetch("/api/perfil/atualizar", {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    const dados = await resposta.json().catch(() => ({}));
+                    if (resposta.ok && dados.status === "sucesso") {
+                        toastSucesso.classList.remove("hidden");
+                        toastSucesso.classList.add("animate-pulse");
+
+                        // Recarrega a página após 1.5 segundo para atualizar o nome no topo
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        const erro = dados;
+                        alert(typeof erro.detail === 'string' ? erro.detail : 'Confira os campos do perfil.');
+                    }
+                } catch (erro) {
+                    console.error("Erro na requisição:", erro);
+                    alert("Erro de conexão com o servidor.");
+                }
+            });
+        });
+    </script>
+</body>
+</html>

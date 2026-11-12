@@ -1,0 +1,12 @@
+<header class="legal-header">
+    <a class="legal-brand" href="/" data-legal-return aria-label="Voltar à página anterior">
+        <img src="/static/images/logo.png" alt="JurisHome">
+    </a>
+    <nav class="legal-tabs" aria-label="Documentos legais">
+        <a href="/termos-de-aceite"{% if documento_legal == 'termos' %} aria-current="page"{% endif %}>Termo de Aceite</a>
+        <a href="/politica-de-privacidade"{% if documento_legal == 'privacidade' %} aria-current="page"{% endif %}>Política de Privacidade</a>
+    </nav>
+    <a class="legal-back" href="/" data-legal-return>
+        <span aria-hidden="true">←</span> Voltar
+    </a>
+</header>

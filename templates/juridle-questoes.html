@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Banco de questões | JurisHome</title>
+        <link rel="icon" href="/static/images/micrologo.png.png">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link rel="stylesheet" href="/static/css/legal.css">
+        <link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav">
+        <link rel="stylesheet" href="/static/css/home.css?v=20261108-nav">
+        <link rel="stylesheet" href="/static/css/juridle.css?v=20261106">
+        <script>(()=>{try{document.documentElement.dataset.theme=localStorage.getItem('tema_juris')==='claro'?'light':'dark';}catch(_){}})();</script>
+        <script src="/static/js/session.js" defer></script>
+        <script src="/static/js/curiosidades.js?v=20261108-nav" defer></script>
+        <script src="/static/js/juridle-questoes.js?v=20261106" defer></script>
+    </head>
+    <body class="juris-ui home-shell">
+        <a class="home-skip" href="#conteudo-principal">Pular para o conteúdo</a>
+        {% include "_juris_nav.html" %}
+        <main id="conteudo-principal" class="quiz-page quiz-bank" data-root="{{ 'true' if e_root else 'false' }}">
+            <header class="quiz-header">
+                <div>
+                    <span class="home-eyebrow">CONTEÚDO REVISADO · APRENDIZADO DIÁRIO</span>
+                    <h1>
+                        Ampliar game
+                        <span class="quiz-title-dot">.</span>
+                    </h1>
+                    <p>Ajude a construir o próximo desafio do Juridle.</p>
+                </div>
+                <a class="quiz-outline" href="/juridle">← Voltar ao jogo</a>
+            </header>
+            <p id="home-aviso" role="status" hidden></p>
+            <section class="quiz-panel quiz-bank-stats" aria-label="Capacidade do banco">
+                <h2>Um banco que cresce com o conhecimento</h2>
+                <p>
+                    <strong id="b-aprovadas">—</strong>
+                    questões aprovadas ·
+                    <strong id="b-dias">—</strong>
+                    dias cobertos ·
+                    <strong id="b-pendentes">—</strong>
+                    pendentes
+                    {% if not e_root %}
+                        suas
+                    {% endif %}
+                    .
+                </p>
+                <progress id="b-meta" max="150" value="0" aria-label="Meta de 150 questões aprovadas"></progress>
+                <p class="quiz-hint">Meta: 150 questões aprovadas para 30 dias, com 5 por dia. Os mesmos itens podem atender pessoas diferentes. Para a mesma pessoa, não se repetem por 30 dias; continue ampliando o banco.</p>
+            </section>
+            <div class="quiz-bank-tabs" role="tablist" aria-label="Banco de questões">
+                <button type="button" id="b-tab-criar" role="tab" aria-selected="true" aria-controls="b-criar">+ Criar questão</button>
+                <button type="button" id="b-tab-lista" role="tab" aria-selected="false" aria-controls="b-lista" tabindex="-1">{{ 'Revisar e gerenciar' if e_root else 'Minhas questões' }}</button>
+            </div>
+            <section class="quiz-panel" id="b-criar" role="tabpanel" aria-labelledby="b-tab-criar">
+                <h2>Uma boa pergunta abre novas ideias</h2>
+                <p class="quiz-hint">Escreva com clareza, evite ambiguidades e confirme a resposta em uma fonte confiável. Até questões criadas pelo root precisam passar pela revisão.</p>
+                <form id="b-form" class="quiz-form">
+                    <label for="b-enunciado">Pergunta *</label>
+                    <textarea id="b-enunciado" minlength="10" maxlength="1000" rows="3" required placeholder="Ex.: Em qual situação se aplica este conceito?"></textarea>
+                    <div class="quiz-form-grid">
+                        <div>
+                            <label for="b-area">Área do Direito *</label>
+                            <select id="b-area" required>
+                                <option>Direito Constitucional</option>
+                                <option>Direito Civil</option>
+                                <option>Direito Penal</option>
+                                <option>Direito Trabalhista</option>
+                                <option>Direito do Consumidor</option>
+                                <option>Direito Administrativo</option>
+                                <option>Direito Empresarial</option>
+                                <option>Direito Tributário</option>
+                                <option>Processo civil</option>
+                                <option>Conhecimentos jurídicos</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="correct-label" for="b-correta">Resposta correta *</label>
+                            <input id="b-correta" maxlength="300" required placeholder="Esta será a única correta">
+                        </div>
+                    </div>
+                    <div class="quiz-form-grid">
+                        {% for i in range(1,4) %}
+                            <div>
+                                <label for="b-errada-{{ i }}">Alternativa incorreta {{ i }} *</label>
+                                <input id="b-errada-{{ i }}" maxlength="300" required placeholder="Uma alternativa plausível, mas incorreta">
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <small>As quatro alternativas precisam ser diferentes. A ordem será embaralhada no jogo.</small>
+                    <label for="b-explicacao">Explicação da resposta *</label>
+                    <textarea id="b-explicacao" minlength="20" maxlength="2000" rows="3" required placeholder="Explique por que a resposta está correta."></textarea>
+                    <div class="quiz-form-grid">
+                        <div>
+                            <label for="b-fonte">Link da fonte *</label>
+                            <input type="url" id="b-fonte" maxlength="2000" required placeholder="https://...">
+                        </div>
+                        <div>
+                            <label for="b-referencia">Artigo ou referência</label>
+                            <input id="b-referencia" maxlength="200" placeholder="Ex.: Art. 5º, inciso…">
+                        </div>
+                    </div>
+                    <details>
+                        <summary class="quiz-hint" style="cursor:pointer;margin-top:24px">+ Adicionar uma imagem opcional</summary>
+                        <label for="b-imagem">Imagem da questão</label>
+                        <input type="file" id="b-imagem" accept="image/jpeg,image/png,image/webp">
+                        <small>JPEG, PNG ou WebP, até 8 MB. A imagem será compactada antes do envio.</small>
+                        <img id="b-imagem-previa" alt="Prévia da imagem escolhida" hidden>
+                        <button type="button" class="quiz-outline" id="b-remover-imagem" hidden>Remover imagem</button>
+                        <div class="quiz-form-grid">
+                            <div>
+                                <label for="b-imagem-alt">Descrição acessível da imagem</label>
+                                <input id="b-imagem-alt" maxlength="200">
+                            </div>
+                            <div>
+                                <label for="b-imagem-credito">Crédito ou link da imagem</label>
+                                <input id="b-imagem-credito" maxlength="1000">
+                            </div>
+                        </div>
+                    </details>
+                    <div class="quiz-form-actions">
+                        <p class="quiz-hint">Ao enviar, a questão fica pendente. O root confere a pergunta, as alternativas, a fonte e a imagem antes de aprovar.</p>
+                        <button type="submit" class="quiz-primary" id="b-enviar">Enviar para revisão →</button>
+                    </div>
+                </form>
+            </section>
+            <section class="quiz-panel" id="b-lista" role="tabpanel" aria-labelledby="b-tab-lista" hidden>
+                <h2>{{ 'Revisão de questões' if e_root else 'Acompanhe suas contribuições' }}</h2>
+                <form id="b-filtros" class="quiz-filter">
+                    <input id="b-busca" type="search" placeholder="Buscar pelo enunciado" aria-label="Buscar pelo enunciado" maxlength="80">
+                    <select id="b-status" aria-label="Filtrar por status">
+                        <option value="todas">Todos os status</option>
+                        <option value="pendente">Pendentes</option>
+                        <option value="aprovada">Aprovadas</option>
+                        <option value="rejeitada">Rejeitadas</option>
+                        <option value="arquivada">Arquivadas</option>
+                    </select>
+                    <button class="quiz-outline" type="submit">Filtrar</button>
+                </form>
+                <div class="quiz-table-wrap">
+                    <table class="quiz-table">
+                        <caption class="quiz-hint" style="text-align:left;padding:12px">{{ 'Somente o root aprova, rejeita e arquiva questões.' if e_root else 'Você vê aqui apenas as questões enviadas pela sua conta.' }}</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">Questão</th>
+                                <th scope="col">Área</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="b-linhas"></tbody>
+                    </table>
+                </div>
+                <div class="quiz-pagination">
+                    <span id="b-contagem" role="status"></span>
+                    <div>
+                        <button type="button" class="quiz-outline" id="b-anterior">← Anterior</button>
+                        <button type="button" class="quiz-outline" id="b-proxima">Próxima →</button>
+                    </div>
+                </div>
+            </section>
+            <dialog id="b-modal" class="quiz-modal">
+                <div class="quiz-modal-head">
+                    <h2>Confira a questão</h2>
+                    <button type="button" id="b-fechar" class="quiz-outline" aria-label="Fechar detalhes">✕</button>
+                </div>
+                <p id="b-modal-status" class="quiz-hint"></p>
+                <h3 id="b-modal-titulo"></h3>
+                <p id="b-modal-definicao"></p>
+                <img id="b-modal-imagem" alt="" hidden>
+                <p id="b-modal-credito" class="quiz-hint"></p>
+                <ol id="b-modal-opcoes"></ol>
+                <p id="b-modal-explicacao"></p>
+                <p id="b-modal-referencia" class="quiz-hint"></p>
+                <a id="b-modal-fonte" target="_blank" rel="noopener noreferrer">Conferir fonte original ↗</a>
+                <p id="b-modal-motivo" class="quiz-hint"></p>
+                <div id="b-revisao" class="quiz-form" hidden>
+                    <label class="quiz-terms">
+                        <input id="b-revisado" type="checkbox">
+                        <span>Revisei o enunciado, o gabarito, a explicação, a fonte e a imagem. Confirmo que há apenas uma resposta correta.</span>
+                    </label>
+                    <label for="b-motivo">Observação da revisão</label>
+                    <textarea id="b-motivo" maxlength="500" placeholder="Obrigatória para rejeitar ou arquivar"></textarea>
+                    <div class="quiz-form-grid">
+                        <button id="b-aprovar" type="button" class="quiz-primary">Aprovar questão</button>
+                        <button id="b-rejeitar" type="button" class="quiz-outline">Rejeitar questão</button>
+                        <button id="b-arquivar" type="button" class="quiz-outline" hidden>Arquivar questão</button>
+                    </div>
+                </div>
+                <p id="b-modal-erro" class="quiz-modal-error" role="status" hidden></p>
+            </dialog>
+        </main>
+        {% include "_legal_links.html" %}
+    </body>
+</html>

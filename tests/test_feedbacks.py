@@ -112,6 +112,8 @@ class FeedbackApiTests(unittest.TestCase):
 
     def test_api_rejeita_dados_invalidos(self):
         with self.assertRaises(ValidationError):
+            MensagemAdministrativa(mensagem="    ")
+        with self.assertRaises(ValidationError):
             FeedbackCriacao(tipo="Inexistente", assunto="Oi", mensagem="Curta")
 
         with self.assertRaises(ValidationError):

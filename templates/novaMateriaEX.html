@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pré-visualização da Matéria - JurisHome</title>
+    <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
+    <!-- Tailwind via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        (function() {
+            const temaSalvo = localStorage.getItem("tema_juris");
+            if (temaSalvo === "claro") {
+                document.documentElement.classList.remove("dark");
+            } else {
+                document.documentElement.classList.add("dark");
+            }
+        })();
+    </script>
+<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav">
+</head>
+<body class="juris-ui bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
+
+  <!-- Barra de Navegação Padrão -->
+  {% include "_juris_nav.html" %}
+  <div class="px-4 pt-4"><button onclick="window.close()" class="bg-[#1e1e1e] border border-gray-600 hover:border-amber-500 hover:text-amber-500 text-gray-300 px-4 py-2 rounded-xl transition flex items-center gap-2 text-sm shadow-md cursor-pointer">
+            <i class="fa-solid fa-xmark"></i>
+            <span>Retornar (Fechar aba)</span>
+        </button></div>
+
+  <!-- Conteúdo Principal -->
+  <main class="w-full max-w-4xl mx-auto px-4 py-12 flex-1">
+    
+    <!-- Títulos -->
+    <h1 id="ex-titulo" class="text-3xl md:text-4xl font-bold text-white mb-3"></h1>
+    <h2 id="ex-subtitulo" class="text-lg md:text-xl text-gray-400 mb-6"></h2>
+
+    <!-- Metadados -->
+    <div class="flex flex-wrap justify-between items-center border-b border-gray-700 pb-4 mb-8 text-sm text-gray-400 gap-2">
+      <div>
+        <span>Divulgado por: <strong id="ex-autor" class="text-amber-500">Administrador</strong></span>
+        <span class="mx-2">•</span>
+        <span id="data-criacao-materia">12/08/2026</span>
+      </div>
+      <div id="ex-link-container"></div>
+    </div>
+
+    <!-- Imagem Principal / Miniatura -->
+    <div id="container-img-principal" class="hidden mb-8">
+      <figure class="rounded-2xl overflow-hidden border border-gray-800 bg-[#25262a]">
+        <img id="ex-img-principal" src="" alt="Miniatura da matéria" class="w-full max-h-[450px] object-cover" />
+        <figcaption id="ex-fonte-miniatura" class="p-3 text-xs text-gray-400 italic bg-[#25262a] border-t border-gray-800"></figcaption>
+      </figure>
+    </div>
+
+    <!-- Corpo do Artigo com Imagens Extras Integradas -->
+    <article id="ex-corpo-artigo" class="text-gray-200 text-lg leading-relaxed space-y-6">
+      <!-- O texto e as imagens extras serão injetados aqui ordenadamente -->
+    </article>
+
+    <footer class="mt-16 border-t border-gray-700 pt-6">
+    <div class="flex flex-wrap gap-2 items-center mb-4">
+        <!-- Rótulo fixo -->
+        <span class="font-bold text-sm text-white">Tags:</span>
+        
+        <!-- Container vazio onde o script vai injetar as tags dinâmicas baseadas na categoria -->
+        <div id="ex-tags-container" class="flex flex-wrap gap-2">
+            <!-- O JavaScript vai preencher os spans aqui automaticamente -->
+        </div>
+    </div>
+    
+    <!-- Rodapé da fonte -->
+    <div id="ex-rodape-fonte" class="text-xs text-gray-500"></div>
+</footer>
+
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- 1. CONFIGURAÇÃO DAS DATAS ---
+        const dataHoje = new Intl.DateTimeFormat("pt-BR").format(new Date());
+
+        const elData = document.getElementById("data-atual");
+        if(elData) elData.textContent = dataHoje;
+
+        let dados = {};
+        try { dados = JSON.parse(localStorage.getItem('temp_materia_preview') || '{}') || {}; } catch {}
+        function urlSegura(valor) {
+            try {
+                const url = new URL(valor, window.location.origin);
+                return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+            } catch { return ''; }
+        }
+        function imagemSegura(valor) {
+            if (typeof valor === 'string' && /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(valor)) {
+                return valor;
+            }
+            return urlSegura(valor);
+        }
+
+        // CORRIGIDO O ID AQUI: de "ex-data-criacao" para "data-criacao-materia"
+        const elDataCriacao = document.getElementById("data-criacao-materia");
+        if(elDataCriacao) {
+            const dataDaMateria = dados.data_criacao || dados.data_publicacao || dataHoje;
+            elDataCriacao.textContent = dataDaMateria;
+        }
+
+        // --- 2. CONFIGURAÇÃO DO AUTOR ---
+        // Ajustado para priorizar o nome que você criou ("Admin doidao") se não achar outro no navegador
+        const usuarioLogado = localStorage.getItem('nome_usuario') || 'Admin doidao';
+        const elAutor = document.getElementById('ex-autor');
+        if(elAutor) elAutor.textContent = usuarioLogado;
+
+        // --- 3. PREENCHIMENTO DE TÍTULOS E FONTES ---
+        const elTitulo = document.getElementById('ex-titulo');
+        if(elTitulo) elTitulo.textContent = dados.titulo || 'Título não informado';
+
+        const elSubtitulo = document.getElementById('ex-subtitulo');
+        if(elSubtitulo) elSubtitulo.textContent = dados.sub_titulo || '';
+
+        const linkContainer = document.getElementById('ex-link-container');
+        const rodapeFonte = document.getElementById('ex-rodape-fonte');
+        if (dados.fonte_original && linkContainer && rodapeFonte) {
+            try {
+                const endereco = urlSegura(dados.fonte_original);
+                if (!endereco) throw new Error('URL inválida');
+                for (const container of [linkContainer, rodapeFonte]) {
+                    const link = document.createElement('a');
+                    link.href = endereco;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    link.className = 'text-amber-500 underline hover:text-amber-400';
+                    link.textContent = new URL(endereco).hostname;
+                    container.replaceChildren(document.createTextNode('Fonte original: '), link);
+                }
+            } catch {
+                linkContainer.textContent = 'Fonte original inválida.';
+            }
+        }
+
+        // --- 4. GERAÇÃO DE TAGS DINÂMICAS POR CATEGORIA ---
+        const containerTags = document.getElementById('ex-tags-container');
+        if (containerTags) {
+            const tagsParaExibir = Array.isArray(dados.tags) ? dados.tags.filter(tag => typeof tag === 'string').slice(0, 30) : [];
+
+            // Cria o HTML das tags e insere na tela
+            containerTags.innerHTML = ''; // Limpa o container
+            tagsParaExibir.forEach(tag => {
+                const spanTag = document.createElement('span');
+                // Estilo da Tag usando Tailwind (Fundo escuro, texto ambar)
+                spanTag.className = "bg-[#25262a] border border-gray-700 text-amber-500 text-xs font-semibold px-3 py-1 rounded-full cursor-pointer hover:bg-gray-800 transition-colors";
+                spanTag.textContent = "#" + tag;
+                containerTags.appendChild(spanTag);
+            });
+        }
+
+        // --- 5. IMAGENS E TEXTO (Mantido do seu código original) ---
+        const miniaturaUrl = dados.miniatura || dados.imagem_principal;
+        const miniaturaFonte = dados.fonte_miniatura || dados.fonte_imagem_principal;
+        const imgPrincipal = document.getElementById('ex-img-principal');
+        const containerImg = document.getElementById('container-img-principal');
+        const fonteMiniatura = document.getElementById('ex-fonte-miniatura');
+
+        if (miniaturaUrl && imgPrincipal && containerImg) {
+            imgPrincipal.src = imagemSegura(miniaturaUrl);
+            containerImg.classList.remove('hidden');
+            if (miniaturaFonte && fonteMiniatura) {
+                fonteMiniatura.textContent = "Imagem proporcionada por: " + miniaturaFonte;
+            }
+        }
+
+        const imagensExtras = [];
+        if (dados.corpo_1) imagensExtras.push({ url: dados.corpo_1, fonte: dados.fonte_corpo_1 });
+        if (dados.corpo_2) imagensExtras.push({ url: dados.corpo_2, fonte: dados.fonte_corpo_2 });
+        if (dados.corpo_3) imagensExtras.push({ url: dados.corpo_3, fonte: dados.fonte_corpo_3 });
+
+        const corpoArtigo = document.getElementById('ex-corpo-artigo');
+        if (corpoArtigo) {
+            const textoCompleto = dados.corpo_texto || 'Nenhum texto informado.';
+            let pedacosTexto = textoCompleto.split('\n').filter(p => p.trim() !== '');
+            
+            if (pedacosTexto.length === 1 && textoCompleto.length > 300) {
+                const tamanhoBloco = Math.ceil(textoCompleto.length / (imagensExtras.length + 1));
+                pedacosTexto = [];
+                for (let i = 0; i < textoCompleto.length; i += tamanhoBloco) {
+                    pedacosTexto.push(textoCompleto.substring(i, i + tamanhoBloco));
+                }
+            } else if (pedacosTexto.length === 0) {
+                pedacosTexto = [textoCompleto];
+            }
+
+            const pInicial = document.createElement('p');
+            pInicial.className = "break-words whitespace-pre-line mb-4";
+            pInicial.textContent = pedacosTexto[0];
+            corpoArtigo.appendChild(pInicial);
+
+            imagensExtras.forEach((imgInfo, index) => {
+                const figure = document.createElement('figure');
+                figure.className = "rounded-2xl overflow-hidden border border-gray-800 bg-[#25262a] my-8";
+                
+                const imagem = document.createElement('img');
+                imagem.src = imagemSegura(imgInfo.url);
+                imagem.alt = 'Imagem complementar';
+                imagem.className = 'w-full max-h-[400px] object-cover';
+                figure.appendChild(imagem);
+                if (imgInfo.fonte) {
+                    const legenda = document.createElement('figcaption');
+                    legenda.className = 'p-3 text-xs text-gray-400 italic bg-[#25262a] border-t border-gray-800';
+                    legenda.textContent = 'Imagem proporcionada por: ' + imgInfo.fonte;
+                    figure.appendChild(legenda);
+                }
+                corpoArtigo.appendChild(figure);
+
+                const textoBloco = pedacosTexto[index + 1] || pedacosTexto[pedacosTexto.length - 1];
+                if (textoBloco && imagensExtras.length > index) {
+                    const pExtra = document.createElement('p');
+                    pExtra.className = "break-words whitespace-pre-line mb-4";
+                    pExtra.textContent = textoBloco;
+                    corpoArtigo.appendChild(pExtra);
+                }
+            });
+        }
+    });
+</script>
+</body>
+</html>

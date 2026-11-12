@@ -1,0 +1,155 @@
+.juris-ui .category-learning {
+    display: grid;
+    gap: 1rem;
+    margin: 0 0 2rem;
+}
+
+.juris-ui .category-learning-panel {
+    padding: clamp(1.1rem, 3vw, 1.6rem);
+    border: 1px solid var(--juris-border);
+    border-left: 4px solid var(--juris-yellow);
+    border-radius: 0.85rem;
+    background: var(--juris-panel);
+}
+
+.juris-ui .category-learning-panel h2 {
+    margin: 0 0 0.75rem;
+    color: var(--juris-text);
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.juris-ui .category-learning-panel h3 {
+    margin: 1.15rem 0 0.6rem;
+    color: var(--juris-text);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.juris-ui .category-eyebrow {
+    margin: 0 0 0.5rem;
+    color: var(--juris-yellow);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+}
+
+.juris-ui .category-description {
+    margin: 0.35rem 0 0.85rem;
+    color: var(--juris-muted);
+    font-size: 0.93rem;
+    line-height: 1.75;
+}
+
+.juris-ui .category-topics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.juris-ui .category-topics li {
+    padding: 0.45rem 0.7rem;
+    border: 1px solid var(--juris-border);
+    border-radius: 999px;
+    color: var(--juris-text);
+    background: var(--juris-panel);
+    font-size: 0.82rem;
+}
+
+.juris-ui .category-law-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    gap: 0.8rem;
+}
+
+.juris-ui .category-law-card {
+    padding: 1rem;
+    border: 1px solid var(--juris-border);
+    border-radius: 0.7rem;
+    background: var(--juris-panel);
+}
+
+.juris-ui .category-law-card h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1rem;
+}
+
+.juris-ui .category-law-number,
+.juris-ui .category-law-articles {
+    margin: 0.25rem 0;
+    color: var(--juris-muted);
+    font-size: 0.82rem;
+    line-height: 1.55;
+}
+
+.juris-ui .category-law-articles { color: var(--juris-yellow); font-weight: 700; }
+
+.juris-ui .category-source {
+    display: inline-flex;
+    margin-top: 0.35rem;
+    color: var(--juris-yellow);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+}
+
+.juris-ui .category-news-heading {
+    margin: 0 0 1rem;
+    color: var(--juris-text);
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.juris-ui .category-news-card {
+    display: grid;
+    grid-template-columns: minmax(7rem, 10rem) minmax(0, 1fr);
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--juris-border);
+    border-radius: 0.8rem;
+    background: var(--juris-panel);
+}
+
+.juris-ui .category-news-media {
+    width: 100%;
+    min-height: 7rem;
+    max-height: 9rem;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: var(--juris-border);
+}
+
+.juris-ui .category-news-image,
+.juris-ui .category-news-placeholder {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 7rem;
+    max-height: 9rem;
+    object-fit: cover;
+    background: var(--juris-border);
+}
+
+.juris-ui .category-news-placeholder {
+    display: grid;
+    place-items: center;
+    color: var(--juris-muted);
+    font-size: 1.7rem;
+}
+
+.juris-ui .category-news-copy { min-width: 0; }
+.juris-ui .category-news-source { margin: 0 0 0.4rem; color: var(--juris-yellow); font-size: 0.75rem; font-weight: 700; }
+.juris-ui .category-news-title { display: inline-block; color: var(--juris-text); font-size: 1.1rem; font-weight: 700; line-height: 1.4; text-decoration: none; }
+.juris-ui .category-news-title:hover { color: var(--juris-yellow); }
+.juris-ui .category-empty { padding: 2rem 1rem; color: var(--juris-muted); text-align: center; }
+.juris-ui [hidden] { display: none !important; }
+
+@media (max-width: 560px) {
+    .juris-ui .category-news-card { grid-template-columns: minmax(0, 1fr); }
+    .juris-ui .category-news-media, .juris-ui .category-news-image, .juris-ui .category-news-placeholder { max-height: 12rem; }
+}

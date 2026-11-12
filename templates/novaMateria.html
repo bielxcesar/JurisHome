@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Criar matéria | JurisHome</title>
+        <link rel="icon" href="/static/images/micrologo.png.png">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+        <link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav">
+        <link rel="stylesheet" href="/static/css/home.css?v=20261108-nav">
+        <link rel="stylesheet" href="/static/css/nova-materia.css?v=20261030-6">
+        <script>(()=>{try{document.documentElement.dataset.theme=localStorage.getItem('tema_juris')==='claro'?'light':'dark';}catch(_){}})();</script>
+        <script src="/static/js/session.js" defer></script>
+        <script src="/static/js/curiosidades.js?v=20261108-nav" defer></script>
+        <script src="/static/js/nova-materia.js?v=20261108-cancelar" defer></script>
+    </head>
+    <body class="juris-ui home-shell editor-shell">
+        {% set tipo_usuario='administrador' %}
+        {% include "_juris_nav.html" %}
+        <main class="editor-main" id="conteudo-principal">
+            <header class="editor-heading">
+                <div>
+                    <span class="home-eyebrow">ESTÚDIO EDITORIAL</span>
+                    <h1>Uma boa matéria começa aqui.</h1>
+                    <p>Prepare a chamada, organize a leitura e confira o resultado antes de enviar.</p>
+                </div>
+                <a id="cancelar-materia" href="/admin/tabela-noticias">Cancelar matéria</a>
+            </header>
+            <ol class="editor-stepper" aria-label="Etapas do cadastro">
+                {% for nome in ['Chamada da Home','Texto da matéria','Imagens e créditos','Revisão final'] %}
+                    <li>
+                        <button type="button" data-step="{{ loop.index0 }}" {% if loop.first %}aria-current="step"{% endif %}>
+                            <span>{{ loop.index }}</span>
+                            <div>
+                                {{ nome }}
+                                <small>{{ ['Capa, título e categoria','Estrutura e formatação','Posição e legendas','Prévia e envio'][loop.index0] }}</small>
+                            </div>
+                        </button>
+                    </li>
+                {% endfor %}
+            </ol>
+            <p id="home-aviso" role="status" tabindex="-1" hidden></p>
+            <form id="form-nova-materia" novalidate>
+                <section class="editor-step" data-panel="0" aria-labelledby="etapa-capa">
+                    <div class="editor-panel-heading">
+                        <span>01 / CHAMADA</span>
+                        <h2 id="etapa-capa">O primeiro contato com a matéria</h2>
+                        <p>Defina a imagem e o texto que o leitor encontrará na Home.</p>
+                    </div>
+                    <div class="editor-cover-layout">
+                        <div>
+                            <label class="editor-upload" for="input_miniatura">
+                                <img id="preview_miniatura" alt="Prévia da capa" hidden>
+                                <span class="editor-upload-prompt">
+                                    <i class="fa-regular fa-image" aria-hidden="true"></i>
+                                    <strong>Escolha a capa</strong>
+                                    <small>JPEG, PNG ou WebP · até 8 MB antes da compactação</small>
+                                </span>
+                                <input id="input_miniatura" type="file" accept="image/jpeg,image/png,image/webp" required>
+                            </label>
+                            <label for="fonte_miniatura">Crédito ou link da capa *</label>
+                            <input id="fonte_miniatura" maxlength="2000" placeholder="https://fonte-da-imagem.com ou Acervo pessoal" required>
+                            <div class="editor-two-fields">
+                                <div>
+                                    <label for="capa_legenda">Legenda da capa</label>
+                                    <input id="capa_legenda" maxlength="240" placeholder="Contextualize a imagem">
+                                </div>
+                                <div>
+                                    <label for="capa_alt">Descrição para acessibilidade</label>
+                                    <input id="capa_alt" maxlength="200" placeholder="O que aparece na imagem?">
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="titulo_home">Título na Home *</label>
+                            <input id="titulo_home" maxlength="180" required placeholder="Uma chamada clara e interessante">
+                            <label for="resumo_home">Resumo da chamada *</label>
+                            <textarea id="resumo_home" rows="3" maxlength="500" required placeholder="Apresente o assunto em poucas frases"></textarea>
+                            <label for="categoria_id">Área do Direito *</label>
+                            <select id="categoria_id" required>
+                                <option value="">Selecione uma categoria</option>
+                                {% for categoria in categorias %}
+                                    <option value="{{ categoria.uuid }}">{{ 'Direito Penal (Criminal)' if categoria.nome == 'Direito Penal' else categoria.nome }}</option>
+                                {% endfor %}
+                            </select>
+                            <p class="editor-hint">As tags são acrescentadas automaticamente conforme a área.</p>
+                            <div id="tags-materia-preview" class="editor-tags" aria-live="polite"></div>
+                        </div>
+                    </div>
+                </section>
+                <section class="editor-step" data-panel="1" hidden aria-labelledby="etapa-texto">
+                    <div class="editor-panel-heading">
+                        <span>02 / LEITURA</span>
+                        <h2 id="etapa-texto">Dê forma à sua matéria</h2>
+                        <p>Crie seções e destaques para conduzir a leitura.</p>
+                    </div>
+                    <label class="editor-check">
+                        <input type="checkbox" id="mesmo-titulo" checked>
+                        Usar o título da Home dentro da matéria
+                    </label>
+                    <label for="titulo">Título dentro da matéria *</label>
+                    <input id="titulo" maxlength="180" required>
+                    <label for="sub_titulo">Subtítulo</label>
+                    <input id="sub_titulo" maxlength="500" placeholder="Complemente o título e prepare o leitor">
+                    <label for="corpo_texto">Corpo da matéria *</label>
+                    <div class="editor-writing">
+                        <div class="editor-toolbar" role="toolbar" aria-label="Formatar o texto selecionado">
+                            <button type="button" data-format="negrito" title="Negrito">
+                                <b>B</b>
+                                <span>Negrito</span>
+                            </button>
+                            <button type="button" data-format="italico">
+                                <i>I</i>
+                                <span>Itálico</span>
+                            </button>
+                            <button type="button" data-format="destaque">Destaque</button>
+                            <button type="button" data-format="maiusculas">MAIÚSCULAS</button>
+                            <button type="button" data-format="subtitulo">Título de seção</button>
+                            <button type="button" data-format="citacao">Citação</button>
+                            <button type="button" data-format="lista">Lista</button>
+                        </div>
+                        <textarea id="corpo_texto" rows="14" maxlength="50000" required placeholder="Escreva sua matéria. Selecione um trecho para aplicar negrito, itálico ou destaque.
+
+Use os botões para criar títulos de seção, citações e listas." aria-describedby="editor-ajuda"></textarea>
+                        <div class="editor-writing-footer">
+                            <small id="editor-ajuda">**negrito** · _itálico_ · ==destaque== · ## seção · &gt; citação · - item</small>
+                            <span id="editor-contador">0 caracteres</span>
+                        </div>
+                    </div>
+                    <div class="editor-two-fields">
+                        <div>
+                            <label for="alinhamento">Alinhamento do texto</label>
+                            <select id="alinhamento">
+                                <option value="esquerda">À esquerda · leitura natural</option>
+                                <option value="justificado">Justificado · estilo editorial</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="tipo_fonte">Tipo da fonte original *</label>
+                            <select id="tipo_fonte" required>
+                                <option value="">Selecione</option>
+                                {% for valor,nome in [('legislacao','Legislação'),('acordao','Acórdão'),('doutrina','Doutrina'),('g1','G1'),('terra','Terra'),('uol','UOL'),('x','X'),('instagram','Instagram')] %}
+                                    <option value="{{ valor }}">{{ nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <label for="fonte_original">Link da fonte original *</label>
+                    <input id="fonte_original" type="url" required placeholder="https://..." maxlength="2000">
+                </section>
+                <section class="editor-step" data-panel="2" hidden aria-labelledby="etapa-imagens">
+                    <div class="editor-panel-heading">
+                        <span>03 / IMAGENS</span>
+                        <h2 id="etapa-imagens">Uma imagem no lugar certo</h2>
+                        <p>Acrescente até três imagens internas. O crédito de cada uma será salvo com a matéria.</p>
+                    </div>
+                    <p class="editor-hint">A posição indica depois de qual bloco a imagem aparece. Cada linha não vazia do editor é um bloco. Use 0 para posicionar antes do primeiro texto.</p>
+                    <div class="editor-image-grid">
+                        {% for i in range(1,4) %}
+                            <article class="editor-image-card">
+                                <div class="editor-image-card-heading">
+                                    <h3>Imagem {{ i }}</h3>
+                                    <button type="button" data-remove="{{ i }}">Remover</button>
+                                </div>
+                                <label class="editor-upload editor-upload-small" for="input_corpo_{{ i }}">
+                                    <img id="preview_corpo_{{ i }}" alt="Prévia da imagem {{ i }}" hidden>
+                                    <span class="editor-upload-prompt">
+                                        <i class="fa-regular fa-image" aria-hidden="true"></i>
+                                        <strong>Selecionar imagem</strong>
+                                    </span>
+                                    <input id="input_corpo_{{ i }}" type="file" accept="image/jpeg,image/png,image/webp">
+                                </label>
+                                <label for="fonte_corpo_{{ i }}">Crédito ou link da imagem</label>
+                                <input id="fonte_corpo_{{ i }}" maxlength="2000" placeholder="Link ou nome do autor">
+                                <label for="legenda_corpo_{{ i }}">Legenda</label>
+                                <input id="legenda_corpo_{{ i }}" maxlength="240" placeholder="Uma breve contextualização">
+                                <label for="alt_corpo_{{ i }}">Descrição da imagem</label>
+                                <input id="alt_corpo_{{ i }}" maxlength="200" placeholder="Para quem usa leitor de tela">
+                                <div class="editor-two-fields">
+                                    <div>
+                                        <label for="posicao_corpo_{{ i }}">Após bloco nº</label>
+                                        <input id="posicao_corpo_{{ i }}" type="number" min="0" max="1000" value="{{ i }}">
+                                    </div>
+                                    <div>
+                                        <label for="largura_corpo_{{ i }}">Largura</label>
+                                        <select id="largura_corpo_{{ i }}">
+                                            <option value="ampla">Ampla</option>
+                                            <option value="normal">Centralizada</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                </section>
+                <section class="editor-step" data-panel="3" hidden aria-labelledby="etapa-revisao">
+                    <div class="editor-panel-heading">
+                        <span>04 / REVISÃO</span>
+                        <h2 id="etapa-revisao">Confira antes de enviar</h2>
+                        <p>A prévia usa a mesma formatação da página de leitura.</p>
+                    </div>
+                    <div class="editor-review-heading">
+                        <h3>Chamada da Home</h3>
+                        <button type="button" id="btn-preview">Atualizar chamada</button>
+                    </div>
+                    <div class="editor-home-card">
+                        <img id="revisao-capa" alt="Capa da chamada">
+                        <div>
+                            <span id="revisao-categoria"></span>
+                            <h3 id="revisao-titulo"></h3>
+                            <p id="revisao-resumo"></p>
+                        </div>
+                    </div>
+                    <h3 class="editor-preview-label">1. Visualize a matéria completa</h3>
+                    <p class="editor-hint">Abra o modelo em uma nova aba para conferir o texto, as imagens e os créditos em tamanho de leitura. Depois, retorne a esta aba para enviar.</p>
+                    <button type="button" id="btn-visualizar">Visualizar modelo completo ↗</button>
+                    <p id="previa-status" role="status"></p>
+                    <section class="editor-termos" aria-labelledby="titulo-termos">
+                        <h3 id="titulo-termos">2. Responsabilidade editorial do administrador</h3>
+                        <p>Regras editoriais do JurisHome · versão 30/10/2026. Antes de enviar, revise todos os pontos:</p>
+                        <ul>
+                            <li>
+                                <strong>Veracidade e contexto:</strong>
+                                confira fatos, datas e referências. Não publique boatos ou afirmações sem fonte verificável; diferencie fatos confirmados, hipóteses e interpretações.
+                            </li>
+                            <li>
+                                <strong>Imparcialidade:</strong>
+                                priorize informação e interesse educativo. Evite opiniões pessoais, ataques, propaganda e julgamentos antecipados; apresente perspectivas relevantes com equilíbrio.
+                            </li>
+                            <li>
+                                <strong>Linguagem formal e clara:</strong>
+                                use redação respeitosa e objetiva, títulos fiéis ao conteúdo e explicações acessíveis, sem sensacionalismo ou conteúdo discriminatório.
+                            </li>
+                            <li>
+                                <strong>Privacidade e conteúdo sensível:</strong>
+                                não exponha dados pessoais desnecessários, documentos privados, informações sob sigilo, identidade de pessoas vulneráveis ou imagens explícitas. Anonimize informações quando necessário.
+                            </li>
+                            <li>
+                                <strong>Autoria e imagens:</strong>
+                                cite as fontes originais e os créditos; utilize somente materiais próprios, autorizados ou com licença compatível. Dar crédito não substitui a autorização de uso.
+                            </li>
+                            <li>
+                                <strong>Informação jurídica responsável:</strong>
+                                indique referências e contexto temporal; não apresente a matéria como aconselhamento jurídico individual ou promessa de resultado.
+                            </li>
+                            <li>
+                                <strong>Revisão e correção:</strong>
+                                revise o conteúdo antes do envio e comunique erros identificados. O material passará por análise e poderá exigir ajustes ou ser recusado.
+                            </li>
+                        </ul>
+                        <label class="editor-aceite">
+                            <input type="checkbox" id="aceite-editorial" required>
+                            <span>Li e aceito as regras editoriais. Declaro que revisei esta matéria, conferi suas fontes e autorizações e assumo a responsabilidade pelas informações que estou enviando.</span>
+                        </label>
+                        <p class="editor-hint">O aceite registra a conta responsável, a data, a matéria e a versão destas regras. Ele não substitui a análise editorial nem garante a aprovação.</p>
+                    </section>
+                    <p class="editor-hint">Ao enviar, a matéria ficará em análise e seguirá o fluxo de aprovação do JurisHome.</p>
+                </section>
+                <div class="editor-navigation">
+                    <button type="button" id="editor-voltar" hidden>← Etapa anterior</button>
+                    <span id="editor-etapa-atual" aria-live="polite">Etapa 1 de 4</span>
+                    <button type="button" class="editor-primary" id="editor-avancar">Continuar →</button>
+                    <button type="submit" class="editor-primary" id="btn-enviar" hidden disabled>Enviar para análise</button>
+                </div>
+            </form>
+            <p id="msg-retorno" role="status" hidden></p>
+            <script id="categorias-tags" type="application/json">{{ tags_por_categoria | tojson }}</script>
+        </main>
+        {% include "_legal_links.html" %}
+    </body>
+</html>

@@ -1,15 +1,16 @@
 import asyncio
+import base64
+import time
 import importlib.util
 import json
 import os
-import sys
 import unittest
-from io import BytesIO
+from datetime import datetime, timezone
 from http.cookies import SimpleCookie
-from types import ModuleType
 from unittest.mock import patch
 
 os.environ.setdefault("JurisHome_senha", "segredo-de-teste-jurishome-com-mais-de-32-bytes")
+os.environ.setdefault("TOTP_ENCRYPTION_KEY", base64.urlsafe_b64encode(b"t" * 32).decode("ascii"))
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -30,8 +31,6 @@ from routes.auth import (
     atualizar_senha,
     ativar_2fa_no_cadastro,
     cadastrar_usuario,
-    consultar_ies_api_publica,
-    consultar_instituicao_emec,
     login,
     validar_2fa,
 )
@@ -72,7 +71,7 @@ class AutenticacaoTests(unittest.TestCase):
 
         app.dependency_overrides[get_db] = banco_de_teste
         corpo = json.dumps(dados).encode("utf-8") if dados is not None else b""
-        cabecalhos = [(b"host", b"testserver"), (b"accept", b"text/html")]
+        cabecalhos = [(b"host", b"testserver"), (b"accept", b"text/html"), (b"origin", b"http://testserver")]
         if dados is not None:
             cabecalhos.append((b"content-type", b"application/json"))
         if token:
@@ -106,10 +105,10 @@ class AutenticacaoTests(unittest.TestCase):
         resultado = asyncio.run(
             cadastrar_usuario(
                 CadastroUsuario(
-                    nome="Erick Santos",
+                    nome='Erick', sobrenome='Santos', interesse="Direito Civil",
                     email="erick@example.com",
-                    senha="SenhaSegura123",
-                    confirmar_senha="SenhaSegura123",
+                    senha="SenhaSegura123!",
+                    confirmar_senha="SenhaSegura123!",
                     consentimento_lgpd=True,
                 ),
                 Response(),
@@ -121,8 +120,8 @@ class AutenticacaoTests(unittest.TestCase):
         self.assertTrue(resultado["configuracao_token"])
         self.assertTrue(resultado["qr_code"].startswith("data:image/png;base64,"))
         usuario = self.db.query(models.Usuario).filter_by(email="erick@example.com").one()
-        self.assertNotEqual("SenhaSegura123", usuario.senha_hash)
-        self.assertTrue(verificar_senha("SenhaSegura123", usuario.senha_hash))
+        self.assertNotEqual("SenhaSegura123!", usuario.senha_hash)
+        self.assertTrue(verificar_senha("SenhaSegura123!", usuario.senha_hash))
         self.assertTrue(usuario.consentimento_lgpd)
         self.assertIsNotNone(usuario.data_consentimento)
         self.assertEqual("2.2", usuario.versao_termos)
@@ -132,7 +131,7 @@ class AutenticacaoTests(unittest.TestCase):
             self.db.query(models.LogAuditoria).filter_by(acao="cadastro", resultado="sucesso").count(),
         )
 
-        login_resultado = login(Credenciais(email="erick@example.com", senha="SenhaSegura123"), Response(), self.db)
+        login_resultado = login(Credenciais(email="erick@example.com", senha="SenhaSegura123!"), Response(), self.db)
         self.assertTrue(login_resultado["requer_configuracao_2fa"])
         self.assertEqual(resultado["segredo"], login_resultado["segredo"])
         self.assertNotIn("access_token", login_resultado)
@@ -142,10 +141,10 @@ class AutenticacaoTests(unittest.TestCase):
             asyncio.run(
                 cadastrar_usuario(
                     CadastroUsuario(
-                        nome="Ana Silva",
+                        nome='Ana', sobrenome='Silva', interesse="Direito Civil",
                         email="ana@example.com",
-                        senha="SenhaSegura123",
-                        confirmar_senha="SenhaSegura123",
+                        senha="SenhaSegura123!",
+                        confirmar_senha="SenhaSegura123!",
                         consentimento_lgpd=False,
                     ),
                     Response(),
@@ -154,12 +153,101 @@ class AutenticacaoTests(unittest.TestCase):
             )
         self.assertEqual(422, contexto.exception.status_code)
 
+    def test_cadastro_repetido_retorna_mensagem_generica(self):
+        existente = models.Usuario(
+            nome="Pessoa Existente",
+            email="DUPLICADO@example.com",
+            senha_hash=hash_senha("SenhaSegura123!"),
+            tipo_usuario=models.TipoUsuario.ESTUDANTE,
+        )
+        self.db.add(existente)
+        self.db.commit()
+
+        with self.assertRaises(HTTPException) as contexto:
+            asyncio.run(
+                cadastrar_usuario(
+                    CadastroUsuario(
+                        nome='Outra', sobrenome='Pessoa', interesse="Direito Civil",
+                        email="duplicado@example.com",
+                        senha="SenhaSegura123!",
+                        confirmar_senha="SenhaSegura123!",
+                        consentimento_lgpd=True,
+                    ),
+                    Response(),
+                    self.db,
+                )
+            )
+
+        self.assertEqual(400, contexto.exception.status_code)
+        self.assertEqual("Não foi possível a finalização do cadastro.", contexto.exception.detail)
+        self.assertNotIn("cadastrado", contexto.exception.detail.lower())
+        self.assertEqual(1, self.db.query(models.Usuario).count())
+
+    def test_admin_suporte_pode_anonimizar_conta_e_root_nao(self):
+        root = models.Usuario(
+            nome="Root de teste",
+            email="root-teste@example.com",
+            senha_hash=hash_senha("SenhaSegura123!"),
+            tipo_usuario=models.TipoUsuario.ADMINISTRADOR,
+            e_root_admin=True,
+        )
+        suporte = models.Usuario(
+            nome="Suporte de teste",
+            email="suporte-teste@example.com",
+            senha_hash=hash_senha("SenhaSegura123!"),
+            tipo_usuario=models.TipoUsuario.ADMINISTRADOR,
+            e_root_admin=False,
+        )
+        self.db.add_all([root, suporte])
+        self.db.commit()
+
+        resposta_root = Response()
+        with self.assertRaises(HTTPException) as contexto:
+            anonimizar_meus_dados(
+                SolicitacaoAnonimizacao(senha="SenhaSegura123!", confirmacao="ANONIMIZAR"),
+                resposta_root,
+                root,
+                self.db,
+                self.db,
+            )
+        self.assertEqual(409, contexto.exception.status_code)
+        self.db.refresh(root)
+        self.assertEqual("root-teste@example.com", root.email)
+        self.assertTrue(verificar_senha("SenhaSegura123!", root.senha_hash))
+
+        resposta_suporte = Response()
+        resultado = anonimizar_meus_dados(
+            SolicitacaoAnonimizacao(senha="SenhaSegura123!", confirmacao="ANONIMIZAR"),
+            resposta_suporte,
+            suporte,
+            self.db,
+            self.db,
+        )
+        self.db.refresh(suporte)
+        self.assertTrue(suporte.email.startswith("anonimizado-"))
+        self.assertIsNone(suporte.senha_hash)
+        self.assertEqual("Dados pessoais anonimizados e sessão encerrada.", resultado["mensagem"])
+        self.assertIn("jurishome_access_token", resposta_suporte.headers.get("set-cookie", ""))
+
+        self.assertEqual(
+            1,
+            self.db.query(models.LogAuditoria)
+            .filter_by(acao="dados_pessoais_anonimizados", resultado="bloqueado")
+            .count(),
+        )
+        self.assertEqual(
+            1,
+            self.db.query(models.LogAuditoria)
+            .filter_by(acao="dados_pessoais_anonimizados", resultado="sucesso")
+            .count(),
+        )
+
     def test_cadastro_devolve_erro_legivel_para_email_e_confirmacao(self):
         dados = {
-            "nome": "Pessoa Teste",
+            "nome": 'Pessoa', "sobrenome": 'Teste', "interesse": "Direito Civil",
             "email": "sem-arroba.exemplo.com",
-            "senha": "SenhaSegura123",
-            "confirmar_senha": "SenhaSegura123",
+            "senha": "SenhaSegura123!",
+            "confirmar_senha": "SenhaSegura123!",
             "consentimento_lgpd": True,
         }
         codigo, _, corpo = self.requisicao_http("POST", "/api/auth/cadastro", dados)
@@ -170,7 +258,7 @@ class AutenticacaoTests(unittest.TestCase):
         codigo, _, corpo = self.requisicao_http(
             "POST",
             "/api/auth/login",
-            {"email": "sem-arroba", "senha": "SenhaSegura123"},
+            {"email": "sem-arroba", "senha": "SenhaSegura123!"},
         )
         self.assertEqual(422, codigo)
         erros = json.loads(corpo)["detail"]
@@ -183,14 +271,14 @@ class AutenticacaoTests(unittest.TestCase):
         erros = json.loads(corpo)["detail"]
         self.assertTrue(any("As senhas não conferem." in erro["msg"] for erro in erros))
 
-    def test_bloqueia_conta_apos_cinco_senhas_invalidas(self):
+    def test_bloqueia_conta_apos_seis_senhas_invalidas(self):
         asyncio.run(
             cadastrar_usuario(
                 CadastroUsuario(
-                    nome="Bruno Lima",
+                    nome='Bruno', sobrenome='Lima', interesse="Direito Civil",
                     email="bruno@example.com",
-                    senha="SenhaSegura123",
-                    confirmar_senha="SenhaSegura123",
+                    senha="SenhaSegura123!",
+                    confirmar_senha="SenhaSegura123!",
                     consentimento_lgpd=True,
                 ),
                 Response(),
@@ -198,23 +286,23 @@ class AutenticacaoTests(unittest.TestCase):
             )
         )
 
-        for _ in range(5):
+        for i in range(6):
             with self.assertRaises(HTTPException) as contexto:
                 login(Credenciais(email="bruno@example.com", senha="Invalida123"), Response(), self.db)
-            self.assertEqual(401, contexto.exception.status_code)
+            self.assertEqual(429 if i==5 else 401, contexto.exception.status_code)
 
         with self.assertRaises(HTTPException) as contexto:
-            login(Credenciais(email="bruno@example.com", senha="SenhaSegura123"), Response(), self.db)
-        self.assertEqual(423, contexto.exception.status_code)
+            login(Credenciais(email="bruno@example.com", senha="SenhaSegura123!"), Response(), self.db)
+        self.assertEqual(429, contexto.exception.status_code)
 
     def test_troca_senha_exige_a_senha_atual_e_emite_nova_sessao(self):
         asyncio.run(
             cadastrar_usuario(
                 CadastroUsuario(
-                    nome="Clara Alves",
+                    nome='Clara', sobrenome='Alves', interesse="Direito Civil",
                     email="clara@example.com",
-                    senha="SenhaSegura123",
-                    confirmar_senha="SenhaSegura123",
+                    senha="SenhaSegura123!",
+                    confirmar_senha="SenhaSegura123!",
                     consentimento_lgpd=True,
                 ),
                 Response(),
@@ -225,7 +313,7 @@ class AutenticacaoTests(unittest.TestCase):
 
         with self.assertRaises(HTTPException) as contexto:
             atualizar_senha(
-                AtualizacaoSenha(senha_atual="Invalida123", nova_senha="NovaSenha456"),
+                AtualizacaoSenha(senha_atual="Invalida123", nova_senha="NovaSenha456!"),
                 Response(),
                 usuario,
                 self.db,
@@ -233,27 +321,27 @@ class AutenticacaoTests(unittest.TestCase):
         self.assertEqual(400, contexto.exception.status_code)
 
         resultado = atualizar_senha(
-            AtualizacaoSenha(senha_atual="SenhaSegura123", nova_senha="NovaSenha456"),
+            AtualizacaoSenha(senha_atual="SenhaSegura123!", nova_senha="NovaSenha456!"),
             Response(),
             usuario,
             self.db,
         )
-        self.assertTrue(resultado["access_token"])
-        self.assertTrue(verificar_senha("NovaSenha456", usuario.senha_hash))
+        self.assertTrue(resultado["autenticado"])
+        self.assertTrue(verificar_senha("NovaSenha456!", usuario.senha_hash))
 
     def test_anonimizacao_remove_dados_e_preserva_rastreabilidade(self):
         usuario = models.Usuario(
             uuid="usr-anonimizacao-001",
             nome="Titular Exemplo",
             email="titular@example.com",
-            senha_hash=hash_senha("SenhaSegura123"),
+            senha_hash=hash_senha("SenhaSegura123!"),
             tipo_usuario=models.TipoUsuario.ESTUDANTE,
             universidade="Universidade Exemplo",
             especialidade_juridica="Direito Civil",
             totp_secret="segredo-cifrado-de-teste",
             is_2fa_enabled=True,
             consentimento_lgpd=True,
-            data_consentimento=models.datetime.now(models.timezone.utc).replace(tzinfo=None),
+            data_consentimento=datetime.now(timezone.utc).replace(tzinfo=None),
             versao_termos="1.2",
         )
         atendimento = models.FeedbackAtendimento(
@@ -287,12 +375,20 @@ class AutenticacaoTests(unittest.TestCase):
             correlacao_id="correlacao-anterior-001",
             detalhes_json="{}",
         )
-        self.db.add_all([usuario, atendimento, legado, log_anterior])
+        categoria = models.Categoria(nome="Direito Civil")
+        self.db.add(categoria)
+        self.db.flush()
+        acesso_categoria = models.CategoriaAcesso(
+            usuario_id=usuario.uuid,
+            categoria_id=categoria.uuid,
+            dia="2026-09-25",
+        )
+        self.db.add_all([usuario, atendimento, legado, log_anterior, acesso_categoria])
         self.db.commit()
 
         resposta = Response()
         resultado = anonimizar_meus_dados(
-            SolicitacaoAnonimizacao(senha="SenhaSegura123", confirmacao="ANONIMIZAR"),
+            SolicitacaoAnonimizacao(senha="SenhaSegura123!", confirmacao="ANONIMIZAR"),
             resposta,
             usuario,
             self.db,
@@ -318,12 +414,13 @@ class AutenticacaoTests(unittest.TestCase):
 
         self.db.refresh(legado)
         self.assertNotIn("Mensagem antiga", legado.mensagem)
+        self.assertEqual(0, self.db.query(models.CategoriaAcesso).filter_by(usuario_id=usuario.uuid).count())
 
         log = self.db.query(models.LogAuditoria).filter_by(acao="dados_pessoais_anonimizados").one()
         self.assertEqual(usuario.uuid, log.usuario_id)
         self.assertEqual("sucesso", log.resultado)
         self.assertNotIn("titular@example.com", log.detalhes_json)
-        self.assertNotIn("SenhaSegura123", log.detalhes_json)
+        self.assertNotIn("SenhaSegura123!", log.detalhes_json)
         self.assertEqual(1, self.db.query(models.LogAuditoria).filter_by(acao="perfil_alterado").count())
         self.assertEqual(2, self.db.query(models.LogAuditoria).count())
         self.assertEqual(usuario.uuid, resultado["registro_preservado"]["usuario_id"])
@@ -336,10 +433,10 @@ class AutenticacaoTests(unittest.TestCase):
         configuracao = asyncio.run(
             cadastrar_usuario(
                 CadastroUsuario(
-                    nome="Diego Nunes",
+                    nome='Diego', sobrenome='Nunes', interesse="Direito Civil",
                     email="diego@example.com",
-                    senha="SenhaSegura123",
-                    confirmar_senha="SenhaSegura123",
+                    senha="SenhaSegura123!",
+                    confirmar_senha="SenhaSegura123!",
                     consentimento_lgpd=True,
                 ),
                 Response(),
@@ -353,14 +450,15 @@ class AutenticacaoTests(unittest.TestCase):
         primeira_sessao = ativar_2fa_no_cadastro(
             Codigo2FA(
                 desafio_token=configuracao["configuracao_token"],
-                codigo=pyotp.TOTP(configuracao["segredo"]).now(),
+                codigo=pyotp.TOTP(configuracao["segredo"]).at(time.time() - 30),
             ),
             Response(),
             self.db,
         )
-        self.assertTrue(primeira_sessao["access_token"])
+        self.assertTrue(primeira_sessao["autenticado"])
+        self.assertNotIn("access_token", primeira_sessao)
         self.assertTrue(usuario.is_2fa_enabled)
-        resposta_login = login(Credenciais(email="diego@example.com", senha="SenhaSegura123"), Response(), self.db)
+        resposta_login = login(Credenciais(email="diego@example.com", senha="SenhaSegura123!"), Response(), self.db)
         self.assertTrue(resposta_login["requer_2fa"])
         self.assertTrue(resposta_login["desafio_token"])
         sessao = validar_2fa(
@@ -371,7 +469,8 @@ class AutenticacaoTests(unittest.TestCase):
             Response(),
             self.db,
         )
-        self.assertTrue(sessao["access_token"])
+        self.assertTrue(sessao["autenticado"])
+        self.assertNotIn("access_token", sessao)
 
     @unittest.skipUnless(importlib.util.find_spec("pyotp"), "pyotp não está instalado")
     def test_bloqueia_brute_force_de_codigo_2fa_sem_resetar_no_login(self):
@@ -380,10 +479,10 @@ class AutenticacaoTests(unittest.TestCase):
         configuracao = asyncio.run(
             cadastrar_usuario(
                 CadastroUsuario(
-                    nome="Marina Costa",
+                    nome='Marina', sobrenome='Costa', interesse="Direito Civil",
                     email="marina@example.com",
-                    senha="SenhaSegura123",
-                    confirmar_senha="SenhaSegura123",
+                    senha="SenhaSegura123!",
+                    confirmar_senha="SenhaSegura123!",
                     consentimento_lgpd=True,
                 ),
                 Response(),
@@ -400,13 +499,13 @@ class AutenticacaoTests(unittest.TestCase):
             self.db,
         )
 
-        for _ in range(4):
+        for _ in range(5):
             with self.assertRaises(HTTPException) as contexto:
                 login(Credenciais(email="marina@example.com", senha="SenhaErrada123"), Response(), self.db)
             self.assertEqual(401, contexto.exception.status_code)
 
-        desafio = login(Credenciais(email="marina@example.com", senha="SenhaSegura123"), Response(), self.db)
-        self.assertEqual(4, self.db.query(models.Usuario).filter_by(email="marina@example.com").one().tentativas_login_falhas)
+        desafio = login(Credenciais(email="marina@example.com", senha="SenhaSegura123!"), Response(), self.db)
+        self.assertEqual(5, self.db.query(models.Usuario).filter_by(email="marina@example.com").one().tentativas_login_falhas)
         totp = pyotp.TOTP(segredo)
         codigo_invalido = next(
             f"{codigo:06d}"
@@ -419,28 +518,28 @@ class AutenticacaoTests(unittest.TestCase):
                 Response(),
                 self.db,
             )
-        self.assertEqual(401, contexto.exception.status_code)
+        self.assertEqual(429, contexto.exception.status_code)
 
         with self.assertRaises(HTTPException) as contexto:
-            login(Credenciais(email="marina@example.com", senha="SenhaSegura123"), Response(), self.db)
-        self.assertEqual(423, contexto.exception.status_code)
+            login(Credenciais(email="marina@example.com", senha="SenhaSegura123!"), Response(), self.db)
+        self.assertEqual(429, contexto.exception.status_code)
 
     @unittest.skipUnless(importlib.util.find_spec("pyotp"), "pyotp não está instalado")
     def test_fluxo_http_cadastro_ativacao_saida_e_login_exigem_2fa(self):
         import pyotp
 
         codigo, headers, _ = self.requisicao_http("GET", "/home_usuario")
-        self.assertEqual(303, codigo)
-        self.assertIn(("location", "/?sessao=expirada"), headers)
+        self.assertEqual(404, codigo)
+        self.assertNotIn(("location", "/?sessao=expirada"), headers)
         for rota in ("/exibir-mais", "/categorias"):
             with self.subTest(rota=rota):
                 codigo, headers, _ = self.requisicao_http("GET", rota)
-                self.assertEqual(303, codigo)
-                self.assertIn(("location", "/?sessao=expirada"), headers)
+                self.assertEqual(404, codigo)
+                self.assertNotIn(("location", "/?sessao=expirada"), headers)
 
         codigo, headers, corpo = self.requisicao_http(
             "POST", "/api/auth/cadastro",
-            {"nome": "Teste Completo", "email": "completo@example.com", "senha": "SenhaSegura123", "confirmar_senha": "SenhaSegura123", "consentimento_lgpd": True},
+            {"nome": 'Teste', "sobrenome": 'Completo', "interesse": "Direito Civil", "email": "completo@example.com", "senha": "SenhaSegura123!", "confirmar_senha": "SenhaSegura123!", "consentimento_lgpd": True},
         )
         cadastro = json.loads(corpo)
         self.assertEqual(201, codigo)
@@ -451,7 +550,7 @@ class AutenticacaoTests(unittest.TestCase):
         codigo, _, _ = self.requisicao_http("GET", "/api/usuarios/me", token=cadastro["configuracao_token"])
         self.assertEqual(401, codigo)
         codigo, _, _ = self.requisicao_http("GET", "/home_usuario")
-        self.assertEqual(303, codigo)
+        self.assertEqual(404, codigo)
 
         codigo_invalido = "000000" if pyotp.TOTP(cadastro["segredo"]).now() != "000000" else "999999"
         codigo, _, _ = self.requisicao_http(
@@ -465,7 +564,7 @@ class AutenticacaoTests(unittest.TestCase):
             {"desafio_token": cadastro["configuracao_token"], "codigo": pyotp.TOTP(cadastro["segredo"]).now()},
         )
         self.assertEqual(200, codigo)
-        self.assertTrue(json.loads(corpo)["access_token"])
+        self.assertTrue(json.loads(corpo)["autenticado"])
         cookie_resposta = SimpleCookie()
         cookie_resposta.load(next(valor for chave, valor in headers if chave == "set-cookie"))
         cookie = f"jurishome_access_token={cookie_resposta['jurishome_access_token'].value}"
@@ -482,10 +581,10 @@ class AutenticacaoTests(unittest.TestCase):
         codigo, _, _ = self.requisicao_http("POST", "/api/auth/logout", cookie=cookie)
         self.assertEqual(204, codigo)
         codigo, _, _ = self.requisicao_http("GET", "/home_usuario")
-        self.assertEqual(303, codigo)
+        self.assertEqual(404, codigo)
 
         codigo, headers, corpo = self.requisicao_http(
-            "POST", "/api/auth/login", {"email": "completo@example.com", "senha": "SenhaSegura123"},
+            "POST", "/api/auth/login", {"email": "completo@example.com", "senha": "SenhaSegura123!"},
         )
         login_pendente = json.loads(corpo)
         self.assertEqual(200, codigo)
@@ -496,82 +595,16 @@ class AutenticacaoTests(unittest.TestCase):
 
         codigo, headers, corpo = self.requisicao_http(
             "POST", "/api/auth/2fa/validar",
-            {"desafio_token": login_pendente["desafio_token"], "codigo": pyotp.TOTP(cadastro["segredo"]).now()},
+            {"desafio_token": login_pendente["desafio_token"], "codigo": pyotp.TOTP(cadastro["segredo"]).at(time.time() + 30)},
         )
         self.assertEqual(200, codigo)
-        self.assertTrue(json.loads(corpo)["access_token"])
+        self.assertTrue(json.loads(corpo)["autenticado"])
         self.assertTrue(any(chave == "set-cookie" for chave, _ in headers))
 
     def test_favicon_nao_retorna_404(self):
         codigo, headers, _ = self.requisicao_http("GET", "/favicon.ico")
         self.assertEqual(307, codigo)
         self.assertIn(("location", "/static/images/logo.png"), headers)
-
-    def test_consulta_emec_mapeia_o_retorno_da_biblioteca(self):
-        pacote = ModuleType("emec_api")
-        api = ModuleType("emec_api.api")
-        cliente = ModuleType("emec_api.api.client")
-
-        class InstituicaoFalsa:
-            def __init__(self, codigo):
-                self.codigo = codigo
-
-            def parse(self):
-                return None
-
-            def get_full_json(self):
-                return {
-                    "nome_da_ies": "Universidade de Mogi das Cruzes",
-                    "sigla": "UMC",
-                    "situacao": "ATIVA",
-                    "campus": [{"code": "1", "city": "Mogi das Cruzes", "uf": "SP"}],
-                }
-
-        cliente.Institution = InstituicaoFalsa
-        with patch.dict(
-            sys.modules,
-            {"emec_api": pacote, "emec_api.api": api, "emec_api.api.client": cliente},
-        ):
-            resultado = consultar_instituicao_emec(123)
-
-        self.assertEqual("Universidade de Mogi das Cruzes", resultado["nome"])
-        self.assertEqual("UMC", resultado["sigla"])
-        self.assertEqual("SP", resultado["campus"][0]["uf"])
-
-    def test_consulta_emec_usa_fonte_publica_se_biblioteca_nao_importar(self):
-        resultado_publico = {"nome": "Universidade pública"}
-        with patch.dict(sys.modules, {"emec_api": None}):
-            with patch("routes.auth.consultar_ies_api_publica", return_value=resultado_publico) as consulta:
-                resultado = consultar_instituicao_emec(123)
-
-        self.assertEqual(resultado_publico, resultado)
-        consulta.assert_called_once_with(123)
-
-    def test_consulta_api_externa_mapeia_codigo_emec(self):
-        resposta_externa = {
-            "features": [
-                {
-                    "attributes": {
-                        "ies_cdg_mec_ies": 521,
-                        "ies_nome": "UNIVERSIDADE DE MOGI DAS CRUZES",
-                        "ies_sigla": "UMC",
-                        "ies_campus": "Centro Cívico",
-                        "ies_municipio": "MOGI DAS CRUZES",
-                        "ies_uf": "SP",
-                        "curso_situacao": "CADASTRADO",
-                    }
-                }
-            ]
-        }
-        import json
-
-        with patch("routes.auth.urlopen", return_value=BytesIO(json.dumps(resposta_externa).encode("utf-8"))):
-            resultado = consultar_ies_api_publica(521)
-
-        self.assertIsNotNone(resultado)
-        self.assertEqual("UNIVERSIDADE DE MOGI DAS CRUZES", resultado["nome"])
-        self.assertEqual("UMC", resultado["sigla"])
-        self.assertEqual("SP", resultado["campus"][0]["uf"])
 
 if __name__ == "__main__":
     unittest.main()

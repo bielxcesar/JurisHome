@@ -1,68 +1,349 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Matérias jurídicas recentes e organizadas por categoria no JurisHome">
     <title>{% if visao == 'recentes' %}Exibir mais{% else %}Categorias{% endif %} | JurisHome</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/homeAdmin.css?v=20260925-2">
-    <link rel="stylesheet" href="/static/css/figma-app.css?v=20260925-5">
+    <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
     <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+    <!-- Tailwind via CDN substituindo os CSS bloqueados -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        (function() {
+            const temaSalvo = localStorage.getItem("tema_juris");
+            if (temaSalvo === "claro") {
+                document.documentElement.classList.remove("dark");
+                document.documentElement.setAttribute("data-theme", "light");
+            } else {
+                document.documentElement.classList.add("dark");
+                document.documentElement.setAttribute("data-theme", "dark");
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav">
+    {% if visao == 'categorias' %}<link rel="stylesheet" href="/static/css/conteudo-educacional.css?v=20261103-1">{% endif %}
+    {% if tipo_usuario != 'administrador' %}<script src="/static/js/categoria-acesso.js?v=20261103-1" defer></script>{% endif %}
 </head>
-<body class="listagem-shell" data-visao="{{ visao }}" data-tipo-usuario="{{ tipo_usuario }}">
-    <header class="navbar">
-        <div class="nav-data" id="data-atual" aria-label="Data atual">--/--/----</div>
-        <nav class="nav-menu" aria-label="Navegação principal">
-            <a href="{% if tipo_usuario == 'administrador' %}/home_admin{% else %}/home_usuario{% endif %}" class="nav-link"><i class="fa-solid fa-house" aria-hidden="true"></i> Home</a>
-            <a href="/exibir-mais" class="nav-link{% if visao == 'recentes' %} active{% endif %}"{% if visao == 'recentes' %} aria-current="page"{% endif %}><i class="fa-solid fa-square-plus" aria-hidden="true"></i> Exibir mais</a>
-            {% if tipo_usuario == 'administrador' %}
-            <a href="/admin-feedbacks" class="nav-link"><i class="fa-solid fa-inbox" aria-hidden="true"></i> Feedbacks</a>
-            <a href="/admin/auditoria" class="nav-link"><i class="fa-solid fa-list-check" aria-hidden="true"></i> Auditoria</a>
-            {% else %}
-            <a href="/configuracoes-usuario#feedback" class="nav-link"><i class="fa-solid fa-headset" aria-hidden="true"></i> Suporte</a>
-            {% endif %}
-            <span class="nav-link nav-link-indisponivel" aria-disabled="true" title="Página ainda não disponível"><i class="fa-solid fa-user-group" aria-hidden="true"></i> Sobre nós</span>
-            <a href="/categorias" class="nav-link{% if visao == 'categorias' %} active{% endif %}"{% if visao == 'categorias' %} aria-current="page"{% endif %}><i class="fa-solid fa-newspaper" aria-hidden="true"></i> Categorias</a>
-            <a href="/pesquisa" class="nav-link"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Pesquisa</a>
-            <a href="/glossario{% if tipo_usuario != 'administrador' %}?origem=usuario{% endif %}" class="nav-link"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Glossário</a>
-        </nav>
-        <div class="nav-perfil">
-            <button class="avatar-icon" id="btn-perfil" type="button" aria-label="Abrir configurações" aria-expanded="false" aria-controls="dropdown-perfil">
-                <i class="fa-solid fa-user" aria-hidden="true"></i>
-            </button>
-            <div class="menu-perfil-dropdown" id="dropdown-perfil">
-                <a href="{% if tipo_usuario == 'administrador' %}/configuracao{% else %}/configuracoes-usuario{% endif %}" class="dropdown-item">Configurações <i class="fa-solid fa-gear" aria-hidden="true"></i></a>
-                <a href="/termos-de-aceite" class="dropdown-item">Termo de Aceite <i class="fa-regular fa-file-lines" aria-hidden="true"></i></a>
-                <a href="/politica-de-privacidade" class="dropdown-item">Privacidade <i class="fa-solid fa-shield-halved" aria-hidden="true"></i></a>
-                <a href="/" class="dropdown-item btn-desconectar">Sair <i class="fa-solid fa-power-off" aria-hidden="true"></i></a>
+<body class="juris-ui juris-list bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col" data-visao="{{ visao }}" data-tipo-usuario="{{ tipo_usuario }}">
+    
+    <!-- Barra de Navegação Padronizada -->
+    {% include "_juris_nav.html" %}
+
+    <!-- Área Principal -->
+    <main class="w-full max-w-4xl mx-auto px-4 py-12 flex-1" id="conteudo-principal">
+        
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-gray-800 pb-6 mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-white mb-2">{% if visao == 'recentes' %}Todas as Matérias{% else %}Categorias{% endif %}</h1>
+                <p class="text-gray-400 text-sm">{% if visao == 'recentes' %}Acompanhe o acervo completo do JurisHome.{% else %}Filtre o acervo por áreas do Direito.{% endif %}</p>
+            </div>
+
+            <!-- Filtros Condicionais (Recentes vs Categorias) -->
+            <div class="w-full md:w-auto">
+                {% if visao == 'recentes' %}
+                <div class="relative group">
+                    <i class="fa-solid fa-arrow-down-short-wide absolute left-4 top-1/2 -translate-y-1/2 text-amber-500"></i>
+                    <select id="ordem-materias" class="w-full md:w-64 bg-[#25262a] border border-gray-700 rounded-xl py-3 pl-12 pr-10 text-white appearance-none focus:outline-none focus:border-amber-500 transition cursor-pointer">
+                        <option value="recente">Mais recentes primeiro</option>
+                        <option value="antiga">Mais antigas primeiro</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                </div>
+                {% else %}
+                <div class="relative group">
+                    <i class="fa-solid fa-filter absolute left-4 top-1/2 -translate-y-1/2 text-amber-500"></i>
+                    <select id="categoria-materias" class="w-full md:w-64 bg-[#25262a] border border-gray-700 rounded-xl py-3 pl-12 pr-10 text-white appearance-none focus:outline-none focus:border-amber-500 transition cursor-pointer">
+                        <option value="">Todas as categorias</option>
+                        <!-- Preenchido via JS -->
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                </div>
+                {% endif %}
             </div>
         </div>
-    </header>
 
-    <main class="materias-lista-page" id="conteudo-principal">
-        {% if visao == 'recentes' %}
-        <div class="filtro-lista filtro-data">
-            <label for="ordem-materias">Data:</label>
-            <select id="ordem-materias" aria-label="Ordenar matérias por data">
-                <option value="recente">recente</option>
-                <option value="antiga">antiga</option>
-            </select>
-        </div>
-        {% else %}
-        <div class="filtro-lista filtro-categoria">
-            <label for="categoria-materias">Categoria:</label>
-            <select id="categoria-materias" aria-label="Selecionar categoria">
-                <option value="">Carregando...</option>
-            </select>
-            <i class="fa-solid fa-angle-up" aria-hidden="true"></i>
+        {% if visao == 'categorias' %}
+        <script id="catalogo-categorias" type="application/json">{{ categorias_catalogo | default([]) | tojson }}</script>
+        <div id="conteudo-categoria" class="category-learning" hidden>
+            <section class="category-learning-panel" aria-labelledby="titulo-categoria">
+                <p class="category-eyebrow">CONHEÇA A ÁREA</p>
+                <h2 id="titulo-categoria"></h2>
+                <p id="descricao-categoria" class="category-description"></p>
+                <h3>Principais assuntos</h3>
+                <ul id="assuntos-categoria" class="category-topics"></ul>
+                <p id="cotidiano-categoria" class="category-description"></p>
+            </section>
+            <section class="category-learning-panel" aria-labelledby="titulo-curiosidade-categoria">
+                <p class="category-eyebrow">CURIOSIDADES JURÍDICAS</p>
+                <h2 id="titulo-curiosidade-categoria"></h2>
+                <p id="texto-curiosidade-categoria" class="category-description"></p>
+                <a id="fonte-curiosidade-categoria" class="category-source" target="_blank" rel="noopener noreferrer"></a>
+            </section>
+            <section class="category-learning-panel" aria-labelledby="titulo-legislacao-categoria">
+                <p class="category-eyebrow">LEGISLAÇÃO EM DESTAQUE</p>
+                <h2 id="titulo-legislacao-categoria">Fontes oficiais para consulta</h2>
+                <p class="category-description">As descrições são introdutórias. Consulte o texto oficial para conferir a redação vigente e suas alterações.</p>
+                <div id="legislacao-categoria" class="category-law-grid"></div>
+            </section>
         </div>
         {% endif %}
-        <p class="status-listagem" id="status-listagem" role="status" aria-live="polite">Carregando matérias...</p>
-        <div class="materias-lista" id="lista-materias" aria-live="polite"></div>
+
+        {% if visao == 'categorias' %}<h2 id="titulo-noticias-categoria" class="category-news-heading" hidden></h2>{% endif %}
+
+        <p id="status-listagem" class="text-amber-500 font-semibold flex items-center gap-2 mb-6" role="status" aria-live="polite">
+            <i class="fa-solid fa-circle-notch fa-spin"></i> Carregando matérias...
+        </p>
+
+        <!-- Container da Lista -->
+        <div id="lista-materias" class="flex flex-col gap-4" aria-live="polite">
+            <!-- Cards injetados via JS -->
+        </div>
     </main>
 
     {% include "_legal_links.html" %}
-    <script src="/static/js/listagemConteudos.js?v=20260925-3"></script>
+
+    <!-- Script Embutido (Substitui o listagemConteudos.js para aplicar as classes Tailwind) -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Lógica do Header
+            const botaoPerfil = document.getElementById("btn-perfil");
+            const menuPerfil = document.getElementById("dropdown-perfil");
+            
+            if (botaoPerfil && menuPerfil) {
+                botaoPerfil.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    menuPerfil.classList.toggle("hidden");
+                    menuPerfil.classList.toggle("flex");
+                    botaoPerfil.setAttribute('aria-expanded', String(!menuPerfil.classList.contains('hidden')));
+                });
+                document.addEventListener("click", (e) => {
+                    if (!menuPerfil.contains(e.target) && !botaoPerfil.contains(e.target)) {
+                        menuPerfil.classList.add("hidden");
+                        menuPerfil.classList.remove("flex");
+                        botaoPerfil.setAttribute('aria-expanded', 'false');
+                    }
+                });
+                document.addEventListener('keydown', (evento) => {
+                    if (evento.key === 'Escape') {
+                        menuPerfil.classList.add('hidden');
+                        menuPerfil.classList.remove('flex');
+                        botaoPerfil.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            }
+
+            const elData = document.getElementById("data-atual");
+            if(elData) elData.textContent = new Intl.DateTimeFormat("pt-BR").format(new Date());
+
+            document.querySelectorAll(".btn-desconectar").forEach((link) => {
+                link.addEventListener("click", (evento) => {
+                    evento.preventDefault();
+                    window.localStorage.removeItem("jurishome_access_token");
+                    window.sessionStorage.removeItem("jurishome_desafio_2fa");
+                    window.fetch("/api/auth/logout", { method: "POST" })
+                        .finally(() => { window.location.href = "/"; });
+                });
+            });
+
+            // LÓGICA DE LISTAGEM (O que antes ficava no listagemConteudos.js)
+            const visao = document.body.dataset.visao;
+            const containerLista = document.getElementById("lista-materias");
+            const statusTexto = document.getElementById("status-listagem");
+            
+            const seletorOrdem = document.getElementById("ordem-materias");
+            const seletorCategoria = document.getElementById("categoria-materias");
+
+            let acervoCompleto = [];
+            const catalogoCategorias = JSON.parse(document.getElementById('catalogo-categorias')?.textContent || '[]');
+            function apresentarCategoria() {
+                const painel = document.getElementById('conteudo-categoria');
+                if (!painel) return;
+                const nome = seletorCategoria?.value || '';
+                const categoria = catalogoCategorias.find(c => c.nome === nome);
+                painel.hidden = !categoria;
+                const tituloNoticias = document.getElementById('titulo-noticias-categoria');
+                tituloNoticias.hidden = !categoria;
+                tituloNoticias.textContent = categoria ? `Notícias jurídicas · ${nome}` : '';
+                if (categoria) {
+                    document.getElementById('titulo-categoria').textContent = nome;
+                    document.getElementById('descricao-categoria').textContent = categoria.descricao || '';
+                    document.getElementById('cotidiano-categoria').textContent = categoria.cotidiano || '';
+                    const assuntos = document.getElementById('assuntos-categoria');
+                    assuntos.replaceChildren();
+                    (Array.isArray(categoria.assuntos) ? categoria.assuntos : []).forEach(assunto => {
+                        const item = document.createElement('li');
+                        item.textContent = assunto;
+                        assuntos.append(item);
+                    });
+
+                    const curiosidade = categoria.curiosidade;
+                    document.getElementById('titulo-curiosidade-categoria').textContent = curiosidade?.titulo || '';
+                    document.getElementById('texto-curiosidade-categoria').textContent = curiosidade?.texto || '';
+                    const fonteCuriosidade = document.getElementById('fonte-curiosidade-categoria');
+                    fonteCuriosidade.textContent = curiosidade?.fonte || 'Consultar fonte oficial';
+                    fonteCuriosidade.href = curiosidade?.url || '#';
+
+                    const legislacoes = document.getElementById('legislacao-categoria');
+                    legislacoes.replaceChildren();
+                    (Array.isArray(categoria.legislacoes) ? categoria.legislacoes : []).forEach(lei => {
+                        const cartao = document.createElement('article');
+                        cartao.className = 'category-law-card';
+                        const nomeLei = document.createElement('h3');
+                        nomeLei.textContent = lei.nome || 'Legislação';
+                        const numeroLei = document.createElement('p');
+                        numeroLei.className = 'category-law-number';
+                        numeroLei.textContent = lei.numero || '';
+                        const artigosLei = document.createElement('p');
+                        artigosLei.className = 'category-law-articles';
+                        artigosLei.textContent = lei.artigos || '';
+                        const descricaoLei = document.createElement('p');
+                        descricaoLei.className = 'category-description';
+                        descricaoLei.textContent = lei.descricao || '';
+                        const linkLei = document.createElement('a');
+                        linkLei.className = 'category-source';
+                        linkLei.href = lei.url || '#';
+                        linkLei.target = '_blank';
+                        linkLei.rel = 'noopener noreferrer';
+                        linkLei.textContent = 'Consultar texto oficial ↗';
+                        cartao.append(nomeLei, numeroLei, artigosLei, descricaoLei, linkLei);
+                        legislacoes.append(cartao);
+                    });
+                }
+                const url = new URL(location.href);
+                if (nome) url.searchParams.set('categoria', nome);
+                else url.searchParams.delete('categoria');
+                history.replaceState(null, '', url);
+            }
+            if (visao === 'categorias' && seletorCategoria) preencherFiltroCategorias();
+
+            async function carregarDados() {
+                try {
+                    const resposta = await fetch("/api/conteudos");
+                    if (!resposta.ok) throw new Error("Falha ao carregar.");
+                    acervoCompleto = await resposta.json();
+                    
+                    if (visao === 'categorias' && seletorCategoria) {
+                        preencherFiltroCategorias();
+                    }
+                    
+                    processarERenderizar();
+                } catch (erro) {
+                    console.error("Erro na listagem:", erro);
+                    statusTexto.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro ao carregar as matérias.';
+                    statusTexto.className = "text-red-500 font-semibold mb-6 flex items-center gap-2";
+                }
+            }
+
+            function preencherFiltroCategorias() {
+                // Pega categorias únicas que não sejam vazias
+                const selecionada = seletorCategoria.value || new URLSearchParams(location.search).get('categoria');
+                seletorCategoria.replaceChildren(new Option('Todas as categorias', ''));
+                const categoriasUnicas = [...new Set([...catalogoCategorias.map(c => c.nome), ...acervoCompleto.map(m => m.categoria)].filter(Boolean))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
+                
+                categoriasUnicas.forEach(cat => {
+                    const option = document.createElement("option");
+                    option.value = cat;
+                    option.textContent = cat;
+                    seletorCategoria.appendChild(option);
+                });
+                const solicitada = selecionada;
+                seletorCategoria.value = solicitada && categoriasUnicas.includes(solicitada) ? solicitada : '';
+                apresentarCategoria();
+            }
+
+            function processarERenderizar() {
+                apresentarCategoria();
+                let resultados = [...acervoCompleto];
+
+                // Filtra por Categoria (se estiver na página categorias)
+                if (visao === 'categorias' && seletorCategoria && seletorCategoria.value) {
+                    resultados = resultados.filter(m => m.categoria === seletorCategoria.value);
+                }
+
+                // Ordena por data (se estiver na página recentes)
+                // Como não temos a data exata no objeto simples, usamos a ordem do array (simulando recente/antigo)
+                if (visao === 'recentes' && seletorOrdem) {
+                    if (seletorOrdem.value === 'antiga') {
+                        resultados.reverse(); // Inverte para simular as mais antigas primeiro
+                    }
+                }
+
+                renderizarCards(resultados);
+            }
+
+            function renderizarCards(materias) {
+                containerLista.replaceChildren();
+                statusTexto.classList.add("hidden");
+
+                if (materias.length === 0) {
+                    const vazio = document.createElement('p');
+                    vazio.className = 'category-empty';
+                    vazio.textContent = 'Nenhuma publicação encontrada nesta categoria.';
+                    containerLista.append(vazio);
+                    return;
+                }
+
+                materias.forEach(materia => {
+                    const card = document.createElement('article');
+                    card.className = 'category-news-card';
+                    const media = document.createElement('div');
+                    media.className = 'category-news-media';
+                    if (materia.imagem_miniatura) {
+                        const imagem = document.createElement('img');
+                        imagem.className = 'category-news-image';
+                        imagem.alt = '';
+                        imagem.loading = 'lazy';
+                        imagem.src = materia.imagem_miniatura;
+                        media.append(imagem);
+                    } else {
+                        const placeholder = document.createElement('span');
+                        placeholder.className = 'category-news-placeholder';
+                        placeholder.setAttribute('aria-hidden', 'true');
+                        placeholder.textContent = '§';
+                        media.append(placeholder);
+                    }
+                    const conteudo = document.createElement('div');
+                    conteudo.className = 'category-news-copy';
+                    const origem = document.createElement('p');
+                    origem.className = 'category-news-source';
+                    origem.textContent = `${materia.fonte ? `Fonte: ${materia.fonte}` : 'Fonte não informada'} · Publicado em ${materia.criado_em || 'data não informada'}`;
+                    const titulo = document.createElement('a');
+                    titulo.className = 'category-news-title';
+                    titulo.href = `/materia/${encodeURIComponent(materia.uuid || '')}`;
+                    titulo.textContent = materia.titulo || 'Publicação jurídica';
+                    const resumo = document.createElement('p');
+                    resumo.className = 'category-description';
+                    resumo.textContent = materia.resumo_home || 'Acesse a publicação para consultar o conteúdo completo.';
+                    conteudo.append(origem, titulo, resumo);
+                    if (materia.fonte_original) {
+                        const fonte = document.createElement('a');
+                        fonte.className = 'category-source';
+                        fonte.href = materia.fonte_original;
+                        fonte.target = '_blank';
+                        fonte.rel = 'noopener noreferrer';
+                        fonte.textContent = 'Acessar fonte original ↗';
+                        conteudo.append(fonte);
+                    } else {
+                        const fonteAusente = document.createElement('span');
+                        fonteAusente.className = 'category-law-number';
+                        fonteAusente.textContent = 'Fonte original não informada';
+                        conteudo.append(fonteAusente);
+                    }
+                    card.append(media, conteudo);
+                    containerLista.append(card);
+                });
+            }
+
+            // Listeners para os filtros
+            if (seletorOrdem) seletorOrdem.addEventListener("change", processarERenderizar);
+            if (seletorCategoria) seletorCategoria.addEventListener("change", processarERenderizar);
+
+            // Inicia o processo
+            carregarDados();
+        });
+    </script>
 </body>
 </html>

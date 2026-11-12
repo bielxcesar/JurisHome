@@ -23,6 +23,11 @@
     let feedbackSelecionadoId = null;
     let ultimoAcionadorDoDialogo = null;
     let temporizadorToast = null;
+    let atualizacaoEmCurso = false;
+    let operacaoEmCurso = false;
+    let paginaAtual = 1;
+    const TAMANHO_PAGINA = 10;
+    const rascunhos = new Map();
 
     document.addEventListener("DOMContentLoaded", iniciar);
 
@@ -50,6 +55,14 @@
         const botao = document.getElementById("btn-perfil");
         const menu = document.getElementById("dropdown-perfil");
         if (!botao || !menu) return;
+        document.querySelectorAll('.btn-desconectar').forEach(link => link.addEventListener('click', async evento => {
+            evento.preventDefault();
+            try {
+                const resposta = await window.fetch('/api/auth/logout', {method: 'POST'});
+                if (!resposta.ok) throw new Error();
+                window.location.assign('/');
+            } catch { mostrarToast('Não foi possível encerrar a sessão. Tente novamente.', true); }
+        }));
 
         const fecharMenu = () => {
             menu.classList.remove("ativo");
@@ -82,14 +95,19 @@
     }
 
     function configurarFiltros() {
-        document.getElementById("admin-search").addEventListener("input", renderizarLista);
-        document.getElementById("admin-status-filter").addEventListener("change", renderizarLista);
+        const filtrar = () => { paginaAtual = 1; renderizarLista(); };
+        document.getElementById("admin-search").addEventListener("input", filtrar);
+        document.getElementById("admin-status-filter").addEventListener("change", filtrar);
+        document.getElementById('admin-refresh').addEventListener('click', atualizarDoServidor);
+        document.getElementById('admin-previous').addEventListener('click', () => { paginaAtual--; renderizarLista(); });
+        document.getElementById('admin-next').addEventListener('click', () => { paginaAtual++; renderizarLista(); });
         document.getElementById("admin-clear-filters").addEventListener("click", limparFiltros);
         document.getElementById("admin-empty-clear").addEventListener("click", limparFiltros);
         document.getElementById("feedback-filter-form").addEventListener("submit", (evento) => evento.preventDefault());
     }
 
     function limparFiltros() {
+        paginaAtual = 1;
         document.getElementById("admin-search").value = "";
         document.getElementById("admin-status-filter").value = "";
         renderizarLista();
@@ -104,17 +122,29 @@
     }
 
     async function atualizarDoServidor() {
+        if (atualizacaoEmCurso || operacaoEmCurso) return;
+        atualizacaoEmCurso = true;
+        const botao = document.getElementById('admin-refresh');
+        botao.disabled = true;
+        const estado = document.getElementById('admin-load-state');
+        estado.textContent = 'Atualizando os atendimentos…';
+        document.querySelector('.feedback-admin-list-panel').setAttribute('aria-busy', 'true');
         try {
             await service.inicializar();
             renderizarTudo();
+            estado.textContent = 'Atendimentos atualizados.';
 
             const dialogo = document.getElementById("feedback-admin-dialog");
             if (dialogo.open && feedbackSelecionadoId) {
                 preencherDetalhes(service.buscarPorId(feedbackSelecionadoId));
             }
         } catch (erro) {
-            renderizarTudo();
+            estado.textContent = 'Não foi possível atualizar. Os dados exibidos podem estar desatualizados. Use Atualizar para tentar novamente.';
             mostrarToast(erro.message || "Não foi possível atualizar os feedbacks.", true);
+        } finally {
+            botao.disabled = false;
+            atualizacaoEmCurso = false;
+            document.querySelector('.feedback-admin-list-panel').setAttribute('aria-busy', 'false');
         }
     }
 
@@ -135,6 +165,7 @@
                 const alvo = normalizarTexto([
                     item.protocolo,
                     item.usuario.email,
+                    item.usuario.nome,
                     item.tipo,
                     item.assunto
                 ].join(" "));
@@ -145,13 +176,19 @@
 
     function renderizarLista() {
         const registros = obterFiltrados();
+        const paginas = Math.max(1, Math.ceil(registros.length / TAMANHO_PAGINA));
+        paginaAtual = Math.min(Math.max(1, paginaAtual), paginas);
+        const visiveis = registros.slice((paginaAtual - 1) * TAMANHO_PAGINA, paginaAtual * TAMANHO_PAGINA);
+        definirTexto('admin-page-label', `Página ${paginaAtual} de ${paginas}`);
+        document.getElementById('admin-previous').disabled = paginaAtual === 1;
+        document.getElementById('admin-next').disabled = paginaAtual === paginas;
         const corpoTabela = document.getElementById("admin-feedback-table-body");
         const listaMobile = document.getElementById("admin-feedback-mobile-list");
         const vazio = document.getElementById("admin-feedback-empty");
 
         corpoTabela.replaceChildren();
         listaMobile.replaceChildren();
-        registros.forEach((feedback) => {
+        visiveis.forEach((feedback) => {
             corpoTabela.append(criarLinhaTabela(feedback));
             listaMobile.append(criarCardMobile(feedback));
         });
@@ -176,7 +213,8 @@
 
         const usuarioCelula = document.createElement("td");
         const usuario = criarElemento("div", "feedback-table-user");
-        usuario.append(criarElemento("strong", "", feedback.usuario.email));
+        usuario.append(criarElemento("strong", "", feedback.usuario.nome || 'Usuário'));
+        usuario.append(criarElemento("small", "", feedback.usuario.email));
         usuarioCelula.append(usuario);
 
         const assuntoCelula = document.createElement("td");
@@ -214,6 +252,7 @@
     function criarBotaoDetalhes(feedback) {
         const botao = criarElemento("button", "feedback-table-action", "Abrir");
         botao.type = "button";
+        botao.dataset.feedbackId = feedback.id;
         botao.setAttribute("aria-label", `Abrir ${feedback.protocolo}: ${feedback.assunto}`);
         botao.addEventListener("click", () => abrirDetalhes(feedback.id, botao));
         return botao;
@@ -221,26 +260,37 @@
 
     function configurarDialogo() {
         const dialogo = document.getElementById("feedback-admin-dialog");
-        document.getElementById("feedback-admin-dialog-close").addEventListener("click", () => dialogo.close());
+        document.getElementById("feedback-admin-dialog-close").addEventListener("click", () => { if (!operacaoEmCurso) dialogo.close(); });
+        dialogo.addEventListener('cancel', evento => { if (operacaoEmCurso) evento.preventDefault(); });
         dialogo.addEventListener("click", (evento) => {
-            if (evento.target === dialogo) dialogo.close();
+            if (evento.target === dialogo && !operacaoEmCurso) dialogo.close();
         });
         dialogo.addEventListener("close", () => {
-            if (ultimoAcionadorDoDialogo) ultimoAcionadorDoDialogo.focus();
+            rascunhos.set(feedbackSelecionadoId, document.getElementById('feedback-admin-response').value);
+            const acionador = Array.from(document.querySelectorAll(`[data-feedback-id="${CSS.escape(feedbackSelecionadoId || '')}"]`)).find(botao => botao.getClientRects().length);
+            (acionador || document.getElementById('admin-search')).focus();
         });
         document.getElementById("feedback-admin-status").addEventListener("change", alterarStatus);
         document.getElementById("feedback-admin-send-response").addEventListener("click", enviarResposta);
     }
 
     async function abrirDetalhes(id, acionador) {
+        if (operacaoEmCurso) return;
         feedbackSelecionadoId = id;
         ultimoAcionadorDoDialogo = acionador;
         const atual = service.buscarPorId(id);
         if (!atual) return;
-        if (atual.novo) await service.marcarComoVisto(id);
+        try {
+            if (atual.novo) await service.marcarComoVisto(id);
+        } catch (erro) { mostrarToast(erro.message, true); }
+        document.getElementById('feedback-admin-response').value = rascunhos.get(id) || '';
+        document.getElementById('feedback-admin-response-error').textContent = '';
+        document.getElementById('feedback-admin-dialog-notice').hidden = true;
+        document.getElementById('feedback-admin-response').removeAttribute('aria-invalid');
         preencherDetalhes(service.buscarPorId(id));
         renderizarLista();
-        document.getElementById("feedback-admin-dialog").showModal();
+        const dialogo = document.getElementById("feedback-admin-dialog");
+        if (!dialogo.open) dialogo.showModal();
     }
 
     function preencherDetalhes(feedback) {
@@ -251,6 +301,7 @@
         const email = document.getElementById("feedback-admin-user-email");
         email.textContent = feedback.usuario.email;
         email.href = `mailto:${feedback.usuario.email}`;
+        definirTexto('feedback-admin-user-name', feedback.usuario.nome || 'Usuário');
         definirTexto("feedback-admin-avatar", "@");
         definirTexto("feedback-admin-created-date", `Enviado em ${formatarDataHora(feedback.criadoEm)}`);
         definirTexto("feedback-admin-type", feedback.tipo);
@@ -280,18 +331,27 @@
     }
 
     async function alterarStatus(evento) {
-        if (!feedbackSelecionadoId) return;
+        if (!feedbackSelecionadoId || operacaoEmCurso) return;
+        operacaoEmCurso = true;
+        evento.target.disabled = true;
+        document.getElementById('feedback-admin-send-response').disabled = true;
         try {
             const atualizado = await service.alterarStatus(feedbackSelecionadoId, evento.target.value);
             preencherDetalhes(atualizado);
             renderizarTudo();
             mostrarToast(`Status alterado para ${atualizado.status}.`);
         } catch (erro) {
+            evento.target.value = service.buscarPorId(feedbackSelecionadoId).status;
             mostrarToast(erro.message, true);
+        } finally {
+            operacaoEmCurso = false;
+            evento.target.disabled = false;
+            document.getElementById('feedback-admin-send-response').disabled = false;
         }
     }
 
     async function enviarResposta() {
+        if (operacaoEmCurso || !feedbackSelecionadoId) return;
         const campo = document.getElementById("feedback-admin-response");
         const erroAlvo = document.getElementById("feedback-admin-response-error");
         const texto = campo.value.trim();
@@ -307,6 +367,8 @@
         const botao = document.getElementById("feedback-admin-send-response");
         const textoBotao = botao.querySelector(".feedback-button-text");
         botao.disabled = true;
+        operacaoEmCurso = true;
+        document.getElementById('feedback-admin-status').disabled = true;
         campo.disabled = true;
         botao.classList.add("is-loading");
         textoBotao.textContent = "Enviando...";
@@ -321,6 +383,8 @@
             mostrarToast(erro.message, true);
         } finally {
             botao.disabled = false;
+            operacaoEmCurso = false;
+            document.getElementById('feedback-admin-status').disabled = false;
             campo.disabled = false;
             botao.classList.remove("is-loading");
             textoBotao.textContent = "Enviar resposta";
@@ -328,6 +392,15 @@
     }
 
     function mostrarToast(mensagem, erro = false) {
+        const dialogo = document.getElementById('feedback-admin-dialog');
+        if (dialogo.open) {
+            const aviso = document.getElementById('feedback-admin-dialog-notice');
+            aviso.textContent = mensagem;
+            aviso.hidden = false;
+            aviso.className = `feedback-alert ${erro ? 'feedback-alert-error' : 'feedback-alert-success'}`;
+            aviso.setAttribute('role', erro ? 'alert' : 'status');
+            return;
+        }
         const toast = document.getElementById("feedback-admin-toast");
         window.clearTimeout(temporizadorToast);
         toast.textContent = mensagem;
@@ -352,11 +425,13 @@
     }
 
     function formatarData(valor) {
-        return formatadorData.format(new Date(valor));
+        const data = new Date(valor);
+        return Number.isNaN(data.getTime()) ? 'Data não informada' : formatadorData.format(data);
     }
 
     function formatarDataHora(valor) {
-        return formatadorDataHora.format(new Date(valor));
+        const data = new Date(valor);
+        return Number.isNaN(data.getTime()) ? 'Data não informada' : formatadorDataHora.format(data);
     }
 
     function formatarAvaliacao(valor) {

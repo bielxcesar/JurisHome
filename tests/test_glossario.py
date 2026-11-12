@@ -6,6 +6,64 @@ from services.glossario import consultar_glossario, normalizar
 
 
 class GlossarioTests(unittest.TestCase):
+    def test_consulta_por_tipo_numero_e_ano_no_glossario(self):
+        from unittest.mock import patch
+        from routes.glossario import ConsultaLegislacao, consultar_legislacao, pagina_glossario, redirecionar_consulta_lei
+        from starlette.requests import Request
+
+        resposta = {"encontrado": True, "norma": {"numero": "15211"}}
+        with patch("routes.glossario.buscar_legislacao", return_value=resposta) as buscar:
+            resultado = consultar_legislacao(ConsultaLegislacao(tipo="LEI", numero="15211", ano=2025))
+            buscar.assert_called_once_with("LEI", "15211", 2025)
+        self.assertEqual(resultado, resposta)
+        request = Request({"type": "http", "method": "GET", "path": "/glossario", "headers": []})
+        html = pagina_glossario(request, usuario=None, origem="").body.decode()
+        for campo in ("consulta-lei", "legislacao-tipo", "legislacao-numero", "legislacao-ano"):
+            self.assertIn(f'id="{campo}"', html)
+        self.assertEqual(redirecionar_consulta_lei().headers["location"], "/glossario#consulta-lei")
+
+    def test_menu_usa_perfil_real_e_preserva_ordem(self):
+        from types import SimpleNamespace
+        from starlette.requests import Request
+        from routes.glossario import pagina_glossario
+        from model.models import TipoUsuario
+
+        request = Request({"type": "http", "method": "GET", "path": "/glossario", "headers": []})
+        admin = SimpleNamespace(tipo_usuario=TipoUsuario.ADMINISTRADOR)
+        html = pagina_glossario(request, q="", letra="", origem="usuario", usuario=admin).body.decode()
+        nav = html.split('aria-label="Navegação principal"')[1].split('</nav>')[0]
+        nomes = ["Home", "Exibir mais", "Feedbacks", "Auditoria", "Sobre nós", "Categorias", "Pesquisa", "Glossário"]
+        self.assertEqual([nav.index(nome) for nome in nomes], sorted(nav.index(nome) for nome in nomes))
+        self.assertIn('aria-current="page"', nav)
+        self.assertNotIn('Suporte', nav)
+        visitante = pagina_glossario(request, q="", letra="", origem="", usuario=None).body.decode()
+        self.assertIn('Suporte', visitante)
+        self.assertNotIn('href="/admin/auditoria"', visitante)
+
+    def test_paginacao_nao_omite_termos_e_mantem_links_e_filtros(self):
+        from routes.glossario import paginar, pagina_glossario
+        from starlette.requests import Request
+        resultado = paginar('', '', 1)
+        ids = []
+        for pagina in range(1, resultado['total_paginas'] + 1):
+            atual = paginar('', '', pagina)
+            self.assertLessEqual(len(atual['itens']), 6)
+            ids.extend(t['id'] for t in atual['itens'])
+        self.assertEqual(ids, [t['id'] for t in consultar_glossario()['itens']])
+        self.assertEqual(len(ids), len(set(ids)))
+        request = Request({'type':'http', 'method':'GET', 'path':'/glossario', 'headers':[]})
+        resposta = pagina_glossario(request, q='', letra='', origem='usuario', usuario=None, pagina=2)
+        html = resposta.body.decode()
+        self.assertEqual(html.count('<article id='), 6)
+        self.assertEqual(resposta.context['pagina'], 2)
+        self.assertIn('origem=usuario', resposta.context['pagina_proxima'])
+        self.assertIn('pagina=3', resposta.context['pagina_proxima'])
+        self.assertIn('rel="prev"', html)
+        filtrada = pagina_glossario(request, q='direito', letra='', origem='usuario', usuario=None, pagina=1)
+        self.assertIn('q=direito', filtrada.context['paginas'][0]['url'])
+        vazio = paginar('zzzinexistente', '', 50)
+        self.assertEqual((vazio['pagina'], vazio['primeiro'], vazio['ultimo'], vazio['itens']), (1,0,0,[]))
+
     def test_busca_ignora_acentos_caixa_e_espacos(self):
         resultado = consultar_glossario("  ACORDAO  ")
         self.assertEqual([t["id"] for t in resultado["itens"]], ["acordao"])

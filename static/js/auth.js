@@ -9,6 +9,33 @@
     const RECUPERACAO_DESAFIO_KEY = "jurishome_recuperacao_desafio";
     const REDEFINICAO_TOKEN_KEY = "jurishome_redefinicao_token";
 
+    let bloqueioFim = 0, relogio;
+    const botoesAuth = () => [...document.querySelectorAll('#form-login button[type=submit],#form-2fatores button[type=submit],#form-recuperacao-codigo button[type=submit]')];
+    function mostrarEspera(segundos) {
+        if (!Number.isFinite(segundos) || segundos <= 0) return;
+        bloqueioFim = performance.now() + segundos * 1000;
+        let painel = document.getElementById('auth-bloqueio');
+        if (!painel) {
+            painel = document.createElement('div');painel.id='auth-bloqueio';painel.className='auth-lock-panel';
+            const texto=document.createElement('p');texto.textContent='Muitas tentativas seguidas. Aguarde para tentar novamente.';
+            const tempo=document.createElement('strong');tempo.id='auth-bloqueio-tempo';tempo.setAttribute('aria-live','off');
+            const dica=document.createElement('small');dica.textContent='A espera continua mesmo se você atualizar a página. Seu acesso será liberado automaticamente.';
+            painel.append(texto,tempo,dica);document.getElementById('auth-message')?.after(painel);
+        }
+        painel.hidden=false;
+        function atualizar(){
+            const restante=Math.max(0,Math.ceil((bloqueioFim-performance.now())/1000));
+            document.getElementById('auth-bloqueio-tempo').textContent=String(Math.floor(restante/60)).padStart(2,'0')+':'+String(restante%60).padStart(2,'0');
+            for(const b of botoesAuth()){if(!b.dataset.textoLivre)b.dataset.textoLivre=b.textContent;b.disabled=restante>0;}
+            if(!restante){clearInterval(relogio);painel.hidden=true;bloqueioFim=0;if(document.getElementById('form-2fatores')||document.getElementById('form-recuperacao-codigo')){sessionStorage.removeItem(DESAFIO_2FA_KEY);sessionStorage.removeItem(CONFIGURACAO_2FA_KEY);location.replace('/?bloqueio=encerrado');return;}mostrarMensagem('Você já pode tentar entrar novamente.',false);verificarEspera();}
+        }
+        clearInterval(relogio);atualizar();relogio=setInterval(atualizar,1000);
+    }
+    async function verificarEspera(){
+        if(!botoesAuth().length)return;
+        try{const r=await fetch('/api/auth/limite',{credentials:'same-origin',cache:'no-store'});if(!r.ok)return;const d=await r.json();if(d.bloqueado)mostrarEspera(Number(d.aguardeSegundos));}catch(_){}
+    }
+
     function inicializarAutenticacao() {
         const parametros = new URLSearchParams(window.location.search);
         if (parametros.has("sessao")) {
@@ -17,12 +44,13 @@
         } else if (parametros.get("senha") === "alterada") {
             mostrarMensagem("Senha alterada com sucesso. Entre com a nova senha.", false);
         }
+        if(parametros.get('bloqueio')==='encerrado')mostrarMensagem('Tempo de espera encerrado. Entre novamente para continuar.',false);
         configurarAlternanciaSenha();
         configurarLogin();
         configurarCadastro();
         configurar2FA();
         configurarRecuperacaoSenha();
-        configurarConsultaUniversidade();
+        verificarEspera();
     }
 
     if (document.readyState === "loading") {
@@ -37,6 +65,8 @@
 
         formulario.addEventListener("submit", async (evento) => {
             evento.preventDefault();
+            if(evento.currentTarget.dataset.enviando==='true')return;
+            if(bloqueioFim > performance.now())return;
             limparMensagem();
             const email = document.getElementById("email").value.trim().toLowerCase();
             const senha = document.getElementById("senha").value;
@@ -84,6 +114,10 @@
         });
     }
 
+    function senhaValida(valor) {
+        return [...valor].length >= 8 && [...valor].length <= 25 && /\p{Lu}/u.test(valor) && /[0-9]/.test(valor) && /[^\p{L}\p{N}\s]/u.test(valor) && !/[\r\n\t]/.test(valor) && new TextEncoder().encode(valor).length <= 72;
+    }
+
     function configurarCadastro() {
         const formulario = document.getElementById("form-cadastro");
         if (!formulario) return;
@@ -91,13 +125,16 @@
 
         formulario.addEventListener("submit", async (evento) => {
             evento.preventDefault();
+            if(evento.currentTarget.dataset.enviando==='true')return;
             limparMensagem();
             const nome = document.getElementById("cadastro-nome").value.trim();
+            const sobrenome = document.getElementById("cadastro-sobrenome").value.trim();
+            const interesse = document.getElementById("cadastro-interesse").value;
             const email = document.getElementById("cadastro-email").value.trim().toLowerCase();
             const senha = document.getElementById("cadastro-senha").value;
             const confirmarSenha = document.getElementById("cadastro-confirma-senha").value;
-            if (nome.length < 3) {
-                mostrarMensagem("Informe seu nome completo.");
+            if (!/^[\p{L} ]{2,40}$/u.test(nome)) {
+                mostrarMensagem("Informe seu nome com 2 a 40 letras, acentos e espaços.");
                 document.getElementById("cadastro-nome").focus();
                 return;
             }
@@ -106,8 +143,12 @@
                 document.getElementById("cadastro-email").focus();
                 return;
             }
-            if (senha.length < 8 || !/[A-Za-z]/.test(senha) || !/\d/.test(senha)) {
-                mostrarMensagem("A senha deve ter pelo menos 8 caracteres, incluindo letras e números.");
+            if (!/^[\p{L} ]{2,50}$/u.test(sobrenome) || !interesse) {
+                mostrarMensagem('Preencha o sobrenome (2 a 50 letras) e escolha sua área de interesse.');
+                return;
+            }
+            if (!senhaValida(senha)) {
+                mostrarMensagem("Use de 8 a 25 caracteres, com maiúscula, número e caractere especial.");
                 document.getElementById("cadastro-senha").focus();
                 return;
             }
@@ -133,6 +174,8 @@
                     method: "POST",
                     body: JSON.stringify({
                         nome,
+                        sobrenome,
+                        interesse,
                         email,
                         senha,
                         confirmar_senha: confirmarSenha,
@@ -153,6 +196,7 @@
         if (formularioEmail) {
             formularioEmail.addEventListener("submit", async (evento) => {
                 evento.preventDefault();
+            if(evento.currentTarget.dataset.enviando==='true')return;
                 limparMensagem();
                 const email = document.getElementById("recuperacao-email").value.trim().toLowerCase();
                 if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -190,6 +234,7 @@
             document.getElementById("recovery-address").textContent = email;
             formularioCodigo.addEventListener("submit", async (evento) => {
                 evento.preventDefault();
+            if(evento.currentTarget.dataset.enviando==='true')return;
                 limparMensagem();
                 const codigo = document.getElementById("recuperacao-codigo").value.trim();
                 if (!/^\d{6}$/.test(codigo)) {
@@ -223,11 +268,12 @@
             }
             formularioNovaSenha.addEventListener("submit", async (evento) => {
                 evento.preventDefault();
+            if(evento.currentTarget.dataset.enviando==='true')return;
                 limparMensagem();
                 const novaSenha = document.getElementById("recuperacao-nova-senha").value;
                 const confirmaSenha = document.getElementById("recuperacao-confirma-senha").value;
-                if (!/^(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,25}$/.test(novaSenha)) {
-                    mostrarMensagem("Use de 8 a 25 caracteres, incluindo uma letra maiúscula e um caractere especial.");
+                if (!senhaValida(novaSenha)) {
+                    mostrarMensagem("Use de 8 a 25 caracteres, incluindo uma letra maiúscula, um número e um caractere especial.");
                     return;
                 }
                 if (novaSenha !== confirmaSenha) {
@@ -258,57 +304,6 @@
         }
     }
 
-    function configurarConsultaUniversidade() {
-        const botao = document.getElementById("consultar-emec");
-        const codigo = document.getElementById("codigo-emec");
-        if (!botao || !codigo) return;
-
-        botao.addEventListener("click", async () => {
-            const mensagem = document.getElementById("emec-message");
-            const resultado = document.getElementById("emec-result");
-            mensagem.hidden = true;
-            mensagem.classList.remove("is-success");
-            resultado.hidden = true;
-            resultado.replaceChildren();
-            const valor = codigo.value.trim();
-            if (!/^\d{1,10}$/.test(valor)) {
-                mensagem.textContent = "Informe um código e-MEC numérico válido.";
-                mensagem.hidden = false;
-                return;
-            }
-
-            alternarCarregamento(botao, true, "Consultando...");
-            try {
-                const instituicao = await requisitar(`/api/universidades/emec/${encodeURIComponent(valor)}`);
-                const nome = document.createElement("strong");
-                nome.textContent = instituicao.nome;
-                resultado.append(nome);
-                const detalhes = [instituicao.sigla, instituicao.situacao].filter(Boolean).join(" · ");
-                if (detalhes) {
-                    const paragrafo = document.createElement("p");
-                    paragrafo.textContent = detalhes;
-                    resultado.append(paragrafo);
-                }
-                const campus = (instituicao.campus || []).slice(0, 5).map((item) =>
-                    [item.nome, item.cidade, item.uf].filter(Boolean).join(" · "),
-                ).filter(Boolean);
-                if (campus.length) {
-                    const paragrafo = document.createElement("p");
-                    paragrafo.textContent = `Campus: ${campus.join("; ")}`;
-                    resultado.append(paragrafo);
-                }
-                resultado.hidden = false;
-                mensagem.textContent = "Instituição encontrada.";
-                mensagem.classList.add("is-success");
-                mensagem.hidden = false;
-            } catch (erro) {
-                mensagem.textContent = erro.message;
-                mensagem.hidden = false;
-            } finally {
-                alternarCarregamento(botao, false, "Consultar");
-            }
-        });
-    }
 
     function configurar2FA() {
         const formulario = document.getElementById("form-2fatores");
@@ -331,7 +326,9 @@
 
         formulario.addEventListener("submit", async (evento) => {
             evento.preventDefault();
+            if(evento.currentTarget.dataset.enviando==='true')return;
             limparMensagem();
+            if(bloqueioFim > performance.now())return;
             const botao = formulario.querySelector("button[type=submit]");
             alternarCarregamento(botao, true, "Verificando...");
             try {
@@ -425,12 +422,17 @@
             headers: { "Content-Type": "application/json", ...(opcoes.headers || {}) },
         });
         const dados = await resposta.json().catch(() => ({}));
-        if (!resposta.ok) throw new Error(mensagemErroApi(dados.detail));
+        if (!resposta.ok) {
+            const erro=new Error(mensagemErroApi(dados.detail));
+            const espera=Number(resposta.headers.get('Retry-After'));
+            if(resposta.status===429 && espera>0)mostrarEspera(espera);
+            throw erro;
+        }
         return dados;
     }
 
     function concluirLogin(resposta) {
-        if (!resposta.access_token || !resposta.usuario?.tipo_usuario) {
+        if (!resposta.autenticado || !resposta.usuario?.tipo_usuario) {
             throw new Error("A autenticação não foi concluída. Tente novamente.");
         }
         localStorage.removeItem(TOKEN_KEY);
@@ -454,7 +456,8 @@
 
     function alternarCarregamento(botao, carregando, texto) {
         if (!botao) return;
-        botao.disabled = carregando;
+        const form=botao.closest('form');if(form)form.dataset.enviando=String(carregando);
+        botao.disabled = carregando || bloqueioFim > performance.now();
         botao.textContent = texto;
     }
 })();
