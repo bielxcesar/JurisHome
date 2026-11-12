@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180" fill="none">
+  <defs>
+    <linearGradient id="shield" x1="77" y1="40" x2="165" y2="143" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFC44D"/>
+      <stop offset="1" stop-color="#F59E0B"/>
+    </linearGradient>
+    <linearGradient id="device" x1="72" y1="38" x2="176" y2="146" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#32343A"/>
+      <stop offset="1" stop-color="#1B1C20"/>
+    </linearGradient>
+  </defs>
+  <circle cx="120" cy="90" r="78" fill="#F59E0B" fill-opacity=".1"/>
+  <circle cx="33" cy="44" r="4" fill="#38A3FF"/>
+  <circle cx="204" cy="45" r="5" fill="#4BBE75"/>
+  <circle cx="199" cy="137" r="3" fill="#BD70FF"/>
+  <path d="M31 91h22m134 0h22M48 65h14m116 56h14" stroke="#F59E0B" stroke-opacity=".5" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 6"/>
+  <rect x="60" y="27" width="120" height="126" rx="26" fill="url(#device)" stroke="#F59E0B" stroke-opacity=".55" stroke-width="2"/>
+  <path d="M120 47 153 59v24c0 26-16 42-33 51-17-9-33-25-33-51V59l33-12Z" fill="url(#shield)"/>
+  <path d="M120 56v68c13-8 24-21 24-41V66l-24-10Z" fill="#E98B08" fill-opacity=".62"/>
+  <rect x="102" y="79" width="36" height="29" rx="7" fill="#202126"/>
+  <path d="M109 79v-6a11 11 0 0 1 22 0v6" stroke="#202126" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="120" cy="92" r="3" fill="#FFC44D"/>
+  <path d="M120 95v5" stroke="#FFC44D" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="188" cy="67" r="17" fill="#24262B" stroke="#4BBE75" stroke-width="2"/>
+  <path d="m181 67 5 5 9-10" stroke="#4BBE75" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="54" cy="125" r="12" fill="#24262B" stroke="#38A3FF" stroke-width="2"/>
+  <path d="M50 125h8m-4-4v8" stroke="#38A3FF" stroke-width="2" stroke-linecap="round"/>
+</svg>
