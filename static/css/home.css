@@ -720,6 +720,169 @@ html[data-theme="light"] .home-shell .home-eyebrow {
     min-height: 110px;
 }
 
+.home-digital-guidance {
+    margin-top: 14px;
+    padding: 22px;
+    border: 1px solid color-mix(in srgb,var(--juris-yellow) 28%,var(--juris-border));
+    border-radius: 16px;
+    background: radial-gradient(ellipse at 94% 0%,#f59e0b12,transparent 34%),var(--juris-panel);
+    box-shadow: 0 12px 34px #00000020;
+}
+
+.home-digital-guidance-hero {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) 132px;
+    align-items: center;
+    gap: 18px;
+    min-height: 124px;
+}
+
+.home-digital-guidance-intro {
+    min-width: 0;
+}
+
+.home-digital-guidance-eyebrow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 9px;
+}
+
+.home-digital-guidance-art {
+    display: block;
+    width: 132px;
+    height: 124px;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 18px #f59e0b20);
+}
+
+.home-digital-guidance h3 {
+    margin: 8px 0 5px;
+    color: var(--juris-text);
+    font-size: clamp(20px,2.2vw,25px);
+    font-weight: 700;
+    letter-spacing: -.02em;
+}
+
+.home-digital-guidance-intro > p {
+    margin: 0;
+    color: var(--juris-muted);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.home-digital-guidance-count {
+    flex: 0 0 auto;
+    padding: 5px 10px;
+    border: 1px solid #f59e0b66;
+    border-radius: 999px;
+    background: #f59e0b18;
+    color: var(--juris-yellow);
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.home-digital-guidance-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0 12px;
+    color: var(--juris-muted);
+    font-size: 12px;
+}
+
+.home-digital-guidance-hint i {
+    color: var(--juris-yellow);
+}
+
+.home-digital-guidance-topics {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 9px;
+}
+
+.home-digital-guidance details {
+    --topic-accent: var(--juris-yellow);
+    min-width: 0;
+    padding: 14px 15px;
+    border: 1px solid var(--juris-border);
+    border-radius: 10px;
+    background: linear-gradient(135deg,color-mix(in srgb,var(--topic-accent) 6%,var(--juris-bg)),var(--juris-bg) 54%);
+    transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+
+.home-digital-guidance details:nth-child(2) {
+    --topic-accent: #38a3ff;
+}
+
+.home-digital-guidance details:nth-child(3) {
+    --topic-accent: #bd70ff;
+}
+
+.home-digital-guidance details:nth-child(4) {
+    --topic-accent: #4bbe75;
+}
+
+.home-digital-guidance details:hover,
+.home-digital-guidance details[open] {
+    border-color: color-mix(in srgb,var(--topic-accent) 65%,var(--juris-border));
+    box-shadow: 0 8px 22px #00000018;
+    transform: translateY(-1px);
+}
+
+.home-digital-guidance summary {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-height: 36px;
+    color: var(--juris-text);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.5;
+}
+
+.home-digital-guidance summary::marker {
+    color: var(--juris-yellow);
+}
+
+.home-digital-guidance summary > i {
+    flex: 0 0 18px;
+    margin-top: 2px;
+    color: var(--topic-accent);
+    text-align: center;
+}
+
+.home-digital-guidance summary small {
+    display: block;
+    margin-top: 2px;
+    color: var(--juris-muted);
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.home-digital-guidance summary:focus-visible {
+    outline: 3px solid var(--juris-yellow);
+    outline-offset: 4px;
+    border-radius: 3px;
+}
+
+.home-digital-guidance details[open] summary {
+    margin-bottom: 9px;
+}
+
+.home-digital-guidance details p {
+    margin: 0 0 0 28px;
+    color: var(--juris-muted);
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.home-digital-guidance details p strong {
+    color: var(--topic-accent);
+}
+
 .juridle-page {
     width: min(864px,calc(100% - 32px))!important;
     margin: 48px auto!important;
@@ -874,6 +1037,27 @@ html[data-theme="light"] .home-shell .home-eyebrow {
     .home-recreation-tiles {
         grid-template-columns: repeat(2,minmax(0,1fr));
     }
+    .home-digital-guidance {
+        padding: 16px;
+    }
+    .home-digital-guidance-hero {
+        grid-template-columns: minmax(0,1fr) 82px;
+        gap: 8px;
+        min-height: 94px;
+    }
+    .home-digital-guidance-art {
+        width: 82px;
+        height: 88px;
+    }
+    .home-digital-guidance-intro > p {
+        font-size: 12px;
+    }
+    .home-digital-guidance-topics {
+        grid-template-columns: 1fr;
+    }
+    .home-digital-guidance details p {
+        margin-left: 0;
+    }
     .juridle-stats {
         gap: 10px;
     }
@@ -892,6 +1076,19 @@ html[data-theme="light"] .home-shell .home-eyebrow {
     }
     .juridle-page {
         margin-top: 28px!important;
+    }
+}
+
+@media(max-width:390px) {
+    .home-digital-guidance-hero {
+        grid-template-columns: minmax(0,1fr) 58px;
+    }
+    .home-digital-guidance-art {
+        width: 58px;
+        height: 72px;
+    }
+    .home-digital-guidance-count {
+        font-size: 10px;
     }
 }
 
