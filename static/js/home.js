@@ -57,6 +57,9 @@
     }
     function destaque(){
         const m=materias[posicao],link=$('home-destaque');
+        const resumo = $('home-resumo');
+        resumo.textContent = m?.resumo_home?.trim() || m?.sub_titulo?.trim() || '';
+        resumo.hidden = !resumo.textContent;
         if(!m){
             link.removeAttribute('href');
             $('home-area').textContent='ACERVO JURISHOME';
@@ -74,6 +77,32 @@
         $('home-carousel').hidden=materias.length<2;
         $('home-posicao').textContent=`${posicao+1} de ${materias.length}`;
     }
+    function criarCartaoMateria(materia) {
+        const cartao = criar('a', undefined, 'home-article');
+        cartao.href = '/materia/' + encodeURIComponent(materia.uuid);
+
+        const placeholder = criar('span', undefined, 'home-thumb home-thumb-placeholder');
+        placeholder.setAttribute('aria-hidden', 'true');
+        placeholder.append(criar('i', undefined, 'fa-regular fa-file-lines'));
+        const src = imagemSegura(materia.imagem_miniatura);
+        if (src) {
+            const imagem = criar('img', undefined, 'home-thumb');
+            imagem.alt = '';
+            imagem.loading = 'lazy';
+            imagem.addEventListener('error', () => imagem.replaceWith(placeholder), {once: true});
+            imagem.src = src;
+            cartao.append(imagem);
+        } else {
+            cartao.append(placeholder);
+        }
+
+        const info = criar('div', undefined, 'home-article-info');
+        const data = materia.criado_em ? `Publicado em ${materia.criado_em}` : 'Ler matéria →';
+        info.append(criar('span', materia.categoria || 'Direito'), criar('h3', materia.titulo), criar('small', data));
+        cartao.append(info);
+        return cartao;
+    }
+
     function cartoes(){
         const grade=$('home-materias');
         grade.replaceChildren();
@@ -82,25 +111,7 @@
             return;
         }
         for(const m of materias.slice(0,8)){
-            const a=criar('a',undefined,'home-article');
-            a.href='/materia/'+encodeURIComponent(m.uuid);
-            const src=imagemSegura(m.imagem_miniatura);
-            if(src){
-                const img=criar('img',undefined,'home-thumb');
-                img.alt='';
-                img.loading='lazy';
-                definirImagem(img,src);
-                a.append(img);
-            }else{
-                const icone=criar('span',undefined,'home-thumb home-thumb-placeholder');
-                icone.setAttribute('aria-hidden','true');
-                icone.append(criar('i',undefined,'fa-regular fa-file-lines'));
-                a.append(icone);
-            }
-            const info=criar('div',undefined,'home-article-info');
-            info.append(criar('span',m.categoria||'Direito'),criar('h3',m.titulo),criar('small',m.criado_em?`Publicado em ${m.criado_em}`:'Ler matéria →'));
-            a.append(info);
-            grade.append(a);
+            grade.append(criarCartaoMateria(m));
         }
     }
     async function ler(url){
@@ -224,16 +235,7 @@
             $('home-interesse-titulo').textContent=d.area||'Escolha sua área de interesse';
             $('home-interesse-descricao').textContent=d.area?'Publicações recentes sobre a área que você escolheu.':'Defina uma área no perfil para encontrar suas leituras aqui.';
             for(const m of d.itens){
-                const a=criar('a',undefined,'home-article');
-                a.href='/materia/'+encodeURIComponent(m.uuid);
-                const img=criar('img');
-                img.alt='';
-                img.loading='lazy';
-                definirImagem(img,m.imagem_miniatura);
-                const info=criar('div',undefined,'home-article-info');
-                info.append(criar('span',m.categoria),criar('h3',m.titulo),criar('small',m.criado_em));
-                a.append(img,info);
-                grade.append(a);
+                grade.append(criarCartaoMateria(m));
             }
             if(!d.itens.length){
                 const a=criar('a',d.area?'Novas matérias desta área aparecerão aqui. Explorar categoria →':'Escolher área de interesse →','home-empty');

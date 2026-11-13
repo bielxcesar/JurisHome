@@ -42,6 +42,32 @@ from routes.auth import (
 
 
 class TestesSeguranca(unittest.TestCase):
+    def test_documentacao_exclusiva_do_administrador_principal(self):
+        leitor = self._usuario()
+        suporte = self._usuario(TipoUsuario.ADMINISTRADOR)
+        root = self._usuario(TipoUsuario.ADMINISTRADOR)
+        root.e_root_admin = True
+        self.db.commit()
+
+        for token in (None, criar_access_token(leitor), criar_access_token(suporte)):
+            for caminho in ("/docs", "/openapi.json"):
+                with self.subTest(autenticado=token is not None, caminho=caminho):
+                    status, _, _ = self._request("GET", caminho, token=token)
+                    self.assertEqual(status, 404)
+
+        token = criar_access_token(root)
+        status, headers, corpo = self._request("GET", "/docs", token=token)
+        self.assertEqual(status, 200)
+        self.assertIn("no-store", headers["cache-control"])
+        self.assertIn(b"/openapi.json", corpo)
+        status, headers, corpo = self._request("GET", "/openapi.json", token=token)
+        self.assertEqual(status, 200)
+        self.assertIn("no-store", headers["cache-control"])
+        self.assertIn("/api/auth/login", json.loads(corpo)["paths"])
+        for caminho in ("/redoc", "/docs/oauth2-redirect"):
+            status, _, _ = self._request("GET", caminho, token=token)
+            self.assertEqual(status, 404)
+
     def test_home_curiosidades_respeita_perfil_e_autenticacao(self):
         aluno = self._usuario()
         token = criar_access_token(aluno)
