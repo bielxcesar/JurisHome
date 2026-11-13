@@ -2,6 +2,7 @@ import os
 import logging
 
 from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
@@ -14,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from database import engine, SessionLocal
 from services.categorias import garantir_categorias, corrigir_vinculos_legados
 from services.root_unico import garantir_root_unico
+from services.administradores import exigir_root
 from services.entrada_http import EntradaSeguraMiddleware
 from services.erros import eh_pagina, resposta_erro
 from feedback_database import criar_tabela_feedback
@@ -40,8 +42,21 @@ with SessionLocal() as db_catalogo:
     limpar_antigos(db_catalogo)
 criar_tabela_feedback()
 
-app = FastAPI(title="JurisHome")
+app = FastAPI(title="JurisHome", docs_url=None, redoc_url=None, openapi_url=None)
 app.add_middleware(EntradaSeguraMiddleware)
+
+CAMINHOS_DOCUMENTACAO = {"/docs", "/openapi.json"}
+
+
+@app.get("/docs", include_in_schema=False, dependencies=[Depends(exigir_root)])
+def documentacao_swagger(request: Request):
+    prefixo = request.scope.get("root_path", "").rstrip("/")
+    return get_swagger_ui_html(openapi_url=f"{prefixo}/openapi.json", title="JurisHome API")
+
+
+@app.get("/openapi.json", include_in_schema=False, dependencies=[Depends(exigir_root)])
+def esquema_openapi():
+    return JSONResponse(app.openapi())
 
 
 @app.middleware("http")
@@ -81,6 +96,8 @@ async def adicionar_correlacao_auditoria(request: Request, call_next):
 @app.middleware("http")
 async def adicionar_cabecalhos_seguranca(request: Request, call_next):
     response = await call_next(request)
+    if request.url.path in CAMINHOS_DOCUMENTACAO:
+        response.headers["Cache-Control"] = "no-store, max-age=0"
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
@@ -97,6 +114,9 @@ async def adicionar_cabecalhos_seguranca(request: Request, call_next):
 
 @app.exception_handler(StarletteHTTPException)
 async def tratar_erro_http(request: Request, erro: StarletteHTTPException):
+    if request.url.path in CAMINHOS_DOCUMENTACAO and erro.status_code in {401, 403}:
+        return resposta_erro(request, 404)
+
     paginas_protegidas = {
         "/home_usuario", "/home_Usuario.html", "/templates/home_Usuario.html",
         "/configuracoes-usuario", "/templates/confUsuario.html",

@@ -115,6 +115,19 @@ html[data-theme="light"] .home-shell {
     color: #d1d5db;
 }
 
+.home-hero-resumo {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    max-width: 680px;
+    margin: 0 0 12px;
+    color: #f3f4f6;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
 .home-carousel {
     position: absolute;
     bottom: 16px;
