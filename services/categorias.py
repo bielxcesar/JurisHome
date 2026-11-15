@@ -1,9 +1,8 @@
 """Áreas do Direito e tags temáticas do catálogo editorial."""
-import unicodedata
-
 from sqlalchemy.exc import IntegrityError
 
 from model.models import Categoria, Conteudo
+from services.texto import normalizar_para_busca as normalizar
 
 
 CATALOGO = {
@@ -22,10 +21,6 @@ DESCRICOES = {
 
 def descricao_categoria(nome):
     return DESCRICOES.get(categoria_canonica(nome), "Esta área reúne matérias e conceitos relacionados ao tema selecionado. Explore as publicações abaixo para conhecer seus principais assuntos.")
-
-
-def normalizar(valor):
-    return " ".join("".join(c for c in unicodedata.normalize("NFD", valor.casefold()) if not unicodedata.combining(c)).split())
 
 
 ALIASES = {

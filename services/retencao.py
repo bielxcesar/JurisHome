@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from model.models import CategoriaAcesso, FeedbackAtendimento, LogAuditoria, Usuario, fuso_br
 from services.auditoria import registrar_auditoria
-from services.dashboard_usuario import DIAS_RETENCAO_CATEGORIA
+from services.dashboard_usuario import DIAS_RETENCAO_CATEGORIA, inicio_periodo
 from services.direitos_titular import anonimizar_feedback_atendimento
 
 
@@ -30,13 +30,8 @@ def aplicar_retencao(
 ) -> dict[str, int | bool]:
 
     referencia = _sem_fuso(agora or datetime.now(timezone.utc))
-    instante_categoria = agora or datetime.now(fuso_br)
-    if instante_categoria.tzinfo is None:
-        instante_categoria = instante_categoria.replace(tzinfo=timezone.utc)
-    limite_categoria = (
-        instante_categoria.astimezone(fuso_br).date()
-        - timedelta(days=DIAS_RETENCAO_CATEGORIA - 1)
-    ).isoformat()
+    dia_local = referencia.replace(tzinfo=timezone.utc).astimezone(fuso_br).date()
+    limite_categoria = inicio_periodo(dia_local, DIAS_RETENCAO_CATEGORIA).isoformat()
     limite_feedback = referencia - timedelta(days=DIAS_FEEDBACK_APOS_ENCERRAMENTO)
     limite_log = referencia - timedelta(days=DIAS_LOG_GERAL)
     limite_incidente = referencia - timedelta(days=DIAS_LOG_INCIDENTE)
@@ -48,7 +43,7 @@ def aplicar_retencao(
         FeedbackAtendimento.usuario_email != "anonimizado@invalid.local",
     ).all()
 
-    logs = db.query(LogAuditoria).all()
+    logs = db.query(LogAuditoria).filter(LogAuditoria.criado_em < limite_log).all()
     logs_para_minimizar = []
     for log in logs:
         criado = _sem_fuso(log.criado_em)

@@ -33,6 +33,53 @@
         'Direito Ambiental':['Ambiental']
     };
     let materias=[],posicao=0;
+    let destaques = [];
+    const LIMITE_DESTAQUES = 5;
+    const destaqueHome = $('home-feature');
+    const faixaProgresso = $('home-progresso');
+    const controleAutomatico = $('home-pausar');
+    const movimentoReduzido = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const DURACAO_DESTAQUE = 8000;
+    let pausado = movimentoReduzido.matches;
+    let progresso;
+
+    function sincronizarCarrossel() {
+        const suspenso = pausado || document.hidden || destaqueHome.matches(':hover, :focus-within');
+        $('home-posicao').setAttribute('aria-live', suspenso ? 'polite' : 'off');
+
+        if (!progresso) return;
+        if (suspenso) progresso.pause();
+        else progresso.play();
+    }
+
+    function atualizarControleAutomatico() {
+        const rotulo = pausado ? 'Ativar avanço automático' : 'Pausar avanço automático';
+        controleAutomatico.setAttribute('aria-label', rotulo);
+        controleAutomatico.title = rotulo;
+        controleAutomatico.firstElementChild.className = pausado ? 'fa-solid fa-play' : 'fa-solid fa-pause';
+    }
+
+    function reiniciarProgresso() {
+        progresso?.cancel();
+        progresso = undefined;
+        faixaProgresso.hidden = destaques.length < 2 || pausado;
+        if (destaques.length >= 2 && !pausado) {
+            progresso = faixaProgresso.firstElementChild.animate(
+                [{transform: 'scaleX(0)'}, {transform: 'scaleX(1)'}],
+                {duration: DURACAO_DESTAQUE, fill: 'forwards'},
+            );
+            progresso.onfinish = () => mudarDestaque(1);
+        }
+        sincronizarCarrossel();
+    }
+
+    function mudarDestaque(passo) {
+        if (destaques.length < 2) return;
+        posicao = (posicao + passo + destaques.length) % destaques.length;
+        destaque();
+        reiniciarProgresso();
+    }
+
     function imagemSegura(v){
         if(typeof v!=='string')return null;
         if(/^data:image\/(jpeg|png|webp);base64,[a-zA-Z0-9+/=]+$/.test(v))return v;
@@ -56,7 +103,7 @@
         img.hidden=false;
     }
     function destaque(){
-        const m=materias[posicao],link=$('home-destaque');
+        const m=destaques[posicao],link=$('home-destaque');
         const resumo = $('home-resumo');
         resumo.textContent = m?.resumo_home?.trim() || m?.sub_titulo?.trim() || '';
         resumo.hidden = !resumo.textContent;
@@ -74,8 +121,8 @@
         $('home-titulo').textContent=m.titulo;
         $('home-ler').textContent='Ler matéria completa →';
         definirImagem($('home-capa'),m.imagem_miniatura);
-        $('home-carousel').hidden=materias.length<2;
-        $('home-posicao').textContent=`${posicao+1} de ${materias.length}`;
+        $('home-carousel').hidden=destaques.length<2;
+        $('home-posicao').textContent=`${posicao+1} de ${destaques.length}`;
     }
     function criarCartaoMateria(materia) {
         const cartao = criar('a', undefined, 'home-article');
@@ -126,12 +173,17 @@
         grade.setAttribute('aria-busy','true');
         try{
             materias=await ler('/api/conteudos');
+            // A API entrega as materias aprovadas da mais recente para a mais antiga.
+            destaques = materias.slice(0, LIMITE_DESTAQUES);
             posicao=0;
             destaque();
+            reiniciarProgresso();
             cartoes();
         }catch(_){
             materias=[];
+            destaques = [];
             destaque();
+            reiniciarProgresso();
             $('home-titulo').textContent='Não foi possível carregar as matérias.';
             grade.replaceChildren();
             const box=criar('div','Confira sua conexão e tente novamente.','home-empty'),b=criar('button','Tentar novamente');
@@ -176,14 +228,23 @@
             grade.setAttribute('aria-busy','false');
         }
     }
-    $('home-anterior').addEventListener('click',()=>{
-        posicao=(posicao-1+materias.length)%materias.length;
-        destaque();
+    $('home-anterior').addEventListener('click', () => mudarDestaque(-1));
+    $('home-proximo').addEventListener('click', () => mudarDestaque(1));
+    controleAutomatico.addEventListener('click', () => {
+        pausado = !pausado;
+        atualizarControleAutomatico();
+        reiniciarProgresso();
     });
-    $('home-proximo').addEventListener('click',()=>{
-        posicao=(posicao+1)%materias.length;
-        destaque();
+    movimentoReduzido.addEventListener('change', evento => {
+        pausado = evento.matches;
+        atualizarControleAutomatico();
+        reiniciarProgresso();
     });
+    for (const evento of ['pointerenter', 'pointerleave', 'focusin', 'focusout']) {
+        destaqueHome.addEventListener(evento, () => queueMicrotask(sincronizarCarrossel));
+    }
+    document.addEventListener('visibilitychange', sincronizarCarrossel);
+    atualizarControleAutomatico();
     const data=$('data-atual');
     if(data)data.textContent=new Intl.DateTimeFormat('pt-BR').format(new Date());
     document.body.classList.toggle('modo-claro',document.documentElement.dataset.theme==='light');

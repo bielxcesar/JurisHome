@@ -29,7 +29,7 @@ def registrar_acesso_categoria(
     """Registra no máximo um acesso por usuário, categoria e dia local."""
     data_atual = hoje or datetime.now(fuso_br).date()
     data_acesso = data_atual.isoformat()
-    inicio_retencao = (data_atual - timedelta(days=DIAS_RETENCAO_CATEGORIA - 1)).isoformat()
+    inicio_retencao = inicio_periodo(data_atual, DIAS_RETENCAO_CATEGORIA).isoformat()
     limpar_acessos_categoria_antigos(db, usuario_id, inicio_retencao)
     chave = {
         "usuario_id": usuario_id,
@@ -83,7 +83,7 @@ def obter_dashboard_estudos(
     limpar_acessos_categoria_antigos(
         db,
         usuario_id,
-        (data_final - timedelta(days=DIAS_RETENCAO_CATEGORIA - 1)).isoformat(),
+        inicio_periodo(data_final, DIAS_RETENCAO_CATEGORIA).isoformat(),
     )
 
     materias_total = (

@@ -21,11 +21,10 @@ from services.erros import eh_pagina, resposta_erro
 from feedback_database import criar_tabela_feedback
 from model.models import Base, Usuario, Conteudo, Categoria, StatusConteudo
 from auth.security import get_current_admin
-from routes import auth, paginas, admin, auditoria, conteudos, glossario, feedbacks, juridle
+from routes import admin, auditoria, auth, conteudos, feedbacks, glossario, juridle, legal, perfil, rotas
 from services.auditoria import iniciar_contexto_auditoria, finalizar_contexto_auditoria
 
 Base.metadata.create_all(bind=engine)
-# create_all não adiciona índices a tabelas existentes.
 if engine.dialect.name in {"sqlite", "postgresql"}:
     with engine.begin() as conexao:
         conexao.exec_driver_sql(
@@ -93,9 +92,17 @@ async def adicionar_correlacao_auditoria(request: Request, call_next):
         finalizar_contexto_auditoria(tokens)
 
 
+def adicionar_hsts(request: Request, resposta) -> None:
+    origem_publica = urlsplit(os.getenv("PUBLIC_ORIGIN") or "")
+    # O Railway termina o TLS no proxy. O esquema visto pelo Uvicorn pode ser HTTP.
+    if origem_publica.scheme == "https" and origem_publica.netloc.lower() == request.url.netloc.lower():
+        resposta.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+
+
 @app.middleware("http")
 async def adicionar_cabecalhos_seguranca(request: Request, call_next):
     response = await call_next(request)
+    adicionar_hsts(request, response)
     if request.url.path in CAMINHOS_DOCUMENTACAO:
         response.headers["Cache-Control"] = "no-store, max-age=0"
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
@@ -116,6 +123,9 @@ async def adicionar_cabecalhos_seguranca(request: Request, call_next):
 async def tratar_erro_http(request: Request, erro: StarletteHTTPException):
     if request.url.path in CAMINHOS_DOCUMENTACAO and erro.status_code in {401, 403}:
         return resposta_erro(request, 404)
+
+    if erro.status_code == 428 and request.method == "GET" and eh_pagina(request):
+        return RedirectResponse("/aceitar-documentos", status_code=303, headers={"Cache-Control": "no-store"})
 
     paginas_protegidas = {
         "/home_usuario", "/home_Usuario.html", "/templates/home_Usuario.html",
@@ -160,6 +170,7 @@ async def tratar_dados_invalidos(request: Request, erro: RequestValidationError)
 @app.exception_handler(Exception)
 async def tratar_erro_inesperado(request: Request, erro: Exception):
     resposta = resposta_erro(request, 500)
+    adicionar_hsts(request, resposta)
     logging.getLogger("jurishome.erros").error("Falha interna. Tipo=%s Referencia=%s", type(erro).__name__, resposta.headers["X-Correlation-ID"])
     return resposta
 
@@ -174,7 +185,9 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 admin_dependencies = [Depends(get_current_admin)]
 
-app.include_router(paginas.router)
+app.include_router(rotas.router)
+app.include_router(perfil.router)
+app.include_router(legal.router)
 app.include_router(auth.router)
 app.include_router(admin.router, dependencies=admin_dependencies)
 app.include_router(auditoria.admin_router, dependencies=admin_dependencies)

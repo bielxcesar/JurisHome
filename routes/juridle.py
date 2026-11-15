@@ -1,5 +1,6 @@
 import json
 import unicodedata
+from datetime import timedelta
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -102,8 +103,15 @@ class Revisao(ModeloSeguro):
 
 @router.get('/juridle/ampliar', response_class=HTMLResponse)
 def pagina_banco(request: Request, usuario: Usuario = Depends(administrador)):
-    return templates.TemplateResponse(request=request, name='juridle-questoes.html', context={
-        'tipo_usuario': usuario.tipo_usuario.value, 'e_root': usuario.e_root_admin})
+    return templates.TemplateResponse(
+        request=request,
+        name='juridle-questoes.html',
+        context={
+            'tipo_usuario': usuario.tipo_usuario.value,
+            'e_root': usuario.e_root_admin,
+            'abrir_revisao': usuario.e_root_admin,
+        },
+    )
 
 
 def resumo(q):
@@ -137,7 +145,6 @@ def listar(status: Literal['todas', 'pendente', 'aprovada', 'rejeitada', 'arquiv
 def criar(dados: QuestaoEntrada, db: Session = Depends(get_db), usuario: Usuario = Depends(administrador)):
     garantir_transacao(db)
     db.query(Usuario).filter_by(uuid=usuario.uuid).with_for_update().one()
-    from datetime import timedelta
     if db.query(JuridleQuestao).filter(JuridleQuestao.autor_id == usuario.uuid, JuridleQuestao.criada_em >= juridle.agora() - timedelta(hours=1)).count() >= 60:
         raise HTTPException(429, 'Limite de 60 questões por hora. Continue mais tarde.')
     q = JuridleQuestao(enunciado=dados.enunciado, area=dados.area, opcoes_json=json.dumps([dados.correta, *dados.erradas], ensure_ascii=False),

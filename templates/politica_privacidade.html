@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Política de Privacidade do sistema JurisHome">
     <title>Política de Privacidade | JurisHome</title>
-    <link rel="stylesheet" href="/static/css/legal.css?v=20261108-documentos">
+    <link rel="stylesheet" href="/static/css/legal.css?v=documentos-legais">
     <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
 </head>
 <body class="legal-page">
@@ -17,9 +17,12 @@
         <div class="legal-heading">
             <p class="legal-kicker">Documento do JurisHome</p>
             <h1>Política de Privacidade</h1>
-            <p>Versão {{ versao_politica }} - atualizada em 27 de setembro de 2026</p>
+            {% if texto_publicado is not none %}<p>Versão {{ versao_politica }}{% if publicada_em %} · publicada em {{ publicada_em }}{% endif %}</p>{% else %}<p>Versão {{ versao_politica }} - atualizada em 27 de setembro de 2026</p>{% endif %}
         </div>
 
+        {% if texto_publicado is not none %}
+        <section class="legal-texto-publicado">{{ texto_publicado }}</section>
+        {% else %}
         <section>
             <h2>1. Controladores e canal de contato</h2>
             <p>A equipe responsável pelo projeto é formada por <strong>Erick Santos Barbosa</strong>, <strong>Pedro Henrique Harada Pecegueiro</strong> e <strong>Gabriel Agustín Fernández Alves</strong>. Para assuntos de conta e privacidade, use <a href="mailto:jurishome2026@gmail.com">jurishome2026@gmail.com</a>.</p>
@@ -141,6 +144,7 @@
             <h2>12. Atualizações desta Política</h2>
             <p>Esta Política poderá ser atualizada para acompanhar mudanças nas funcionalidades, nos fornecedores ou na legislação. A versão e a data serão mantidas no início do documento. Alterações materiais serão comunicadas de forma destacada e poderão exigir nova ciência ou novo aceite, conforme a natureza da mudança.</p>
         </section>
+        {% endif %}
     </main>
 
     {% include "_legal_links.html" %}

@@ -5,10 +5,12 @@ from datetime import datetime, time, timedelta, timezone
 
 from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import load_only
 from model.models import (fuso_br, Usuario, JuridleRodada, JuridleDia,
                           JuridleQuestao, JuridleQuestaoUso)
 from auth.sessions import garantir_transacao
+from services.glossario import consultar_glossario
 
 TAMANHO_RODADA = 5
 META_MENSAL = 150
@@ -35,8 +37,6 @@ def limites_dia(instante=None):
 
 def garantir_banco_inicial(db):
     """Migra os termos já publicados, sem alterar questões existentes ou revisadas."""
-    from services.glossario import consultar_glossario
-    from sqlalchemy.exc import IntegrityError
     catalogo = consultar_glossario()['itens']
     existentes = set(db.scalars(select(JuridleQuestao.chave_origem).where(JuridleQuestao.chave_origem.is_not(None))))
     rng = secrets.SystemRandom()

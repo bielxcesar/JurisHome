@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 
+from auth import security
 from auth.sessions import garantir_transacao
 from model.models import LimiteAutenticacao
 
@@ -19,9 +20,8 @@ def agora():
 
 
 def chave(tipo, valor):
-    from auth.security import SECRET_KEY
     # Não armazena IP nem e-mail em claro; separação de domínio para esta finalidade.
-    return hmac.new(SECRET_KEY.encode(), ('auth-limite-v1:' + tipo + ':' + valor).encode(), hashlib.sha256).hexdigest()
+    return hmac.new(security.SECRET_KEY.encode(), ('auth-limite-v1:' + tipo + ':' + valor).encode(), hashlib.sha256).hexdigest()
 
 
 def origem(request):

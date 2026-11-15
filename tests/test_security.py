@@ -216,7 +216,7 @@ class TestesSeguranca(unittest.TestCase):
         self.assertEqual(status, 429)
 
     def test_perfil_persiste_instituicao_interesse_e_mostra_data_real(self):
-        from routes.paginas import atualizar_perfil
+        from routes.perfil import atualizar_perfil
         leitor = self._usuario()
         atualizar_perfil(nome='Leitor atualizado', faculdade='Universidade de teste', interesse='Direito Civil', foto=None, db=self.db, usuario=leitor)
         self.db.refresh(leitor)
@@ -233,7 +233,7 @@ class TestesSeguranca(unittest.TestCase):
         self.db.add(categoria)
         self.db.flush()
         materia = models.Conteudo(titulo='Artigo de teste', resumo_home='Resumo de teste.', corpo_texto='Conteúdo de teste.', categoria_id=categoria.uuid,
-                                  autor_id=autor.uuid, tipo_fonte=models.TipoFonte.DOUTRINA, status=models.StatusConteudo.APROVADO)
+                                  autor_id=autor.uuid, status=models.StatusConteudo.APROVADO)
         self.db.add(materia)
         self.db.commit()
         token_admin = criar_access_token(autor)
@@ -402,7 +402,7 @@ class TestesSeguranca(unittest.TestCase):
         self.db.add(categoria)
         self.db.flush()
         materia = models.Conteudo(titulo='Matéria preservada', resumo_home='Resumo preservado', corpo_texto='Texto preservado',
-                                  categoria_id=categoria.uuid, autor_id=alvo.uuid, tipo_fonte=models.TipoFonte.DOUTRINA,
+                                  categoria_id=categoria.uuid, autor_id=alvo.uuid,
                                   status=models.StatusConteudo.APROVADO)
         self.db.add(materia)
         self.db.commit()
@@ -440,6 +440,20 @@ class TestesSeguranca(unittest.TestCase):
         self.db.commit()
         status, _, _ = self._request('GET', '/api/usuarios/me', token=criar_access_token(primeiro))
         self.assertEqual(status, 403)
+
+    def test_hsts_usa_dominio_publico_https_mesmo_atras_do_proxy(self):
+        cabecalho = "strict-transport-security"
+        with patch.dict(os.environ, {"PUBLIC_ORIGIN": "https://testserver"}):
+            for caminho, esperado in (("/", 200), ("/endereco-inexistente-hsts", 404)):
+                status, headers, _ = self._request("GET", caminho)
+                self.assertEqual(esperado, status)
+                self.assertEqual("max-age=31536000", headers[cabecalho])
+        for origem in ("", "http://testserver", "https://outro.example"):
+            with patch.dict(os.environ, {"PUBLIC_ORIGIN": origem}):
+                _, headers, _ = self._request(
+                    "GET", "/", extra_headers=((b"x-forwarded-proto", b"https"),)
+                )
+                self.assertNotIn(cabecalho, headers)
 
     def test_erros_html_explica_codigos_e_nao_expoe_detalhes(self):
         status, headers, corpo = self._request('GET', '/endereco-que-nao-existe')
@@ -498,7 +512,7 @@ class TestesSeguranca(unittest.TestCase):
         imagem = 'data:image/png;base64,' + base64.b64encode(arquivo.getvalue()).decode()
         fonte_longa = 'https://www.exemplo.test/imagens/' + 'caminho-'*30 + '?origem=arquivo'
         dados = {'titulo': 'Título de leitura', 'corpo_texto': '## Uma seção\nTexto **importante** e _explicação_.\n> Uma citação\n- Um item\n<script>alert(1)</script>',
-                 'categoria_id': categoria.uuid, 'tipo_fonte': 'doutrina', 'imagem_miniatura': imagem,
+                 'categoria_id': categoria.uuid, 'imagem_miniatura': imagem,
                  'imagem_corpo': imagem, 'fonte_imagem': fonte_longa,
                  'editorial': {'titulo_home': 'Chamada na Home', 'formatado': True, 'alinhamento': 'justificado',
                                'capa_legenda': 'Legenda da capa', 'imagens': [{'fonte': fonte_longa, 'legenda': 'Imagem de apoio',
@@ -644,6 +658,20 @@ class TestesSeguranca(unittest.TestCase):
         self.assertEqual(status, 201)
         q = json.loads(corpo)
         self.assertEqual(q['status'], 'pendente')
+        token_root = criar_access_token(root)
+        status, _, corpo = self._request('GET', '/admin/tabela-noticias', token=token_root)
+        self.assertEqual(200, status)
+        self.assertIn(b'href="/juridle/ampliar">Revisar', corpo)
+        status, _, corpo = self._request('GET', '/juridle/ampliar', token=token_root)
+        self.assertEqual(200, status)
+        self.assertIn(b'id="b-tab-lista" role="tab" aria-selected="true"', corpo)
+        self.assertIn(b'<option value="pendente" selected>', corpo)
+        status, _, corpo = self._request('GET', '/api/juridle/questoes?status=pendente', token=token_root)
+        self.assertEqual(200, status)
+        self.assertEqual([q['uuid']], [item['uuid'] for item in json.loads(corpo)['itens']])
+        status, _, corpo = self._request('GET', '/juridle/ampliar', token=criar_access_token(admin))
+        self.assertEqual(200, status)
+        self.assertIn(b'id="b-tab-criar" role="tab" aria-selected="true"', corpo)
         caminho = '/api/juridle/questoes/' + q['uuid']
         status, _, _ = self._request('GET', caminho, token=criar_access_token(outro))
         self.assertEqual(status, 404)
@@ -766,9 +794,9 @@ class TestesSeguranca(unittest.TestCase):
         self.db.add_all([civil,penal]);self.db.flush()
         for indice in range(6):
             self.db.add(models.Conteudo(titulo=f'Civil {indice}', resumo_home='Resumo', corpo_texto='Texto de teste',categoria_id=civil.uuid,
-                autor_id=usuario.uuid,tipo_fonte=models.TipoFonte.DOUTRINA,status=models.StatusConteudo.APROVADO))
-        self.db.add(models.Conteudo(titulo='Pendente',resumo_home='Resumo',corpo_texto='Texto',categoria_id=civil.uuid,autor_id=usuario.uuid,tipo_fonte=models.TipoFonte.DOUTRINA,status=models.StatusConteudo.EM_ANALISE))
-        self.db.add(models.Conteudo(titulo='Penal',resumo_home='Resumo',corpo_texto='Texto',categoria_id=penal.uuid,autor_id=usuario.uuid,tipo_fonte=models.TipoFonte.DOUTRINA,status=models.StatusConteudo.APROVADO))
+                autor_id=usuario.uuid, status=models.StatusConteudo.APROVADO))
+        self.db.add(models.Conteudo(titulo='Pendente',resumo_home='Resumo',corpo_texto='Texto',categoria_id=civil.uuid,autor_id=usuario.uuid, status=models.StatusConteudo.EM_ANALISE))
+        self.db.add(models.Conteudo(titulo='Penal',resumo_home='Resumo',corpo_texto='Texto',categoria_id=penal.uuid,autor_id=usuario.uuid, status=models.StatusConteudo.APROVADO))
         self.db.commit()
         status,headers,corpo=self._request('GET','/api/conteudos/interesse',token=criar_access_token(usuario))
         self.assertEqual(status,200)
@@ -782,7 +810,7 @@ class TestesSeguranca(unittest.TestCase):
         usuario=self._usuario()
         categoria=models.Categoria(nome='Direito Civil');self.db.add(categoria);self.db.flush()
         for titulo in ('Publicação comum','Desconto 10% no contrato','Exemplo_com_subtraço'):
-            self.db.add(models.Conteudo(titulo=titulo,resumo_home='Resumo',corpo_texto='Texto',categoria_id=categoria.uuid,autor_id=usuario.uuid,tipo_fonte=models.TipoFonte.DOUTRINA,status=models.StatusConteudo.APROVADO))
+            self.db.add(models.Conteudo(titulo=titulo,resumo_home='Resumo',corpo_texto='Texto',categoria_id=categoria.uuid,autor_id=usuario.uuid, status=models.StatusConteudo.APROVADO))
         self.db.commit()
         for termo,esperado in (("' OR 1=1 --",0),('%',1),('_',1)):
             status,_,corpo=self._request('GET','/api/conteudos?'+urlencode({'busca':termo}))
@@ -817,7 +845,7 @@ class TestesSeguranca(unittest.TestCase):
         status,_,_=self._request('POST','/api/auth/login',{'email':'naoexiste5@example.test','senha':'Errada!123'},cliente='198.51.100.11')
         self.assertEqual(status,401)  # Só uma falha nesta conta, bloqueio anterior era da origem.
 
-    def test_cookie_sessao_sem_lembrar_e_lembrar_com_mfa_tem_14_dias(self):
+    def test_cookie_sessao_sem_lembrar_e_lembrar_com_mfa_tem_15_minutos(self):
         from http.cookies import SimpleCookie
         import pyotp
         from routes.auth import Codigo2FA,validar_2fa
@@ -832,11 +860,11 @@ class TestesSeguranca(unittest.TestCase):
                 cookies.load(valor)
             acesso=cookies['jurishome_access_token']
             sessao=self.db.get(models.SessaoAutenticada,security._decodificar_token(acesso.value)['sid'])
-            self.assertEqual(acesso['max-age'],'1800' if lembrar else '')
+            self.assertEqual(acesso['max-age'],'900' if lembrar else '')
             self.assertEqual(acesso['httponly'],True)
             refresh=cookies['jurishome_refresh_token']
-            self.assertEqual(refresh['max-age'],str(14*86400) if lembrar else '0')
-            self.assertLessEqual((sessao.expira_em-sessao.criada_em).total_seconds(),14*86400 if lembrar else 1800)
+            self.assertEqual(refresh['max-age'],'900' if lembrar else '0')
+            self.assertLessEqual((sessao.expira_em-sessao.criada_em).total_seconds(),900 if lembrar else 1800)
             if lembrar:self.assertEqual(refresh['samesite'],'strict')
 
     @classmethod
@@ -884,6 +912,67 @@ class TestesSeguranca(unittest.TestCase):
         self.db.add(usuario)
         self.db.commit()
         return usuario
+
+    def test_documentos_legais_publicacao_root_e_novo_aceite(self):
+        from fastapi.testclient import TestClient
+        from services.lgpd import texto_inicial
+
+        leitor = self._usuario()
+        leitor.consentimento_lgpd = True
+        leitor.versao_termos = "2.2"
+        suporte = self._usuario(TipoUsuario.ADMINISTRADOR)
+        root = self._usuario(TipoUsuario.ADMINISTRADOR)
+        root.e_root_admin = True
+        self.db.commit()
+        headers_root = {"Authorization": f"Bearer {criar_access_token(root)}"}
+        headers_leitor = {"Authorization": f"Bearer {criar_access_token(leitor)}"}
+        headers_suporte = {"Authorization": f"Bearer {criar_access_token(suporte)}"}
+        editor = "/perfil/documentos-legais"
+        aceite = "/aceitar-documentos"
+        publicacao = {"versao": "2.2", "texto": "Novo texto do termo & referência.", "confirmar": "sim"}
+
+        with patch.dict(self.app.dependency_overrides, {get_db: self._banco_teste}):
+            client = TestClient(self.app, follow_redirects=False)
+            self.assertEqual(200, client.get("/api/usuarios/me", headers=headers_leitor).status_code)
+            self.assertEqual(404, client.get(editor, headers=headers_suporte).status_code)
+            self.assertEqual(404, client.post(editor + "/termos", headers=headers_suporte, data=publicacao).status_code)
+            inicial = client.get(editor, headers=headers_root)
+            self.assertEqual(200, inicial.status_code)
+            self.assertIn("Objeto e finalidade", inicial.text)
+            igual = dict(publicacao, texto=texto_inicial("termos").replace("\n", "\r\n"))
+            self.assertEqual(200, client.post(editor + "/termos", headers=headers_root, data=igual).status_code)
+            invalido = dict(publicacao, texto="<script>texto</script>")
+            self.assertEqual(422, client.post(editor + "/termos", headers=headers_root, data=invalido).status_code)
+
+            publicado = client.post(editor + "/termos", headers=headers_root, data=publicacao)
+            self.assertEqual(303, publicado.status_code)
+            self.assertEqual(aceite, publicado.headers["location"])
+            self.assertIn("Novo texto do termo &amp; referência.", client.get("/termos-de-aceite").text)
+            self.assertNotIn("Novo texto do termo", client.get("/politica-de-privacidade").text)
+
+            self.assertEqual(428, client.get("/api/usuarios/me", headers=headers_leitor).status_code)
+            self.assertEqual(aceite, client.get("/home_usuario", headers=headers_leitor).headers["location"])
+            pagina = client.get(aceite, headers=headers_leitor)
+            self.assertIn("legal-1", pagina.text)
+            confirmacao = {"versao": "legal-1", "aceite": "sim", "ciencia": "sim"}
+            self.assertEqual(401, client.post(aceite, data=confirmacao).status_code)
+            self.assertEqual(409, client.post(aceite, headers=headers_leitor, data=dict(confirmacao, versao="2.2")).status_code)
+            self.assertEqual(422, client.post(aceite, headers=headers_leitor, data={"versao": "legal-1", "aceite": "sim"}).status_code)
+            self.assertEqual(303, client.post(aceite, headers=headers_leitor, data=confirmacao).status_code)
+            self.assertEqual(200, client.get("/api/usuarios/me", headers=headers_leitor).status_code)
+
+            self.assertEqual(303, client.post(aceite, headers=headers_root, data=confirmacao).status_code)
+            self.assertEqual(409, client.post(editor + "/privacidade", headers=headers_root, data=publicacao).status_code)
+            politica = dict(publicacao, versao="legal-1", texto="Política atualizada para teste.")
+            self.assertEqual(303, client.post(editor + "/privacidade", headers=headers_root, data=politica).status_code)
+            self.assertIn("Política atualizada para teste.", client.get("/politica-de-privacidade").text)
+            self.assertIn("Novo texto do termo", client.get("/termos-de-aceite").text)
+            self.assertEqual(428, client.get("/api/usuarios/me", headers=headers_leitor).status_code)
+
+        self.db.expire_all()
+        self.assertEqual("legal-1", leitor.versao_termos)
+        self.assertIsNotNone(leitor.data_consentimento)
+        self.assertEqual(2, self.db.query(models.RevisaoLegal).count())
 
     def _banco_teste(self):
         sessao = self.Session()
@@ -999,7 +1088,7 @@ class TestesSeguranca(unittest.TestCase):
     def test_upload_rejeita_html_disfarcado_e_arquivo_grande(self):
         from io import BytesIO
         from fastapi import HTTPException, UploadFile
-        from routes.paginas import atualizar_perfil
+        from routes.perfil import atualizar_perfil
 
         usuario = self._usuario()
         for dados, esperado in ((b"<script>alert(1)</script>", 422), (b"x" * (2 * 1024 * 1024 + 1), 413)):
@@ -1022,7 +1111,7 @@ class TestesSeguranca(unittest.TestCase):
         imagem = "data:image/png;base64," + base64.b64encode(saida.getvalue()).decode("ascii")
         status, _, _ = self._request("POST", "/criar-materia", {
             "aceite_editorial": True, "versao_termos": "2026-10-30", "titulo": "Matéria Base64", "corpo_texto": "Texto da matéria.",
-            "categoria_id": categoria.uuid, "tipo_fonte": "legislacao",
+            "categoria_id": categoria.uuid,
             "imagem_miniatura": imagem, "imagem_corpo": imagem,
         }, token=token)
         self.assertEqual(200, status)
@@ -1044,7 +1133,7 @@ class TestesSeguranca(unittest.TestCase):
         from model.models import Categoria
         admin = self._usuario(TipoUsuario.ADMINISTRADOR)
         token = criar_access_token(admin)
-        dados = {"titulo": "Teste", "corpo_texto": "Texto", "categoria_id": "inexistente", "tipo_fonte": "doutrina"}
+        dados = {"titulo": "Teste", "corpo_texto": "Texto", "categoria_id": "inexistente"}
         status, _, _ = self._request("POST", "/criar-materia", dados, token=token)
         self.assertEqual(422, status)
         categoria = Categoria(uuid=str(uuid.uuid4()), nome="Teste imagem")
@@ -1132,7 +1221,7 @@ class TestesSeguranca(unittest.TestCase):
     def test_materia_renderiza_texto_seguro_base64_e_menu_por_perfil(self):
         from io import BytesIO
         from PIL import Image
-        from model.models import Categoria, Conteudo, TipoFonte, StatusConteudo
+        from model.models import Categoria, Conteudo, StatusConteudo
         admin = self._usuario(TipoUsuario.ADMINISTRADOR)
         estudante = self._usuario()
         categoria = Categoria(uuid=str(uuid.uuid4()), nome="Direito Civil")
@@ -1142,7 +1231,7 @@ class TestesSeguranca(unittest.TestCase):
         Image.new("RGB", (20, 10), "gold").save(imagem, format="JPEG")
         base64_imagem = "data:image/jpeg;base64," + base64.b64encode(imagem.getvalue()).decode("ascii")
         materia = Conteudo(titulo="Matéria para leitura segura", resumo_home="Resumo de teste", corpo_texto='<script>alert("teste")</script>\n' + 'texto' * 250,
-            categoria_id=categoria.uuid, autor_id=admin.uuid, tipo_fonte=TipoFonte.DOUTRINA, status=StatusConteudo.EM_ANALISE,
+            categoria_id=categoria.uuid, autor_id=admin.uuid, status=StatusConteudo.EM_ANALISE,
             imagem_miniatura=base64_imagem, imagem_corpo=base64_imagem, fonte_original="javascript:alert(1)")
         self.db.add(materia)
         self.db.commit()
@@ -1196,7 +1285,7 @@ class TestesSeguranca(unittest.TestCase):
         civil = self.db.query(Categoria).filter_by(nome="Direito Civil").one()
         admin = self._usuario(TipoUsuario.ADMINISTRADOR)
         token = criar_access_token(admin)
-        status, _, _ = self._request("POST", "/criar-materia", {"aceite_editorial": True, "versao_termos": "2026-10-30", "titulo": "Tags por categoria", "corpo_texto": "Texto da matéria para teste.", "categoria_id": trabalhista.uuid, "tipo_fonte": "legislacao", "tags": "clt, Trabalho, bolsa de estudo"}, token=token)
+        status, _, _ = self._request("POST", "/criar-materia", {"aceite_editorial": True, "versao_termos": "2026-10-30", "titulo": "Tags por categoria", "corpo_texto": "Texto da matéria para teste.", "categoria_id": trabalhista.uuid, "tags": "clt, Trabalho, bolsa de estudo"}, token=token)
         self.assertEqual(200, status)
         self.db.expire_all()
         materia = self.db.query(Conteudo).filter_by(titulo="Tags por categoria").one()
@@ -1215,11 +1304,11 @@ class TestesSeguranca(unittest.TestCase):
         self.assertNotIn("CLT", materia.tags)
 
     def test_corrige_apenas_vinculo_de_categoria_de_exemplo_conhecido(self):
-        from model.models import Conteudo, TipoFonte, Categoria
+        from model.models import Conteudo, Categoria
         from services.categorias import garantir_categorias, corrigir_vinculos_legados
         admin = self._usuario(TipoUsuario.ADMINISTRADOR)
         garantir_categorias(self.db)
-        materia = Conteudo(titulo="Matéria antiga", resumo_home="Resumo", corpo_texto="Texto", categoria_id="ID_DIREITO_PENAL", autor_id=admin.uuid, tipo_fonte=TipoFonte.DOUTRINA)
+        materia = Conteudo(titulo="Matéria antiga", resumo_home="Resumo", corpo_texto="Texto", categoria_id="ID_DIREITO_PENAL", autor_id=admin.uuid)
         self.db.add(materia)
         self.db.commit()
         self.assertEqual(1, corrigir_vinculos_legados(self.db))
@@ -1376,19 +1465,26 @@ class TestesSeguranca(unittest.TestCase):
         self.db.commit()
         return usuario, acesso, refresh, sid
 
-    def test_lembrar_conectado_nao_alonga_access_token(self):
+    def test_lembrar_conectado_limita_access_token_a_15_minutos(self):
         _, acesso, _, _ = self._sessao_renovavel()
         payload = security._decodificar_token(acesso)
-        self.assertLessEqual(payload["exp"] - payload["iat"], 1800)
+        self.assertLessEqual(payload["exp"] - payload["iat"], 900)
 
     def test_refresh_rota_e_reutilizacao_revoga_toda_a_sessao(self):
         from auth.sessions import renovar_sessao
         from model.models import SessaoAutenticada
         _, acesso, antigo, sid = self._sessao_renovavel()
-        novo_acesso, novo_refresh, _ = renovar_sessao(self.db, antigo)
+        prazo_original = self.db.get(SessaoAutenticada, sid).expira_em
+        novo_acesso, novo_refresh, restante = renovar_sessao(self.db, antigo)
+        self.assertEqual(prazo_original, self.db.get(SessaoAutenticada, sid).expira_em)
+        self.assertLessEqual(restante, 900)
+        self.assertLessEqual(
+            security._decodificar_token(novo_acesso)["exp"],
+            prazo_original.replace(tzinfo=timezone.utc).timestamp(),
+        )
         self.assertNotEqual(antigo, novo_refresh)
         self.assertEqual(sid, security._decodificar_token(novo_acesso)["sid"])
-        self.assertLessEqual((self.db.get(SessaoAutenticada, sid).expira_em - datetime.now(timezone.utc).replace(tzinfo=None)).total_seconds(), 14 * 86400)
+        self.assertLessEqual((self.db.get(SessaoAutenticada, sid).expira_em - datetime.now(timezone.utc).replace(tzinfo=None)).total_seconds(), 900)
         with self.assertRaises(Exception) as contexto:
             renovar_sessao(self.db, antigo)
         self.assertEqual(401, contexto.exception.status_code)
@@ -1398,6 +1494,37 @@ class TestesSeguranca(unittest.TestCase):
             self.assertEqual(401, status)
         with self.assertRaises(Exception):
             renovar_sessao(self.db, novo_refresh)
+
+    def test_sessao_persistente_reabre_inicio_ate_expirar(self):
+        usuario, acesso, refresh, sid = self._sessao_renovavel()
+        cookies = f"jurishome_access_token={acesso}; jurishome_refresh_token={refresh}"
+        status, headers, _ = self._request("GET", "/", cookie=cookies)
+        self.assertEqual(303, status)
+        destino = "/home_admin" if usuario.tipo_usuario == TipoUsuario.ADMINISTRADOR else "/home_usuario"
+        self.assertEqual(destino, headers["location"])
+
+        self.db.get(models.SessaoAutenticada, sid).expira_em = datetime.now(timezone.utc).replace(
+            tzinfo=None
+        ) - timedelta(seconds=1)
+        self.db.commit()
+        status, _, _ = self._request("GET", "/", cookie=cookies)
+        self.assertEqual(200, status)
+
+    def test_sessao_persistente_antiga_respeita_novo_prazo(self):
+        from fastapi import HTTPException
+        from auth.sessions import renovar_sessao
+
+        _, acesso, refresh, sid = self._sessao_renovavel()
+        sessao = self.db.get(models.SessaoAutenticada, sid)
+        sessao.criada_em -= timedelta(minutes=16)
+        sessao.expira_em = sessao.criada_em + timedelta(days=14)
+        self.db.commit()
+
+        status, _, _ = self._request("GET", "/api/usuarios/me", token=acesso)
+        self.assertEqual(401, status)
+        with self.assertRaises(HTTPException) as contexto:
+            renovar_sessao(self.db, refresh)
+        self.assertEqual(401, contexto.exception.status_code)
 
     def test_refresh_exige_origem_e_cookie_http_only(self):
         _, _, refresh, _ = self._sessao_renovavel()
@@ -1584,7 +1711,7 @@ class TestesSeguranca(unittest.TestCase):
         self.assertEqual(respostas[0], respostas[1])
 
     def test_busca_de_conteudo_nao_interpreta_entrada_como_sql(self):
-        from model.models import Categoria, Conteudo, StatusConteudo, TipoFonte
+        from model.models import Categoria, Conteudo, StatusConteudo
 
         autor = self._usuario()
         categoria = Categoria(uuid=str(uuid.uuid4()), nome="Direito Civil")
@@ -1595,7 +1722,6 @@ class TestesSeguranca(unittest.TestCase):
                 titulo="Conteúdo público aprovado",
                 resumo_home="Resumo de teste suficientemente longo.",
                 corpo_texto="Texto de teste.",
-                tipo_fonte=TipoFonte.ACORDAO,
                 status=StatusConteudo.APROVADO,
                 categoria_id=categoria.uuid,
                 autor_id=autor.uuid,
@@ -1606,7 +1732,6 @@ class TestesSeguranca(unittest.TestCase):
                 titulo="Conteúdo ainda não aprovado",
                 resumo_home="Este conteúdo deve permanecer privado.",
                 corpo_texto="Texto reservado.",
-                tipo_fonte=TipoFonte.ACORDAO,
                 status=StatusConteudo.EM_ANALISE,
                 categoria_id=categoria.uuid,
                 autor_id=autor.uuid,

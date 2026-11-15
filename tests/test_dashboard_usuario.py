@@ -15,11 +15,10 @@ from model.models import (
     Conteudo,
     ConteudoLeitura,
     StatusConteudo,
-    TipoFonte,
     TipoUsuario,
     Usuario,
 )
-from routes.paginas import (
+from routes.perfil import (
     RegistroAcessoCategoria,
     api_dashboard_perfil,
     api_registrar_acesso_categoria,
@@ -96,7 +95,6 @@ class DashboardUsuarioTests(unittest.TestCase):
                 titulo=f"Título {identificador}",
                 resumo_home="Resumo de teste",
                 corpo_texto="Conteúdo de teste",
-                tipo_fonte=TipoFonte.DOUTRINA,
                 status=StatusConteudo.APROVADO,
                 categoria_id=categoria.uuid,
                 autor_id=estudante.uuid,
@@ -218,7 +216,7 @@ class DashboardUsuarioTests(unittest.TestCase):
             "categorias": [{"categoria": "Direito Civil", "quantidade": 1}],
             "periodo": {"dias": 30, "rotulo": "Últimos 30 dias", "inicio": "2026-10-04", "fim": "2026-11-02"},
         }
-        with patch("routes.paginas.obter_dashboard_estudos", return_value=previsto) as consultar:
+        with patch("routes.perfil.obter_dashboard_estudos", return_value=previsto) as consultar:
             dados = api_dashboard_perfil(resposta, self.session, self.estudante, periodo=30)
 
         self.assertEqual("no-store, max-age=0", resposta.headers["Cache-Control"])

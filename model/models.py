@@ -12,29 +12,15 @@ from sqlalchemy.orm import relationship
 
 from database import Base
 
-# =====================================================================
 # Configuração do Fuso Horário Local (São Paulo / Brasília)
-# =====================================================================
 fuso_br = tz.gettz("America/Sao_Paulo")
 
 def obter_hora_local():
-    """Retorna a data e hora atual no fuso horário do Brasil."""
     return datetime.now(fuso_br)
 
 class TipoUsuario(str, enum.Enum):
     ESTUDANTE = "estudante"
     ADMINISTRADOR = "administrador"
-
-
-class TipoFonte(str, enum.Enum):
-    ACORDAO = "acordao"
-    DOUTRINA = "doutrina"
-    LEGISLACAO = "legislacao"
-    G1 = "g1"
-    TERRA = "terra"
-    UOL = "uol"
-    X = "x"
-    INSTAGRAM = "instagram"
 
 
 class StatusConteudo(str, enum.Enum):
@@ -97,6 +83,16 @@ class Usuario(Base):
     )
 
 
+class RevisaoLegal(Base):
+    __tablename__ = "revisoes_legais"
+
+    id = Column(Integer, primary_key=True)
+    anterior = Column(String(50), unique=True, nullable=False)
+    termos = Column(Text, nullable=True)
+    politica = Column(Text, nullable=True)
+    publicada_em = Column(DateTime, nullable=False)
+
+
 class DesafioConsumido(Base):
     __tablename__ = "auth_desafios_consumidos"
     digest = Column(String(64), primary_key=True)
@@ -105,7 +101,7 @@ class DesafioConsumido(Base):
 
 
 class AdministradorExcluido(Base):
-    """Preserva vínculos editoriais sem manter uma conta de acesso ativa."""
+    #Preserva vínculos editoriais sem manter uma conta de acesso ativa.
     __tablename__ = "administradores_excluidos"
     usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), primary_key=True)
     excluido_por = Column(CHAR(36), ForeignKey("usuarios.uuid"), nullable=False)
@@ -210,10 +206,6 @@ class Conteudo(Base):
     fonte_original = Column(String, nullable=True)
     fonte_imagem = Column(String, nullable=True)
 
-    tipo_fonte = Column(
-        Enum(TipoFonte, values_callable=lambda x: [e.value for e in x]),
-        nullable=False,
-    )
     status = Column(
         Enum(StatusConteudo, values_callable=lambda x: [e.value for e in x]),
         nullable=False,

@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session, object_session
 from database import get_db
 from model.models import Usuario, TipoUsuario, SessaoAutenticada
 from services.auditoria import definir_ator_auditoria
+from services.lgpd import aceite_pendente
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -33,7 +34,7 @@ if len(SECRET_KEY.encode("utf-8")) < 32 or SECRET_KEY == "__GERAR_CHAVE_LOCAL__"
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-ACCESS_TOKEN_REMEMBER_DAYS = 14
+SESSAO_PERSISTENTE_MINUTOS = 15
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
@@ -78,27 +79,40 @@ def verificar_senha(senha: str, senha_hash: str) -> bool:
         return False
 
 
-def criar_access_token(usuario: Usuario, lembrar_conectado: bool = False, *, sessao_id: str | None = None) -> str:
+def prazo_sessao(sessao: SessaoAutenticada) -> datetime:
+    # Sessões persistentes antigas eram gravadas com prazo superior ao da sessão comum.
+    if sessao.expira_em - sessao.criada_em > timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES):
+        return sessao.criada_em + timedelta(minutes=SESSAO_PERSISTENTE_MINUTOS)
+    return sessao.expira_em
+
+
+def criar_access_token(
+    usuario: Usuario,
+    lembrar_conectado: bool = False,
+    *,
+    sessao: SessaoAutenticada | None = None,
+) -> str:
     agora = datetime.now(timezone.utc)
     validade = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    if sessao_id is None:
+    if sessao is None:
+        minutos = SESSAO_PERSISTENTE_MINUTOS if lembrar_conectado else ACCESS_TOKEN_EXPIRE_MINUTES
         db = object_session(usuario)
         if db is None:
             raise ValueError("A emissão de sessão exige usuário persistido.")
         sessao = SessaoAutenticada(
             id=str(uuid.uuid4()), usuario_id=usuario.uuid,
             criada_em=agora.replace(tzinfo=None),
-            expira_em=(agora + (timedelta(days=ACCESS_TOKEN_REMEMBER_DAYS) if lembrar_conectado else validade)).replace(tzinfo=None),
+            expira_em=(agora + timedelta(minutes=minutos)).replace(tzinfo=None),
         )
         db.add(sessao)
         db.commit()
-        sessao_id = sessao.id
+    expira_em = min(agora + validade, prazo_sessao(sessao).replace(tzinfo=timezone.utc))
     payload = {
         "sub": str(usuario.uuid),
         "tipo": "acesso",
-        "sid": sessao_id,
+        "sid": sessao.id,
         "iat": agora.timestamp(),
-        "exp": agora + validade,
+        "exp": expira_em,
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -209,17 +223,20 @@ def decodificar_token_configuracao_2fa(token: str) -> str:
     return str(payload["sub"])
 
 
-def cifrar_segredo_2fa(segredo: str) -> str:
+def _carregar_fernet():
     try:
-        from cryptography.fernet import Fernet
+        from cryptography import fernet
     except ImportError as erro:
         raise RuntimeError("Dependência de criptografia indisponível.") from erro
+    return fernet
 
+
+def cifrar_segredo_2fa(segredo: str) -> str:
     return _chaves_2fa()[0].encrypt(segredo.encode("utf-8")).decode("utf-8")
 
 
 def _chaves_2fa():
-    from cryptography.fernet import Fernet
+    Fernet = _carregar_fernet().Fernet
     chave = os.getenv("TOTP_ENCRYPTION_KEY")
     if not chave:
         raise RuntimeError("Configure TOTP_ENCRYPTION_KEY com uma chave Fernet independente.")
@@ -235,19 +252,14 @@ def _chaves_2fa():
 
 
 def decifrar_segredo_2fa(segredo_cifrado: str) -> str:
+    fernet = _carregar_fernet()
     try:
-        from cryptography.fernet import Fernet, InvalidToken
-    except ImportError as erro:
-        raise RuntimeError("Dependência de criptografia indisponível.") from erro
-
-    from cryptography.fernet import MultiFernet
-    try:
-        return MultiFernet(_chaves_2fa()).decrypt(segredo_cifrado.encode("utf-8")).decode("utf-8")
-    except (InvalidToken, ValueError, UnicodeError) as erro:
+        return fernet.MultiFernet(_chaves_2fa()).decrypt(segredo_cifrado.encode("utf-8")).decode("utf-8")
+    except (fernet.InvalidToken, ValueError, UnicodeError) as erro:
         raise ValueError("Não foi possível ler a configuração de duas etapas.") from erro
 
 
-def get_current_user(
+def get_current_user_sem_aceite(
     request: Request,
     token: str | None = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
@@ -284,7 +296,7 @@ def get_current_user(
     agora_utc = datetime.now(timezone.utc)
     sessao = db.get(SessaoAutenticada, payload.get("sid")) if isinstance(payload.get("sid"), str) else None
     if (not sessao or sessao.usuario_id != usuario.uuid or sessao.revogada
-            or sessao.expira_em <= agora_utc.replace(tzinfo=None)):
+            or prazo_sessao(sessao) <= agora_utc.replace(tzinfo=None)):
         raise credenciais_invalidas
     bloqueado_ate = usuario.bloqueado_ate
     if bloqueado_ate and bloqueado_ate.tzinfo is None:
@@ -307,6 +319,17 @@ def get_current_user(
 
     definir_ator_auditoria(usuario)
     request.state.tipo_usuario = usuario.tipo_usuario.value
+    return usuario
+
+
+def get_current_user(
+    request: Request,
+    token: str | None = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+) -> Usuario:
+    usuario = get_current_user_sem_aceite(request, token, db)
+    if aceite_pendente(db, usuario):
+        raise HTTPException(428, "Leia e confirme os documentos legais atualizados para continuar.")
     return usuario
 
 

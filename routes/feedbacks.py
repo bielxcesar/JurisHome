@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from auth.sessions import garantir_transacao
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field, field_validator
+from pydantic import Field, field_validator
 from sqlalchemy.orm import Session
 
 from database import get_db

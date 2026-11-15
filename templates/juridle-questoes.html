@@ -13,7 +13,7 @@
         <script>(()=>{try{document.documentElement.dataset.theme=localStorage.getItem('tema_juris')==='claro'?'light':'dark';}catch(_){}})();</script>
         <script src="/static/js/session.js" defer></script>
         <script src="/static/js/curiosidades.js?v=20261108-nav" defer></script>
-        <script src="/static/js/juridle-questoes.js?v=20261106" defer></script>
+        <script src="/static/js/juridle-questoes.js?v=fila-pendentes" defer></script>
     </head>
     <body class="juris-ui home-shell">
         <a class="home-skip" href="#conteudo-principal">Pular para o conteúdo</a>
@@ -23,7 +23,7 @@
                 <div>
                     <span class="home-eyebrow">CONTEÚDO REVISADO · APRENDIZADO DIÁRIO</span>
                     <h1>
-                        Ampliar game
+                        {{ 'Banco de questões do Juridle' if e_root else 'Ampliar game' }}
                         <span class="quiz-title-dot">.</span>
                     </h1>
                     <p>Ajude a construir o próximo desafio do Juridle.</p>
@@ -49,10 +49,10 @@
                 <p class="quiz-hint">Meta: 150 questões aprovadas para 30 dias, com 5 por dia. Os mesmos itens podem atender pessoas diferentes. Para a mesma pessoa, não se repetem por 30 dias; continue ampliando o banco.</p>
             </section>
             <div class="quiz-bank-tabs" role="tablist" aria-label="Banco de questões">
-                <button type="button" id="b-tab-criar" role="tab" aria-selected="true" aria-controls="b-criar">+ Criar questão</button>
-                <button type="button" id="b-tab-lista" role="tab" aria-selected="false" aria-controls="b-lista" tabindex="-1">{{ 'Revisar e gerenciar' if e_root else 'Minhas questões' }}</button>
+                <button type="button" id="b-tab-criar" role="tab" aria-selected="{{ 'false' if abrir_revisao else 'true' }}" aria-controls="b-criar"{% if abrir_revisao %} tabindex="-1"{% endif %}>+ Criar questão</button>
+                <button type="button" id="b-tab-lista" role="tab" aria-selected="{{ 'true' if abrir_revisao else 'false' }}" aria-controls="b-lista"{% if not abrir_revisao %} tabindex="-1"{% endif %}>{{ 'Fila de revisão' if e_root else 'Minhas questões' }}</button>
             </div>
-            <section class="quiz-panel" id="b-criar" role="tabpanel" aria-labelledby="b-tab-criar">
+            <section class="quiz-panel" id="b-criar" role="tabpanel" aria-labelledby="b-tab-criar"{% if abrir_revisao %} hidden{% endif %}>
                 <h2>Uma boa pergunta abre novas ideias</h2>
                 <p class="quiz-hint">Escreva com clareza, evite ambiguidades e confirme a resposta em uma fonte confiável. Até questões criadas pelo root precisam passar pela revisão.</p>
                 <form id="b-form" class="quiz-form">
@@ -124,13 +124,16 @@
                     </div>
                 </form>
             </section>
-            <section class="quiz-panel" id="b-lista" role="tabpanel" aria-labelledby="b-tab-lista" hidden>
+            <section class="quiz-panel" id="b-lista" role="tabpanel" aria-labelledby="b-tab-lista"{% if not abrir_revisao %} hidden{% endif %}>
                 <h2>{{ 'Revisão de questões' if e_root else 'Acompanhe suas contribuições' }}</h2>
+                {% if e_root %}
+                    <p class="quiz-hint">Clique em Revisar para conferir a pergunta, as alternativas e a fonte antes de aprovar ou rejeitar.</p>
+                {% endif %}
                 <form id="b-filtros" class="quiz-filter">
                     <input id="b-busca" type="search" placeholder="Buscar pelo enunciado" aria-label="Buscar pelo enunciado" maxlength="80">
                     <select id="b-status" aria-label="Filtrar por status">
                         <option value="todas">Todos os status</option>
-                        <option value="pendente">Pendentes</option>
+                        <option value="pendente"{% if abrir_revisao %} selected{% endif %}>Pendentes</option>
                         <option value="aprovada">Aprovadas</option>
                         <option value="rejeitada">Rejeitadas</option>
                         <option value="arquivada">Arquivadas</option>

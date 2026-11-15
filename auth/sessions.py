@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException, Response
 from sqlalchemy.exc import IntegrityError
 
-from auth.security import _decodificar_token, criar_access_token
+from auth.security import _decodificar_token, criar_access_token, prazo_sessao
 from model.models import DesafioConsumido, CodigoTotpConsumido, RefreshToken, SessaoAutenticada, Usuario
 
 
@@ -56,15 +56,25 @@ def consumir_desafio(db, token, usuario, tipo):
         raise negar() from erro
 
 
-def consumir_totp(db, usuario, segredo, codigo, janela=2):
-    garantir_transacao(db)
+def carregar_pyotp():
     import pyotp
-    totp = pyotp.TOTP(segredo)
+
+    return pyotp
+
+
+def encontrar_intervalo_totp(segredo: str, codigo: str, janela: int) -> int | None:
+    totp = carregar_pyotp().TOTP(segredo)
     intervalo_atual = int(datetime.now(timezone.utc).timestamp()) // totp.interval
-    intervalo = next((i for i in range(intervalo_atual - janela, intervalo_atual + janela + 1)
-        if hmac.compare_digest(totp.generate_otp(i), codigo)), None)
-    if intervalo is None:
-        raise negar()
+    codigo_bytes = codigo.encode("utf-8")
+    for intervalo in range(intervalo_atual - janela, intervalo_atual + janela + 1):
+        esperado = totp.generate_otp(intervalo).encode("ascii")
+        if hmac.compare_digest(esperado, codigo_bytes):
+            return intervalo
+    return None
+
+
+def consumir_totp(db, usuario, segredo, intervalo):
+    garantir_transacao(db)
     try:
         with db.begin_nested():
             db.add(CodigoTotpConsumido(usuario_id=usuario.uuid, segredo_digest=digest(segredo), intervalo=intervalo))
@@ -84,7 +94,7 @@ def renovar_sessao(db, token):
     garantir_transacao(db)
     registro = db.get(RefreshToken, digest(token)) if token else None
     sessao = db.query(SessaoAutenticada).filter_by(id=registro.sessao_id).populate_existing().with_for_update().first() if registro else None
-    if not sessao or sessao.revogada or sessao.expira_em <= agora():
+    if not sessao or sessao.revogada or prazo_sessao(sessao) <= agora():
         raise negar()
     # UPDATE condicional impede duas renovações com o mesmo token, inclusive entre processos.
     alterados = db.query(RefreshToken).filter_by(digest=registro.digest, usado=False).update({"usado": True})
@@ -101,10 +111,14 @@ def renovar_sessao(db, token):
     if bloqueio and bloqueio.replace(tzinfo=None) > agora():
         db.rollback()
         raise negar()
+    validade = int((prazo_sessao(sessao) - agora()).total_seconds())
+    if validade <= 0:
+        db.rollback()
+        raise negar()
     novo_refresh = criar_refresh(db, sessao.id)
-    acesso = criar_access_token(usuario, sessao_id=sessao.id)
+    acesso = criar_access_token(usuario, sessao=sessao)
     db.commit()
-    return acesso, novo_refresh, max(0, int((sessao.expira_em - agora()).total_seconds()))
+    return acesso, novo_refresh, max(0, int((prazo_sessao(sessao) - agora()).total_seconds()))
 
 
 def salvar_refresh(response: Response, token, max_age):

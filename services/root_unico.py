@@ -1,6 +1,8 @@
 """Invariante: no máximo uma conta root, inclusive antes do primeiro login."""
 from datetime import datetime, timezone
 
+from sqlalchemy import inspect, select
+
 from auth.sessions import garantir_transacao
 from model.models import Usuario, TipoUsuario, SessaoAutenticada
 from services.auditoria import registrar_auditoria
@@ -18,7 +20,6 @@ def instalar_indice(conexao):
         conexao.exec_driver_sql('CREATE UNIQUE INDEX IF NOT EXISTS uq_usuarios_root_unico ON usuarios ((CASE WHEN e_root_admin THEN 1 ELSE NULL END))')
     elif conexao.dialect.name == 'mysql':
         # Índices funcionais são suportados pelo MySQL a partir de 8.0.13.
-        from sqlalchemy import inspect
         if NOME_INDICE not in {i['name'] for i in inspect(conexao).get_indexes('usuarios')}:
             conexao.exec_driver_sql('CREATE UNIQUE INDEX uq_usuarios_root_unico ON usuarios ((CASE WHEN e_root_admin THEN 1 ELSE NULL END))')
     else:
@@ -26,7 +27,6 @@ def instalar_indice(conexao):
 
 
 def garantir_root_unico(engine):
-    from sqlalchemy import select
     with engine.begin() as conexao:
         encontrados = conexao.execute(select(Usuario.uuid, Usuario.tipo_usuario).where(Usuario.e_root_admin != False)).all()
         if len(encontrados) > 1:

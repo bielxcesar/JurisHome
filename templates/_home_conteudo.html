@@ -5,7 +5,7 @@
     <a class="home-feedback-notice" id="home-feedback-notice" hidden>
     </a>
     <div class="home-top-grid">
-        <section class="home-feature" aria-label="Matérias em destaque">
+        <section class="home-feature" id="home-feature" aria-label="Matérias em destaque">
             <a id="home-destaque" class="home-hero">
                 <img id="home-capa" alt="" hidden>
                 <div class="home-hero-shade">
@@ -22,12 +22,19 @@
                     <i class="fa-solid fa-arrow-left" aria-hidden="true">
                     </i>
                 </button>
-                <span id="home-posicao" aria-live="polite">
-                </span>
+                <div class="home-carousel-status">
+                    <button id="home-pausar" type="button" aria-label="Pausar avanço automático" title="Pausar avanço automático">
+                        <i class="fa-solid fa-pause" aria-hidden="true"></i>
+                    </button>
+                    <span id="home-posicao" aria-live="off"></span>
+                </div>
                 <button id="home-proximo" aria-label="Próximo destaque">
                     <i class="fa-solid fa-arrow-right" aria-hidden="true">
                     </i>
                 </button>
+            </div>
+            <div class="home-carousel-progress" id="home-progresso" aria-hidden="true" hidden>
+                <span></span>
             </div>
         </section>
     </div>

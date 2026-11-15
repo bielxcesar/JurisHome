@@ -180,6 +180,7 @@
                         senha,
                         confirmar_senha: confirmarSenha,
                         consentimento_lgpd: document.getElementById("cadastro-lgpd").checked,
+                        versao_documentos: document.getElementById("cadastro-lgpd").dataset.versaoDocumentos,
                     }),
                 });
                 iniciarConfiguracao2FA(resposta);

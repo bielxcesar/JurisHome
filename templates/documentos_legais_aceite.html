@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Confirme os documentos legais | JurisHome</title>
+    <link rel="stylesheet" href="/static/css/legal.css?v=documentos-legais">
+</head>
+<body class="legal-page">
+    <main class="legal-document">
+        <h1>Confira os documentos atualizados</h1>
+        <p>Leia a versão {{ versao }} do Termo de Aceite e da Política de Privacidade antes de continuar.</p>
+        {% if erro %}<p class="legal-notice" role="alert">{{ erro }}</p>{% endif %}
+        <section>
+            <form class="legal-form" method="post" action="/aceitar-documentos">
+                <input type="hidden" name="versao" value="{{ versao }}">
+                <label>
+                    <input type="checkbox" name="aceite" value="sim" required>
+                    Li e aceito o <a href="/termos-de-aceite" target="_blank" rel="noopener">Termo de Aceite (abre em outra aba)</a>.
+                </label>
+                <label>
+                    <input type="checkbox" name="ciencia" value="sim" required>
+                    Li e declaro ciência da <a href="/politica-de-privacidade" target="_blank" rel="noopener">Política de Privacidade (abre em outra aba)</a>.
+                </label>
+                <button type="submit">Confirmar e continuar</button>
+            </form>
+        </section>
+    </main>
+    <script defer src="/static/js/erro.js?v=ultima-pagina"></script>
+</body>
+</html>

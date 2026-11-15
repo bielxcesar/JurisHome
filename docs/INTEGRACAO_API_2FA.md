@@ -64,7 +64,7 @@ O código deve ser enviado como texto com seis dígitos. Em caso de sucesso, a c
 1. `POST /api/auth/login` recebe e-mail e senha. Se estiverem corretos, retorna um `desafio_token` temporário; a sessão ainda não está autenticada.
 2. `POST /api/auth/2fa/validar` recebe esse token e o código atual do autenticador. Em caso de sucesso, libera a sessão.
 
-O desafio do login expira em cinco minutos. A sessão dura 30 minutos, ou 14 dias quando `lembrar_conectado` é `true`. O cookie é `HttpOnly` e usa `SameSite=Lax`; configure `COOKIE_SECURE=true` quando a aplicação estiver servida por HTTPS.
+O desafio do login expira em cinco minutos. A sessão dura 30 minutos, ou até 15 minutos quando `lembrar_conectado` é `true`. O cookie é `HttpOnly` e usa `SameSite=Lax`; configure `COOKIE_SECURE=true` quando a aplicação estiver servida por HTTPS.
 
 ## Recuperação de senha
 

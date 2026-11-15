@@ -6,11 +6,11 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database import Base
-from model.models import Categoria, Conteudo, StatusConteudo, TipoFonte, TipoUsuario, Usuario
+from model.models import Categoria, Conteudo, StatusConteudo, TipoUsuario, Usuario
 from routes.conteudos import buscar_conteudos
 from services.categorias import CATALOGO
 from services.conteudo_pedagogico import CONTEUDO_PEDAGOGICO, conteudo_categoria
-from routes.paginas import pagina_categorias
+from routes.conteudos import pagina_categorias
 from starlette.requests import Request
 
 
@@ -39,7 +39,6 @@ class ConteudosApiTests(unittest.TestCase):
                 titulo="Conteúdo sem imagem",
                 resumo_home="Resumo de teste",
                 corpo_texto="Texto de teste",
-                tipo_fonte=TipoFonte.DOUTRINA,
                 status=StatusConteudo.APROVADO,
                 categoria_id=categoria.uuid,
                 autor_id=autor.uuid,
@@ -60,7 +59,7 @@ class ConteudosApiTests(unittest.TestCase):
         self.assertEqual(1, len(resposta))
         self.assertIsNone(resposta[0]["imagem_miniatura"])
         self.assertIsNone(resposta[0]["fonte_original"])
-        self.assertEqual("Doutrina", resposta[0]["fonte"])
+        self.assertNotIn("fonte", resposta[0])
 
     def test_api_expõe_fonte_original_https_quando_disponível(self):
         materia = self.session.query(Conteudo).one()

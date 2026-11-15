@@ -6,6 +6,9 @@ from urllib.parse import urlsplit
 from pydantic import BaseModel, BeforeValidator, ConfigDict, field_validator
 
 
+from services.categorias import CATALOGO
+
+
 def texto_seguro(valor):
     if not isinstance(valor, str):
         raise ValueError('Informe texto, sem objetos ou listas.')
@@ -84,7 +87,6 @@ def fonte_http(valor):
 
 
 def area_interesse(valor):
-    from services.categorias import CATALOGO
     if valor not in CATALOGO:
         raise ValueError('Escolha uma das áreas de interesse disponíveis.')
     return valor

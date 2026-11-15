@@ -13,7 +13,7 @@
         <script>(()=>{try{document.documentElement.dataset.theme=localStorage.getItem('tema_juris')==='claro'?'light':'dark';}catch(_){}})();</script>
         <script src="/static/js/session.js" defer></script>
         <script src="/static/js/curiosidades.js?v=20261108-nav" defer></script>
-        <script src="/static/js/nova-materia.js?v=20261108-cancelar" defer></script>
+        <script src="/static/js/nova-materia.js?v=fonte-livre" defer></script>
     </head>
     <body class="juris-ui home-shell editor-shell">
         {% set tipo_usuario='administrador' %}
@@ -137,17 +137,10 @@ Use os botões para criar títulos de seção, citações e listas." aria-descri
                             </select>
                         </div>
                         <div>
-                            <label for="tipo_fonte">Tipo da fonte original *</label>
-                            <select id="tipo_fonte" required>
-                                <option value="">Selecione</option>
-                                {% for valor,nome in [('legislacao','Legislação'),('acordao','Acórdão'),('doutrina','Doutrina'),('g1','G1'),('terra','Terra'),('uol','UOL'),('x','X'),('instagram','Instagram')] %}
-                                    <option value="{{ valor }}">{{ nome }}</option>
-                                {% endfor %}
-                            </select>
+                            <label for="fonte_original">Link da fonte original *</label>
+                            <input id="fonte_original" type="url" required placeholder="https://..." maxlength="2000">
                         </div>
                     </div>
-                    <label for="fonte_original">Link da fonte original *</label>
-                    <input id="fonte_original" type="url" required placeholder="https://..." maxlength="2000">
                 </section>
                 <section class="editor-step" data-panel="2" hidden aria-labelledby="etapa-imagens">
                     <div class="editor-panel-heading">

@@ -1,6 +1,8 @@
 """Limites antes da validação: tamanho, query ambígua e JSON não padrão."""
 import json
 from urllib.parse import parse_qsl
+
+from starlette.exceptions import HTTPException
 from starlette.responses import JSONResponse
 
 from services.imagens import LIMITE_IMAGEM_BASE64, LIMITE_IMAGEM_BYTES
@@ -70,7 +72,6 @@ class EntradaSeguraMiddleware:
                 mensagem = await receive()
                 total += len(mensagem.get('body', b''))
                 if total > limite:
-                    from starlette.exceptions import HTTPException
                     raise HTTPException(413, 'O envio ultrapassa o tamanho permitido.')
                 return mensagem
             return await self.app(scope, limitado, send)

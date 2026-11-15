@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Editor de documentos legais | JurisHome</title>
+    <link rel="stylesheet" href="/static/css/legal.css?v=documentos-legais">
+</head>
+<body class="legal-page">
+    <main class="legal-document">
+        <a href="/perfil">← Voltar ao perfil</a>
+        <h1>Editor de documentos legais</h1>
+        <p>Versão vigente {{ versao }}. Publicar uma alteração exige nova confirmação de todos, inclusive do administrador principal.</p>
+        <nav class="legal-tabs" aria-label="Documento para editar">
+            <a href="/perfil/documentos-legais?tipo=termos"{% if tipo == "termos" %} aria-current="page"{% endif %}>Termo de Aceite</a>
+            <a href="/perfil/documentos-legais?tipo=privacidade"{% if tipo == "privacidade" %} aria-current="page"{% endif %}>Política de Privacidade</a>
+        </nav>
+        <section>
+            <form class="legal-form" method="post" action="/perfil/documentos-legais/{{ tipo }}">
+                <input type="hidden" name="versao" value="{{ versao }}">
+                <label for="texto-legal"><strong>{{ titulo }}</strong></label>
+                <p id="ajuda-texto">Edite o texto completo. Use linhas em branco para separar seções.</p>
+                {% if erro %}<p class="legal-notice" role="alert">{{ erro }}</p>{% endif %}
+                <textarea id="texto-legal" name="texto" rows="22" maxlength="{{ limite }}" aria-describedby="ajuda-texto" required>{{ texto }}</textarea>
+                {% if pode_publicar %}
+                    <label><input type="checkbox" name="confirmar" value="sim" required> Revisei o texto e confirmo a publicação.</label>
+                    <button type="submit">Publicar nova versão</button>
+                {% else %}
+                    <a href="/perfil/documentos-legais?tipo={{ tipo }}" target="_blank" rel="noopener">Abrir editor atualizado em outra aba</a>
+                {% endif %}
+            </form>
+        </section>
+    </main>
+    <script defer src="/static/js/erro.js?v=ultima-pagina"></script>
+</body>
+</html>

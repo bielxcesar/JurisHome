@@ -309,7 +309,7 @@
                     conteudo.className = 'category-news-copy';
                     const origem = document.createElement('p');
                     origem.className = 'category-news-source';
-                    origem.textContent = `${materia.fonte ? `Fonte: ${materia.fonte}` : 'Fonte não informada'} · Publicado em ${materia.criado_em || 'data não informada'}`;
+                    origem.textContent = `${materia.criado_em ? `Publicado em ${materia.criado_em}` : 'Data de publicação não informada'}`;
                     const titulo = document.createElement('a');
                     titulo.className = 'category-news-title';
                     titulo.href = `/materia/${encodeURIComponent(materia.uuid || '')}`;

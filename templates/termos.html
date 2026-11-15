@@ -6,7 +6,7 @@
     <meta name="description" content="Termo de Aceite para utilização do sistema JurisHome">
     <title>Termo de Aceite | JurisHome</title>
     <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
-    <link rel="stylesheet" href="/static/css/legal.css?v=20261108-documentos">
+    <link rel="stylesheet" href="/static/css/legal.css?v=documentos-legais">
 </head>
 <body class="legal-page">
     <a class="legal-skip-link" href="#conteudo-legal">Ir para o conteúdo</a>
@@ -17,9 +17,12 @@
         <div class="legal-heading">
             <p class="legal-kicker">Documento do JurisHome</p>
             <h1>Termo de Aceite</h1>
-            <p>Versão {{ versao_termos }} - atualizada em 27 de setembro de 2026</p>
+            {% if texto_publicado is not none %}<p>Versão {{ versao_termos }}{% if publicada_em %} · publicada em {{ publicada_em }}{% endif %}</p>{% else %}<p>Versão {{ versao_termos }} - atualizada em 27 de setembro de 2026</p>{% endif %}
         </div>
 
+        {% if texto_publicado is not none %}
+        <section class="legal-texto-publicado">{{ texto_publicado }}</section>
+        {% else %}
         <section>
             <h2>1. Objeto e finalidade</h2>
             <p>O JurisHome é uma aplicação acadêmica para consulta de conteúdos jurídicos. Nesta versão, o sistema exibe matérias aprovadas, permite pesquisar e filtrar o acervo e oferece um glossário.</p>
@@ -99,6 +102,7 @@
             <p>As pessoas responsáveis pelo projeto informadas nesta versão são <strong>Erick Santos Barbosa</strong>, <strong>Pedro Henrique Harada Pecegueiro</strong> e <strong>Gabriel Agustín Fernández Alves</strong>. Para suporte, privacidade e exercício de direitos, escreva para <a href="mailto:jurishome2026@gmail.com">jurishome2026@gmail.com</a>.</p>
             <p>Este Termo é regido pela legislação brasileira. Eventuais conflitos serão tratados inicialmente pelo canal informado, sem limitar o acesso do usuário aos órgãos competentes e ao Poder Judiciário.</p>
         </section>
+        {% endif %}
     </main>
 
     {% include "_legal_links.html" %}

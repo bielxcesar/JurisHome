@@ -1,26 +1,40 @@
-from services.categorias import categoria_disponivel, categorias_disponiveis
 from typing import Optional, Literal
 from fastapi import APIRouter, Request, Depends, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
-from services.validacao import ModeloSeguro, nome_pessoa, linha, fonte_http
+from pydantic import Field, ConfigDict, field_validator, model_validator
+from services.validacao import ModeloSeguro, email_valido, fonte_http, linha, nome_pessoa, nova_senha
 from services.editorial import ConfiguracaoEditorial, montar_editorial, estilos_previa
-from model.models import ConteudoEditorial
 from types import SimpleNamespace
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from services.auditoria import registrar_auditoria
 from services.administradores import exigir_root, buscar_admin, revogar_sessoes, serializar_admin
-from model.models import AdministradorExcluido
-from routes.auth import CadastroUsuario, Credenciais
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 
 from database import get_db
-from model.models import Categoria, Conteudo, LogAuditoria, StatusConteudo, gerar_uuid, Usuario, TipoUsuario, TipoFonte, FeedbackAtendimento, ConteudoLeitura
+from model.models import (
+    AdministradorExcluido,
+    Categoria,
+    Conteudo,
+    ConteudoEditorial,
+    ConteudoLeitura,
+    FeedbackAtendimento,
+    LogAuditoria,
+    StatusConteudo,
+    TipoUsuario,
+    Usuario,
+    gerar_uuid,
+)
 from services.imagens import normalizar_imagem, normalizar_imagem_bytes, LIMITE_IMAGEM_BYTES
-from services.categorias import tags_padrao, combinar_tags, normalizar
+from services.categorias import (
+    categoria_disponivel,
+    categorias_disponiveis,
+    combinar_tags,
+    normalizar,
+    tags_padrao,
+)
 from auth.security import get_current_user, hash_senha
 import base64
 
@@ -42,12 +56,12 @@ class CadastroAdministrador(ModeloSeguro):
     @field_validator("email")
     @classmethod
     def validar_email(cls, valor):
-        return Credenciais.limpar_email(valor)
+        return email_valido(valor)
 
     @field_validator("senha")
     @classmethod
     def validar_senha(cls, valor):
-        return CadastroUsuario.validar_senha(valor)
+        return nova_senha(valor)
 
 
 class ManutencaoAdministrador(ModeloSeguro):
@@ -67,12 +81,12 @@ class ManutencaoAdministrador(ModeloSeguro):
     @field_validator("email")
     @classmethod
     def validar_email(cls, valor):
-        return Credenciais.limpar_email(valor)
+        return email_valido(valor)
 
     @field_validator("nova_senha")
     @classmethod
     def validar_senha(cls, valor):
-        return CadastroUsuario.validar_senha(valor) if valor is not None else None
+        return nova_senha(valor) if valor is not None else None
 
 
 class ExclusaoAdministrador(ModeloSeguro):
@@ -168,7 +182,20 @@ def criar_administrador(dados: CadastroAdministrador, db: Session = Depends(get_
         raise HTTPException(status_code=409, detail="Este e-mail já está cadastrado.") from erro
     return {"mensagem": "Administrador cadastrado. O primeiro acesso exige a configuração do 2FA.", "uuid": novo.uuid}
 
-class MateriaUpdateSchema(ModeloSeguro):
+class MateriaSchema(ModeloSeguro):
+    @field_validator('titulo', 'sub_titulo', 'resumo_home', 'fonte_imagem', 'tags', check_fields=False)
+    @classmethod
+    def validar_linha(cls, valor, info):
+        limites = {'titulo':180, 'sub_titulo':500, 'resumo_home':500, 'fonte_imagem':2000, 'tags':500}
+        return linha(valor, limites[info.field_name]) if valor is not None else None
+
+    @field_validator('fonte_original', check_fields=False)
+    @classmethod
+    def validar_fonte(cls, valor):
+        return fonte_http(valor)
+
+
+class MateriaUpdateSchema(MateriaSchema):
     titulo: Optional[str] = Field(default=None, max_length=180)
     sub_titulo: Optional[str] = Field(default=None, max_length=500)
     resumo_home: Optional[str] = Field(default=None, max_length=500)
@@ -179,25 +206,13 @@ class MateriaUpdateSchema(ModeloSeguro):
     tags: Optional[str] = Field(default=None, max_length=500)
 
 
-    @field_validator('titulo', 'sub_titulo', 'resumo_home', 'fonte_imagem', 'tags')
-    @classmethod
-    def validar_linha(cls, valor, info):
-        limites = {'titulo':180, 'sub_titulo':500, 'resumo_home':500, 'fonte_imagem':2000, 'tags':500}
-        return linha(valor, limites[info.field_name]) if valor is not None else None
-
-    @field_validator('fonte_original')
-    @classmethod
-    def validar_fonte(cls, valor):
-        return fonte_http(valor)
-
 # MOLDES DE DADOS ATUALIZADOS (Compatível com novaMateriaEX.html)
-class MateriaCreate(ModeloSeguro):
+class MateriaCreate(MateriaSchema):
     titulo: Optional[str] = Field(default=None, max_length=180)
     sub_titulo: Optional[str] = Field(default=None, max_length=500)
     resumo_home: Optional[str] = Field(default=None, max_length=500)
     corpo_texto: str = Field(min_length=1, max_length=50000)
     categoria_id: str = Field(min_length=1, max_length=36)
-    tipo_fonte: TipoFonte
     
     # Capa (Aceita ambos os nomes)
     imagem_miniatura: Optional[str] = None
@@ -221,17 +236,6 @@ class MateriaCreate(ModeloSeguro):
     aceite_editorial: bool = Field(default=False, strict=True)
     versao_termos: str | None = None
 
-
-    @field_validator('titulo', 'sub_titulo', 'resumo_home', 'fonte_imagem', 'tags')
-    @classmethod
-    def validar_linha(cls, valor, info):
-        limites = {'titulo':180, 'sub_titulo':500, 'resumo_home':500, 'fonte_imagem':2000, 'tags':500}
-        return linha(valor, limites[info.field_name]) if valor is not None else None
-
-    @field_validator('fonte_original')
-    @classmethod
-    def validar_fonte(cls, valor):
-        return fonte_http(valor)
 
     @model_validator(mode="after")
     def validar_creditos_editoriais(self):
@@ -485,7 +489,6 @@ def criar_materia(
         resumo_home=resumo_gerado,
         corpo_texto=dados_tela.corpo_texto,
         categoria_id=dados_tela.categoria_id,
-        tipo_fonte=dados_tela.tipo_fonte,
         imagem_miniatura=img_mini,
         imagem_corpo=img_c1,
         imagem_extra_2=img_c2,

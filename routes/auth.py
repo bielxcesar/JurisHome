@@ -2,41 +2,68 @@ import base64
 import hashlib
 import hmac
 import os
-import re
 import time
+import uuid
 from io import BytesIO
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from auth.sessions import (consumir_desafio, consumir_totp, criar_refresh, renovar_sessao,
-    salvar_refresh, apagar_cookies)
+
+try:
+    import qrcode
+except ImportError as erro:
+    qrcode = None
+    _erro_importacao_qrcode = erro
+
+from auth.sessions import (
+    apagar_cookies,
+    carregar_pyotp,
+    consumir_desafio,
+    consumir_totp,
+    criar_refresh,
+    digest,
+    encontrar_intervalo_totp,
+    renovar_sessao,
+    salvar_refresh,
+)
 from services import tentativas_auth as limites_auth
-from auth.security import _decodificar_token
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 from services.validacao import ModeloSeguro, nome_pessoa, email_valido, nova_senha, area_interesse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from auth.security import (
+    SESSAO_PERSISTENTE_MINUTOS,
+    _decodificar_token,
     cifrar_segredo_2fa, criar_access_token, criar_token_configuracao_2fa, criar_token_nova_senha, criar_token_recuperacao_senha, criar_token_2fa_pendente, decifrar_segredo_2fa,
-    decodificar_token_configuracao_2fa, decodificar_token_nova_senha, decodificar_token_recuperacao_senha, decodificar_token_2fa_pendente, get_current_user, get_current_user_optional,
+    decodificar_token_configuracao_2fa, decodificar_token_nova_senha, decodificar_token_recuperacao_senha, decodificar_token_2fa_pendente, get_current_user, get_current_user_sem_aceite, oauth2_scheme,
     hash_senha,verificar_senha,
 )
 from database import get_db
 from feedback_database import get_feedback_db
-from model.models import TipoUsuario, Usuario, JuridleRodada, JuridleDia, JuridleQuestaoUso, ConteudoLeitura, CategoriaAcesso
+from model.models import (
+    CategoriaAcesso,
+    ConteudoLeitura,
+    FeedbackAtendimento,
+    JuridleDia,
+    JuridleQuestaoUso,
+    JuridleRodada,
+    RefreshToken,
+    SessaoAutenticada,
+    TipoUsuario,
+    Usuario,
+)
 from services.auditoria import registrar_auditoria
 from services.direitos_titular import (anonimizar_feedbacks_atendimento,anonimizar_feedbacks_legados,anonimizar_usuario,)
-from services.lgpd import TERMOS_VERSAO
+from services.lgpd import revisao_vigente, versao_legal
 
 router = APIRouter(prefix="/api", tags=["Autenticação e usuários"])
 
 TENTATIVAS_ANTES_DO_BLOQUEIO = 6
 MINUTOS_DE_BLOQUEIO = 8
 JANELA_TOTP = 2
-EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 
 class CadastroUsuario(ModeloSeguro):
@@ -47,6 +74,7 @@ class CadastroUsuario(ModeloSeguro):
     senha: Annotated[str, Field(min_length=8, max_length=25)]
     confirmar_senha: Annotated[str, Field(min_length=8, max_length=25)]
     consentimento_lgpd: Annotated[bool, Field(strict=True)]
+    versao_documentos: str | None = Field(default=None, max_length=50)
 
     @property
     def nome_completo(self):
@@ -168,6 +196,12 @@ def _usuario_bloqueado(usuario: Usuario, agora: datetime | None = None) -> bool:
     return limite > (agora or _agora_sem_fuso())
 
 
+def _limpar_falhas_autenticacao(usuario: Usuario) -> None:
+    usuario.tentativas_login_falhas = 0
+    usuario.ultima_falha_login = None
+    usuario.bloqueado_ate = None
+
+
 def _registrar_falha_autenticacao(usuario: Usuario, agora: datetime | None = None) -> None:
     agora = agora or _agora_sem_fuso()
     if usuario.ultima_falha_login and usuario.ultima_falha_login <= agora - timedelta(minutes=8):
@@ -179,46 +213,42 @@ def _registrar_falha_autenticacao(usuario: Usuario, agora: datetime | None = Non
         usuario.tentativas_login_falhas = 0
 
 
-def _salvar_cookie_de_sessao(response: Response, token: str, lembrar_conectado: bool = False, db: Session | None = None, *, apenas_acesso: bool = False) -> None:
+def _salvar_cookie_de_sessao(response: Response, token: str, lembrar_conectado: bool = False, db: Session | None = None, *, validade_renovada: int | None = None) -> None:
+    max_age = SESSAO_PERSISTENTE_MINUTOS * 60 if lembrar_conectado else None
     response.set_cookie(
         key="jurishome_access_token",
         value=token,
-        max_age=30 * 60 if lembrar_conectado else None,
+        max_age=validade_renovada if validade_renovada is not None else max_age,
         httponly=True,
         secure=os.getenv("COOKIE_SECURE", "false").lower() == "true",
         samesite="lax",
         path="/",
     )
-    if apenas_acesso:
+    if validade_renovada is not None:
         return
     if lembrar_conectado:
         if db is None:
             raise RuntimeError("Renovação de sessão exige banco de dados.")
         refresh = criar_refresh(db, _decodificar_token(token)["sid"])
         db.commit()
-        salvar_refresh(response, refresh, 14 * 24 * 60 * 60)
+        salvar_refresh(response, refresh, max_age)
     else:
         response.delete_cookie("jurishome_refresh_token", path="/")
 
 
-def _verificar_totp(segredo: str, codigo: str) -> bool:
+def _intervalo_totp(segredo: str, codigo: str) -> int | None:
     try:
-        import pyotp
+        return encontrar_intervalo_totp(segredo, codigo, JANELA_TOTP)
     except ImportError as erro:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Dependências do 2FA ausentes no servidor. Na raiz do projeto, execute 'python -m pip install -r requirements.txt' e reinicie a aplicação.",
         ) from erro
-    # Aceita até dois intervalos de diferença para tolerar pequenos desvios
-    # entre o relógio do servidor local e o telefone do usuário.
-    return pyotp.TOTP(segredo).verify(codigo, valid_window=JANELA_TOTP)
 
 
 def gerar_qr_code(uri_autenticador: str) -> str:
-    try:
-        import qrcode
-    except ImportError as erro:
-        raise RuntimeError("Dependência para gerar o QR Code indisponível.") from erro
+    if qrcode is None:
+        raise RuntimeError("Dependência para gerar o QR Code indisponível.") from _erro_importacao_qrcode
 
     imagem = qrcode.make(uri_autenticador)
     buffer = BytesIO()
@@ -229,7 +259,7 @@ def gerar_qr_code(uri_autenticador: str) -> str:
 
 def preparar_configuracao_2fa(usuario: Usuario, db: Session, *, commit: bool = True) -> dict:
     try:
-        import pyotp
+        pyotp = carregar_pyotp()
 
         if usuario.totp_secret and not usuario.is_2fa_enabled:
             # Enquanto a ativação estiver pendente, preserve o mesmo segredo.
@@ -286,8 +316,6 @@ def solicitar_reset_2fa(dados: PedidoReset2FA, db: Session = Depends(get_db), re
     if not usuario.is_2fa_enabled:
         raise HTTPException(status_code=400, detail="Este usuário não possui 2FA ativo.")
 
-    from model.models import FeedbackAtendimento
-    import uuid
     
     pedido_existente = db.query(FeedbackAtendimento).filter(
         FeedbackAtendimento.usuario_id == str(usuario.uuid),
@@ -323,13 +351,17 @@ async def cadastrar_usuario(
     response: Response,
     db: Session = Depends(get_db),
 ):
+    revisao = revisao_vigente(db)
+    versao_atual = versao_legal(revisao)
+    if revisao and dados.versao_documentos != versao_atual:
+        raise HTTPException(409, "Os documentos legais mudaram. Recarregue o cadastro e leia a versão atual.")
     if not dados.consentimento_lgpd:
         registrar_auditoria(
             db,
             acao="cadastro",
             recurso_tipo="usuario",
             resultado="falha",
-            detalhes={"motivo": "termo_nao_aceito", "versao_termos": TERMOS_VERSAO},
+            detalhes={"motivo": "termo_nao_aceito", "versao_termos": versao_atual},
             commit=True,
         )
         raise HTTPException(
@@ -361,7 +393,7 @@ async def cadastrar_usuario(
         tipo_usuario=TipoUsuario.ESTUDANTE,
         consentimento_lgpd=True,
         data_consentimento=_agora_sem_fuso(),
-        versao_termos=TERMOS_VERSAO,
+        versao_termos=versao_atual,
     )
     db.add(usuario)
     try:
@@ -374,7 +406,7 @@ async def cadastrar_usuario(
             recurso_id=usuario.uuid,
             resultado="sucesso",
             usuario=usuario,
-            detalhes={"versao_termos": TERMOS_VERSAO, "requer_2fa": True},
+            detalhes={"versao_termos": versao_atual, "requer_2fa": True},
         )
         db.commit()
     except IntegrityError as erro:
@@ -472,7 +504,8 @@ def validar_2fa(dados: Codigo2FA, response: Response, db: Session = Depends(get_
         segredo = decifrar_segredo_2fa(usuario.totp_secret)
     except (RuntimeError, ValueError) as erro:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(erro)) from erro
-    if not _verificar_totp(segredo, dados.codigo):
+    intervalo = _intervalo_totp(segredo, dados.codigo)
+    if intervalo is None:
         _registrar_falha_autenticacao(usuario)
         limites_auth.falhar(baldes)
         registrar_auditoria(
@@ -492,11 +525,9 @@ def validar_2fa(dados: Codigo2FA, response: Response, db: Session = Depends(get_
         )
 
     consumir_desafio(db, dados.desafio_token, usuario, "2fa_pendente")
-    consumir_totp(db, usuario, segredo, dados.codigo, JANELA_TOTP)
+    consumir_totp(db, usuario, segredo, intervalo)
     limites_auth.concluir(baldes)
-    usuario.tentativas_login_falhas = 0
-    usuario.ultima_falha_login = None
-    usuario.bloqueado_ate = None
+    _limpar_falhas_autenticacao(usuario)
     token = criar_access_token(usuario, dados.lembrar_conectado)
     _salvar_cookie_de_sessao(response, token, dados.lembrar_conectado, db)
     registrar_auditoria(
@@ -557,7 +588,8 @@ def validar_recuperacao_senha(dados: ConfirmacaoRecuperacaoSenha, db: Session = 
     except (RuntimeError, ValueError) as erro:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(erro)) from erro
 
-    if not _verificar_totp(segredo, dados.codigo):
+    intervalo = _intervalo_totp(segredo, dados.codigo)
+    if intervalo is None:
         _registrar_falha_autenticacao(usuario)
         limites_auth.falhar(baldes)
         registrar_auditoria(
@@ -574,11 +606,9 @@ def validar_recuperacao_senha(dados: ConfirmacaoRecuperacaoSenha, db: Session = 
         raise resposta_invalida
 
     consumir_desafio(db, dados.desafio_token, usuario, "recuperacao_senha")
-    consumir_totp(db, usuario, segredo, dados.codigo, JANELA_TOTP)
+    consumir_totp(db, usuario, segredo, intervalo)
     limites_auth.concluir(baldes)
-    usuario.tentativas_login_falhas = 0
-    usuario.ultima_falha_login = None
-    usuario.bloqueado_ate = None
+    _limpar_falhas_autenticacao(usuario)
     registrar_auditoria(
         db,
         acao="recuperacao_senha",
@@ -835,7 +865,8 @@ def ativar_2fa_no_cadastro(dados: Codigo2FA, response: Response, db: Session = D
         segredo = decifrar_segredo_2fa(usuario.totp_secret)
     except (RuntimeError, ValueError) as erro:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(erro)) from erro
-    if not _verificar_totp(segredo, dados.codigo):
+    intervalo = _intervalo_totp(segredo, dados.codigo)
+    if intervalo is None:
         _registrar_falha_autenticacao(usuario)
         limites_auth.falhar(baldes)
         registrar_auditoria(
@@ -855,12 +886,10 @@ def ativar_2fa_no_cadastro(dados: Codigo2FA, response: Response, db: Session = D
         )
 
     consumir_desafio(db, dados.desafio_token, usuario, "2fa_configuracao")
-    consumir_totp(db, usuario, segredo, dados.codigo, JANELA_TOTP)
+    consumir_totp(db, usuario, segredo, intervalo)
     usuario.is_2fa_enabled = True
     limites_auth.concluir(baldes)
-    usuario.tentativas_login_falhas = 0
-    usuario.ultima_falha_login = None
-    usuario.bloqueado_ate = None
+    _limpar_falhas_autenticacao(usuario)
     registrar_auditoria(
         db,
         acao="ativacao_2fa",
@@ -883,11 +912,14 @@ def ativar_2fa_no_cadastro(dados: Codigo2FA, response: Response, db: Session = D
 def logout(
     response: Response,
     request: Request,
-    usuario: Usuario | None = Depends(get_current_user_optional),
+    token: str | None = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ):
-    from model.models import RefreshToken, SessaoAutenticada
-    from auth.sessions import digest
+    try:
+        usuario = get_current_user_sem_aceite(request, token, db)
+    except HTTPException:
+        usuario = None
+
     registro = db.get(RefreshToken, digest(request.cookies.get("jurishome_refresh_token", "")))
     if registro:
         sessao = db.get(SessaoAutenticada, registro.sessao_id)
@@ -911,6 +943,6 @@ def logout(
 @router.post("/auth/refresh")
 def refresh(request: Request, response: Response, db: Session = Depends(get_db)):
     acesso, renovacao, validade = renovar_sessao(db, request.cookies.get("jurishome_refresh_token"))
-    _salvar_cookie_de_sessao(response, acesso, lembrar_conectado=True, apenas_acesso=True)
+    _salvar_cookie_de_sessao(response, acesso, validade_renovada=validade)
     salvar_refresh(response, renovacao, validade)
     return {"autenticado": True}

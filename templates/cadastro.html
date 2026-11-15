@@ -43,7 +43,7 @@
             </div>
             <div class="input-group"><label for="cadastro-interesse">Sua área de interesse</label><select id="cadastro-interesse" required><option value="">Escolha uma área do Direito</option>{% for area in areas_interesse %}<option value="{{ area }}">{{ area }}</option>{% endfor %}</select><small>Matérias desta área terão um espaço na sua Home. Você pode mudar a escolha no perfil.</small></div>
             <label class="checkbox-lgpd">
-                <input id="cadastro-lgpd" type="checkbox" required>
+                <input id="cadastro-lgpd" type="checkbox" data-versao-documentos="{{ versao_documentos }}" required>
                 <span>Declaro ter pelo menos 18 anos, li e aceito o <a href="/termos-de-aceite" target="_blank" rel="noopener">Termo de Aceite</a> e declaro ciência da <a href="/politica-de-privacidade" target="_blank" rel="noopener">Política de Privacidade</a>. Este aceite não autoriza usos opcionais ou genéricos dos meus dados.</span>
             </label>
             <p class="auth-message" id="auth-message" role="alert" hidden></p>
@@ -52,6 +52,6 @@
         <p class="texto-cadastro">Já possui uma conta? <a href="/">Entrar</a></p>
     </main>
     {% include "_legal_links.html" %}
-    <script src="/static/js/auth.js?v=20261106-limites"></script>
+    <script src="/static/js/auth.js?v=documentos-legais"></script>
 </body>
 </html>
