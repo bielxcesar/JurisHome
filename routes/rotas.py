@@ -57,6 +57,11 @@ def pagina_recuperar_senha(request: Request):
     return templates.TemplateResponse(request=request, name="recuperar_senha.html")
 
 
+@router.get("/problemas-acesso", response_class=HTMLResponse)
+def pagina_problemas_acesso(request: Request):
+    return templates.TemplateResponse(request=request, name="problemas_acesso.html", headers={"Cache-Control": "no-store"})
+
+
 @router.get("/recuperar-senha/confirmar", response_class=HTMLResponse)
 def pagina_confirmar_recuperacao(request: Request):
     return templates.TemplateResponse(request=request, name="recuperar_senha_codigo.html")
@@ -121,9 +126,9 @@ def pagina_conhecimento(request: Request, usuario: Usuario = Depends(get_current
 
 
 @router.get("/curiosidades", response_class=HTMLResponse)
-def pagina_curiosidades(request: Request, usuario: Usuario = Depends(get_current_user)):
+def pagina_curiosidades(request: Request, usuario: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
     selecionados = {"acordao", "habeas-corpus", "jurisprudencia", "onus-da-prova", "conciliacao", "mediacao"}
-    itens = [item for item in consultar_glossario()["itens"] if item["id"] in selecionados]
+    itens = [item for item in consultar_glossario(db=db)["itens"] if item["id"] in selecionados]
     return templates.TemplateResponse(request=request, name="curiosidades.html", context={
         "tipo_usuario": usuario.tipo_usuario.value, "itens": itens,
     })

@@ -21,13 +21,13 @@ from auth.sessions import (
     carregar_pyotp,
     consumir_desafio,
     consumir_totp,
-    criar_refresh,
     digest,
     encontrar_intervalo_totp,
     renovar_sessao,
     salvar_refresh,
 )
 from services import tentativas_auth as limites_auth
+from services import limites_operacoes
 from pydantic import Field, field_validator, model_validator
 from services.validacao import ModeloSeguro, nome_pessoa, email_valido, nova_senha, area_interesse
 from sqlalchemy.exc import IntegrityError
@@ -35,7 +35,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from auth.security import (
-    SESSAO_PERSISTENTE_MINUTOS,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
     _decodificar_token,
     cifrar_segredo_2fa, criar_access_token, criar_token_configuracao_2fa, criar_token_nova_senha, criar_token_recuperacao_senha, criar_token_2fa_pendente, decifrar_segredo_2fa,
     decodificar_token_configuracao_2fa, decodificar_token_nova_senha, decodificar_token_recuperacao_senha, decodificar_token_2fa_pendente, get_current_user, get_current_user_sem_aceite, oauth2_scheme,
@@ -214,26 +214,19 @@ def _registrar_falha_autenticacao(usuario: Usuario, agora: datetime | None = Non
 
 
 def _salvar_cookie_de_sessao(response: Response, token: str, lembrar_conectado: bool = False, db: Session | None = None, *, validade_renovada: int | None = None) -> None:
-    max_age = SESSAO_PERSISTENTE_MINUTOS * 60 if lembrar_conectado else None
     response.set_cookie(
         key="jurishome_access_token",
         value=token,
-        max_age=validade_renovada if validade_renovada is not None else max_age,
         httponly=True,
         secure=os.getenv("COOKIE_SECURE", "false").lower() == "true",
         samesite="lax",
         path="/",
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60 if lembrar_conectado and validade_renovada is None else None,
     )
     if validade_renovada is not None:
         return
-    if lembrar_conectado:
-        if db is None:
-            raise RuntimeError("Renovação de sessão exige banco de dados.")
-        refresh = criar_refresh(db, _decodificar_token(token)["sid"])
-        db.commit()
-        salvar_refresh(response, refresh, max_age)
-    else:
-        response.delete_cookie("jurishome_refresh_token", path="/")
+    # Não emitir refresh persistente; a sessão continua limitada pelo servidor.
+    response.delete_cookie("jurishome_refresh_token", path="/")
 
 
 def _intervalo_totp(segredo: str, codigo: str) -> int | None:
@@ -298,7 +291,8 @@ class PedidoReset2FA(ModeloSeguro):
         return email_valido(valor)
 
 @router.post("/solicitar-reset-2fa")
-def solicitar_reset_2fa(dados: PedidoReset2FA, db: Session = Depends(get_db), request: Request = None):
+def solicitar_reset_2fa(dados: PedidoReset2FA, db: Session = Depends(get_db), request: Request = None,
+                       feedback_db: Session = Depends(get_feedback_db)):
     baldes = limites_auth.preparar(db, request, dados.email)
     usuario = db.query(Usuario).filter(Usuario.email == dados.email).populate_existing().with_for_update().first()
     limites_auth.exigir_liberado(baldes, usuario)
@@ -317,10 +311,12 @@ def solicitar_reset_2fa(dados: PedidoReset2FA, db: Session = Depends(get_db), re
         raise HTTPException(status_code=400, detail="Este usuário não possui 2FA ativo.")
 
     
-    pedido_existente = db.query(FeedbackAtendimento).filter(
+    chamados = db if feedback_db.get_bind() is db.get_bind() else feedback_db
+    pedido_existente = chamados.query(FeedbackAtendimento).filter(
         FeedbackAtendimento.usuario_id == str(usuario.uuid),
         FeedbackAtendimento.tipo == "Recuperacao 2FA",
-        FeedbackAtendimento.status == "Recebido"
+        FeedbackAtendimento.status.in_(["Recebido", "Em análise", "Respondido"]),
+        FeedbackAtendimento.arquivado.is_(False),
     ).first()
 
     if pedido_existente:
@@ -340,16 +336,19 @@ def solicitar_reset_2fa(dados: PedidoReset2FA, db: Session = Depends(get_db), re
         prioridade="Alta"
     )
     
-    db.add(novo_chamado)
+    chamados.add(novo_chamado)
+    if chamados is not db:
+        chamados.commit()
     db.commit()
     
-    return {"mensagem": "Solicitação enviada com sucesso! O suporte analisará o caso."}
+    return {"mensagem": "Solicitação enviada aos administradores. Aguarde a liberação e entre novamente para cadastrar o novo QR Code."}
 
 @router.post("/auth/cadastro", status_code=status.HTTP_201_CREATED)
 async def cadastrar_usuario(
     dados: CadastroUsuario,
     response: Response,
     db: Session = Depends(get_db),
+    request: Request = None,
 ):
     revisao = revisao_vigente(db)
     versao_atual = versao_legal(revisao)
@@ -370,6 +369,7 @@ async def cadastrar_usuario(
         )
     # A verificação de duplicidade ocorre depois do mesmo trabalho de hash usado
     # no caminho de sucesso, reduzindo diferenças observáveis no tempo da resposta.
+    limite_cadastro = limites_operacoes.verificar_cadastro(db, request) if request is not None else None
     senha_hash = hash_senha(dados.senha)
     if db.query(Usuario.uuid).filter(func.lower(Usuario.email) == dados.email).first():
         registrar_auditoria(
@@ -399,6 +399,8 @@ async def cadastrar_usuario(
     try:
         db.flush()
         configuracao = preparar_configuracao_2fa(usuario, db, commit=False)
+        if limite_cadastro is not None:
+            limites_operacoes.concluir(limite_cadastro, 5)
         registrar_auditoria(
             db,
             acao="cadastro",
@@ -944,5 +946,5 @@ def logout(
 def refresh(request: Request, response: Response, db: Session = Depends(get_db)):
     acesso, renovacao, validade = renovar_sessao(db, request.cookies.get("jurishome_refresh_token"))
     _salvar_cookie_de_sessao(response, acesso, validade_renovada=validade)
-    salvar_refresh(response, renovacao, validade)
+    salvar_refresh(response, renovacao, None)
     return {"autenticado": True}

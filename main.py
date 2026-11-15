@@ -25,6 +25,8 @@ from routes import admin, auditoria, auth, conteudos, feedbacks, glossario, juri
 from services.auditoria import iniciar_contexto_auditoria, finalizar_contexto_auditoria
 
 Base.metadata.create_all(bind=engine)
+from services.glossario import instalar_catalogo_inicial
+instalar_catalogo_inicial(engine)
 if engine.dialect.name in {"sqlite", "postgresql"}:
     with engine.begin() as conexao:
         conexao.exec_driver_sql(
@@ -113,7 +115,7 @@ async def adicionar_cabecalhos_seguranca(request: Request, call_next):
         "camera=(), geolocation=(), microphone=()",
     )
 
-    if request.url.path.startswith(("/api/auth/", "/api/usuarios/me", "/api/admin/", "/api/juridle/", "/api/perfil/", "/api/feedbacks", "/api/conteudos/em-alta", "/api/conteudos/interesse", "/admin/auditoria", "/admin/tabela-noticias", "/admin/administradores/")) or request.url.path in {"/home_admin", "/home_usuario", "/home_Usuario.html", "/templates/home_Usuario.html", "/perfil", "/juridle", "/juridle/ampliar", "/conhecimento", "/curiosidades", "/configuracoes-usuario", "/templates/confUsuario.html", "/configuracao", "/admin-feedbacks", "/feedback"} or request.url.path in {"/glossario", "/consulta-lei", "/preview-materia"} or request.url.path.startswith("/materia/"):
+    if request.url.path.startswith(("/api/auth/", "/api/usuarios/me", "/api/admin/", "/api/juridle/", "/api/perfil/", "/api/feedbacks", "/api/conteudos/em-alta", "/api/conteudos/interesse", "/admin/auditoria", "/admin/tabela-noticias", "/admin/administradores/")) or request.url.path in {"/home_admin", "/home_usuario", "/home_Usuario.html", "/templates/home_Usuario.html", "/perfil", "/juridle", "/juridle/ampliar", "/conhecimento", "/curiosidades", "/configuracoes-usuario", "/templates/confUsuario.html", "/configuracao", "/admin-feedbacks", "/feedback"} or request.url.path in {"/glossario", "/consulta-lei", "/preview-materia"} or request.url.path.startswith("/materia/") or (request.cookies.get('jurishome_access_token') and response.headers.get('content-type', '').startswith('text/html')):
         response.headers["Cache-Control"] = "no-store, max-age=0"
         response.headers["Pragma"] = "no-cache"
     return response

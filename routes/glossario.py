@@ -9,6 +9,8 @@ from auth.security import get_current_user_optional
 from model.models import Usuario
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
+from database import get_db
 
 from services.glossario import consultar_glossario
 from services.legislacao_senado import buscar_legislacao
@@ -38,8 +40,8 @@ def consultar_legislacao(dados: ConsultaLegislacao):
     return buscar_legislacao(dados.tipo, dados.numero, dados.ano)
 
 
-def paginar(q, letra, pagina):
-    resultado = consultar_glossario(q, letra)
+def paginar(q, letra, pagina, db=None):
+    resultado = consultar_glossario(q, letra, db)
     total_paginas = max(1, (resultado['total'] + 5) // 6)
     pagina = min(pagina, total_paginas)
     inicio = (pagina - 1) * 6
@@ -49,8 +51,8 @@ def paginar(q, letra, pagina):
 
 
 @router.get("/api/glossario")
-def listar_glossario(q: Busca = "", letra: Letra = "", pagina: Pagina = 1):
-    return paginar(q, letra, pagina)
+def listar_glossario(q: Busca = "", letra: Letra = "", pagina: Pagina = 1, db: Session = Depends(get_db)):
+    return paginar(q, letra, pagina, db)
 
 
 @router.get("/glossario", response_class=HTMLResponse)
@@ -61,8 +63,9 @@ def pagina_glossario(
     origem: str = Query(default="", max_length=10, pattern=r"^(usuario)?$"),
     usuario: Usuario | None = Depends(get_current_user_optional),
     pagina: Pagina = 1,
+    db: Session = Depends(get_db),
 ):
-    resultado = paginar(q, letra, pagina)
+    resultado = paginar(q, letra, pagina, db if isinstance(db, Session) else None)
     pagina = resultado["pagina"]
     tipo_usuario = usuario.tipo_usuario.value if usuario else "usuario"
     origem_usuario = tipo_usuario != "administrador"

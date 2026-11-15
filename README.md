@@ -88,7 +88,7 @@ python -m pip install -r requirements.txt
 ```
 Configure as variáveis de ambiente a partir de '.env.example'. No Railway, configure 'DATABASE_URL' no serviço da aplicação com a referência privada do PostgreSQL do mesmo ambiente. Defina também 'JurisHome_senha', 'TOTP_ENCRYPTION_KEY', 'COOKIE_SECURE=true' e 'PUBLIC_ORIGIN' com a URL pública HTTPS da aplicação. Mantenha os valores reais nas variáveis do serviço.
 
-O glossário consulta a API pública do Senado sem chave de acesso. O catálogo local de termos funciona independentemente dessa consulta.
+O glossário consulta a API pública do Senado sem chave de acesso. O catálogo de termos fica no banco principal, independentemente dessa consulta. Na primeira inicialização após a atualização, `data/glossario_inicial.sql` é importado uma única vez por transação; as inicializações seguintes preservam alterações feitas no banco. As tabelas novas são aditivas e não alteram os dados existentes.
 
 ### Passo 3 Criar o administrador
 
@@ -208,13 +208,14 @@ O envio exige o aceite explícito das regras editoriais (versão 2026-10-30): ve
 - Reinicie o servidor e use Ctrl+F5 para carregar os formulários atualizados.
 
 
-### Tentativas de autenticação e “Manter conectado” (06/11/2026)
+### Tentativas de autenticação e segurança de sessão
 
 - Seis falhas seguidas em uma janela de oito minutos por origem OU identificador levam a oito minutos de espera. Os limites são independentes: trocar de e-mail não contorna o limite por IP; trocar de IP não contorna o limite da conta. Falhas de senha e MFA compartilham o orçamento. A verificação de senha para solicitar reset de 2FA também participa. Senha correta sem concluir MFA não zera erros; MFA completo reinicia a sequência. O bloqueio não se prolonga quando alguém tenta novamente durante a espera.
 - A tabela aditiva `auth_limites_tentativas` guarda contadores e prazos, com transações/bloqueios de linha para não perder falhas concorrentes. Identificadores são HMACs, sem IP ou e-mail em claro nessa tabela. Contadores antigos há mais de 24 horas são limpos na inicialização. Rodar múltiplos processos usa o mesmo banco/limite, sem depender de memória do servidor ou armazenamento do navegador.
 - Resposta HTTP 429 com `Retry-After`; `/api/auth/limite` informa apenas o estado da origem da própria requisição. A tela mostra mm:ss e desabilita o envio. Atualizar, trocar de navegador ou apagar armazenamento não remove o bloqueio. O contador usa relógio monotônico no navegador; a decisão é sempre do servidor. Após espera na tela de MFA, o fluxo volta ao login porque desafios expiram em 5–10 minutos.
 - IP é o `request.client.host` reconhecido pelo servidor ASGI, sem aceitar `X-Forwarded-For` diretamente da requisição na aplicação. Atrás de proxy, configure somente os endereços dos proxies reais em `--forwarded-allow-ips`; nunca confie indiscriminadamente em `*`. IP identifica uma conexão/rede, não garante identidade física de um aparelho; redes compartilhadas podem compartilhar a espera.
-- Sem marcar “Manter conectado”: cookie de sessão HttpOnly, sem Max-Age/Expires no cookie de acesso, acesso e sessão de até 30 minutos, sem refresh persistente. Navegadores com restauração de sessão podem restaurar cookies de sessão; o limite de 30 minutos do servidor permanece.
-- Marcando: a sessão já autenticada com 2FA pode ser retomada no mesmo navegador por até 15 minutos. A renovação rotaciona o refresh, cujo hash fica no banco, sem estender o prazo absoluto. Reuso do refresh, logout, troca de senha e revogação administrativa invalidam o acesso. Em produção, configure COOKIE_SECURE=true com HTTPS.
+- O acesso usa cookie HttpOnly e expira no servidor em até 15 minutos após o 2FA. Se a opção de permanecer conectado for marcada, o cookie também dura no máximo 15 minutos; caso contrário, é um cookie de sessão. Ao sair, o servidor revoga a sessão e apaga os cookies. Navegadores com restauração de sessão podem restaurar cookies temporários, portanto fechar uma aba não garante o encerramento imediato: use Sair. Em produção, configure COOKIE_SECURE=true com HTTPS.
+- Cadastros concluídos impõem cinco minutos de espera por IP; a terceira tentativa durante a espera gera bloqueio de uma hora. A criação de matérias impõe 15 minutos por autor. Os limites são persistidos no banco e respondem com HTTP 429 e Retry-After. Em redes compartilhadas o limite de cadastro é compartilhado; configure somente proxies confiáveis no servidor para que o IP de origem seja identificado corretamente.
+- A página “Problemas para acessar?” permite solicitar a recuperação do autenticador após confirmar e-mail e senha. O pedido aparece na fila de feedbacks e na gestão de usuários; um gerente de suporte deve verificar a identidade do solicitante antes de resetar o 2FA. O próximo login solicita novo QR Code. A conta root continua protegida das alterações pelo suporte.
 - O carregamento repetido de session.js é idempotente; a renovação usa Web Locks quando disponível para coordenar abas. A proteção de origem continua ativa na renovação.
 - Referências: https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html e https://fastapi.tiangolo.com/advanced/behind-a-proxy/.

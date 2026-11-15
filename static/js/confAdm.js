@@ -92,7 +92,8 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.removeItem("jurishome_access_token");
             sessionStorage.removeItem("jurishome_desafio_2fa");
             fetch("/api/auth/logout", { method: "POST" })
-                .finally(() => { window.location.href = "/"; });
+                .then(resposta => { if (!resposta.ok) throw new Error(); window.location.replace("/"); })
+                    .catch(() => { window.alert("Não foi possível encerrar a sessão. Tente novamente."); });
         });
     });
 

@@ -38,12 +38,11 @@
             <p class="auth-message" id="auth-message" role="alert" hidden></p>
 
             <div class="login-options">
-                <label class="remember-option" for="manter-conectado">
-                    <input type="checkbox" id="manter-conectado">
-                    <span>Manter conectado por até 15 minutos</span>
-                </label>
+                <label class="remember-option"><input type="checkbox" id="lembrar-conectado"><span>Manter conectado por até 15 minutos</span></label>
                 <a class="link-esqueceu" href="/recuperar-senha">Esqueci minha senha</a>
             </div>
+
+            <p><a class="link-esqueceu" href="/problemas-acesso">Problemas para acessar?</a></p>
 
             <button type="submit" class="btn-entrar">Entrar</button>
         </form>
@@ -54,6 +53,6 @@
     </main>
 
     {% include "_legal_links.html" %}
-    <script src="/static/js/auth.js?v=20261106-limites"></script>
+    <script src="/static/js/auth.js?v=20261115-sessao"></script>
 </body>
 </html>

@@ -46,7 +46,8 @@
                 window.localStorage.removeItem("jurishome_access_token");
                 window.sessionStorage.removeItem("jurishome_desafio_2fa");
                 window.fetch("/api/auth/logout", { method: "POST" })
-                    .finally(() => { window.location.href = "/"; });
+                    .then(resposta => { if (!resposta.ok) throw new Error(); window.location.replace("/"); })
+                    .catch(() => { window.alert("Não foi possível encerrar a sessão. Tente novamente."); });
             });
         });
     }

@@ -33,7 +33,7 @@ if len(SECRET_KEY.encode("utf-8")) < 32 or SECRET_KEY == "__GERAR_CHAVE_LOCAL__"
     raise RuntimeError("JurisHome_senha deve ser uma chave aleatória com pelo menos 32 bytes.")
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 15
 SESSAO_PERSISTENTE_MINUTOS = 15
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
@@ -80,10 +80,7 @@ def verificar_senha(senha: str, senha_hash: str) -> bool:
 
 
 def prazo_sessao(sessao: SessaoAutenticada) -> datetime:
-    # Sessões persistentes antigas eram gravadas com prazo superior ao da sessão comum.
-    if sessao.expira_em - sessao.criada_em > timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES):
-        return sessao.criada_em + timedelta(minutes=SESSAO_PERSISTENTE_MINUTOS)
-    return sessao.expira_em
+    return min(sessao.expira_em, sessao.criada_em + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
 
 
 def criar_access_token(
@@ -95,7 +92,7 @@ def criar_access_token(
     agora = datetime.now(timezone.utc)
     validade = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     if sessao is None:
-        minutos = SESSAO_PERSISTENTE_MINUTOS if lembrar_conectado else ACCESS_TOKEN_EXPIRE_MINUTES
+        minutos = ACCESS_TOKEN_EXPIRE_MINUTES
         db = object_session(usuario)
         if db is None:
             raise ValueError("A emissão de sessão exige usuário persistido.")

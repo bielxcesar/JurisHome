@@ -9,11 +9,13 @@ from types import SimpleNamespace
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from services.auditoria import registrar_auditoria
+from services import limites_operacoes
 from services.administradores import exigir_root, buscar_admin, revogar_sessoes, serializar_admin
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 
 from database import get_db
+from feedback_database import get_feedback_db
 from model.models import (
     AdministradorExcluido,
     Categoria,
@@ -347,7 +349,8 @@ def pagina_feedbacks_administrativos(request: Request):
 def listar_usuarios_filtro(
     tipo: Optional[Literal["admins", "leitores", "administrador", "estudante"]] = None,
     db: Session = Depends(get_db),
-    usuario_logado: Usuario = Depends(get_current_user)
+    usuario_logado: Usuario = Depends(get_current_user),
+    feedback_db: Session = Depends(get_feedback_db),
 ):
     if usuario_logado.tipo_usuario != TipoUsuario.ADMINISTRADOR:
         raise HTTPException(status_code=403, detail="Acesso negado.")
@@ -363,9 +366,10 @@ def listar_usuarios_filtro(
 
     usuarios = query.all()
     
-    chamados_abertos = db.query(FeedbackAtendimento.usuario_id).filter(
+    chamados_abertos = feedback_db.query(FeedbackAtendimento.usuario_id).filter(
         FeedbackAtendimento.tipo == "Recuperacao 2FA",
-        FeedbackAtendimento.status == "Recebido"
+        FeedbackAtendimento.status.in_(["Recebido", "Em análise", "Respondido"]),
+        FeedbackAtendimento.arquivado.is_(False),
     ).all()
     lista_chamados = [c[0] for c in chamados_abertos]
     
@@ -386,7 +390,8 @@ def listar_usuarios_filtro(
 def resetar_2fa(
     usuario_uuid: str,
     db: Session = Depends(get_db),
-    usuario_logado: Usuario = Depends(get_current_user)
+    usuario_logado: Usuario = Depends(get_current_user),
+    feedback_db: Session = Depends(get_feedback_db),
 ):
     if usuario_logado.tipo_usuario != TipoUsuario.ADMINISTRADOR:
         raise HTTPException(status_code=403, detail="Acesso negado.")
@@ -411,13 +416,15 @@ def resetar_2fa(
     usuario_alvo.is_2fa_enabled = False
     usuario_alvo.token_validos_apos = datetime.now(timezone.utc).replace(tzinfo=None)
     
-    chamado = db.query(FeedbackAtendimento).filter(
+    chamados = db if feedback_db.get_bind() is db.get_bind() else feedback_db
+    pendentes = chamados.query(FeedbackAtendimento).filter(
         FeedbackAtendimento.usuario_id == usuario_uuid,
         FeedbackAtendimento.tipo == "Recuperacao 2FA",
-        FeedbackAtendimento.status == "Recebido"
-    ).first()
+        FeedbackAtendimento.status.in_(["Recebido", "Em análise", "Respondido"]),
+        FeedbackAtendimento.arquivado.is_(False),
+    ).all()
     
-    if chamado:
+    for chamado in pendentes:
         chamado.status = "Resolvido"
         chamado.observacoes_json = '["2FA resetado pelo suporte."]'
 
@@ -433,6 +440,8 @@ def resetar_2fa(
     db.add(novo_log)
     
     db.commit()
+    if chamados is not db:
+        chamados.commit()
     return {"mensagem": f"O 2FA de {usuario_alvo.nome} foi desativado com sucesso."}
 
 # ==============================================================================
@@ -474,6 +483,8 @@ def criar_materia(
     if categoria is None or not categoria_disponivel(categoria.nome):
         raise HTTPException(status_code=422, detail="Selecione uma categoria válida.")
 
+    limite_materia = limites_operacoes.verificar_materia(db, usuario_logado.uuid)
+
     resumo_gerado = dados_tela.resumo_home
     if not resumo_gerado:
         resumo_gerado = dados_tela.corpo_texto[:150] + "..." if len(dados_tela.corpo_texto) > 150 else dados_tela.corpo_texto
@@ -501,6 +512,7 @@ def criar_materia(
     )
     
     db.add(nova_materia)
+    limites_operacoes.concluir(limite_materia, 15)
     if dados_tela.editorial:
         nova_materia.editorial = ConteudoEditorial(titulo_home=dados_tela.editorial.titulo_home,
             configuracao_json=dados_tela.editorial.model_dump_json())

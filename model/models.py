@@ -5,7 +5,7 @@ from dateutil import tz
 
 from sqlalchemy import (
     Column, Integer, String, Text, DateTime, Enum, ForeignKey, Boolean,
-    CheckConstraint, UniqueConstraint, Index, case
+    CheckConstraint, UniqueConstraint, Index
 )
 from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import relationship
@@ -77,9 +77,9 @@ class Usuario(Base):
     __table_args__ = (
         CheckConstraint("tentativas_login_falhas >= 0", name="ck_usuarios_tentativas_nao_negativas"),
         CheckConstraint("NOT e_root_admin OR tipo_usuario = 'administrador'", name="ck_root_deve_ser_administrador"),
-        # Roots produzem a mesma chave 1; as outras contas produzem NULL.
-        # Um índice único aceita vários NULLs, mas nunca dois roots.
-        Index("uq_usuarios_root_unico", case((e_root_admin, 1), else_=None), unique=True).ddl_if(dialect=("sqlite", "postgresql")),
+        # Só as contas root entram no índice único; suportes ficam de fora.
+        Index("uq_usuarios_root_unico", e_root_admin, unique=True,
+              sqlite_where=e_root_admin.is_(True), postgresql_where=e_root_admin.is_(True)).ddl_if(dialect=("sqlite", "postgresql")),
     )
 
 
@@ -129,6 +129,45 @@ class RefreshToken(Base):
     digest = Column(String(64), primary_key=True)
     sessao_id = Column(String(36), ForeignKey("auth_sessoes.id"), nullable=False, index=True)
     usado = Column(Boolean, nullable=False, default=False)
+
+
+class LimiteOperacao(Base):
+    __tablename__ = "limites_operacoes"
+    chave = Column(String(64), primary_key=True)
+    proxima_em = Column(DateTime, nullable=True)
+    bloqueado_ate = Column(DateTime, nullable=True)
+    insistencias = Column(Integer, nullable=False, default=0)
+
+
+class GlossarioFonte(Base):
+    __tablename__ = "glossario_fontes"
+    id = Column(String(100), primary_key=True)
+    nome = Column(Text, nullable=False)
+    url = Column(Text, nullable=False)
+
+
+class GlossarioCatalogo(Base):
+    __tablename__ = "glossario_catalogo"
+    id = Column(Integer, primary_key=True)
+    revisado_em = Column(String(20), nullable=False)
+
+
+class GlossarioTermo(Base):
+    __tablename__ = "glossario_termos"
+    id = Column(String(150), primary_key=True)
+    termo = Column(Text, nullable=False)
+    area = Column(Text, nullable=False)
+    definicao = Column(Text, nullable=False)
+    exemplo = Column(Text, nullable=False)
+    referencia = Column(Text, nullable=False)
+    fonte_id = Column(String(100), ForeignKey("glossario_fontes.id"), nullable=False)
+    fonte = relationship("GlossarioFonte")
+
+
+class MigracaoDados(Base):
+    __tablename__ = "migracoes_dados"
+    nome = Column(String(100), primary_key=True)
+    aplicada_em = Column(DateTime, nullable=False)
 
 
 class Categoria(Base):

@@ -3,14 +3,14 @@
 
     const TOKEN_KEY = "jurishome_access_token";
     const DESAFIO_2FA_KEY = "jurishome_desafio_2fa";
+    const LEMBRAR_CONECTADO_KEY = "jurishome_lembrar_conectado_2fa";
     const CONFIGURACAO_2FA_KEY = "jurishome_configuracao_2fa";
-    const LEMBRAR_CONECTADO_KEY = "jurishome_lembrar_conectado";
     const RECUPERACAO_EMAIL_KEY = "jurishome_recuperacao_email";
     const RECUPERACAO_DESAFIO_KEY = "jurishome_recuperacao_desafio";
     const REDEFINICAO_TOKEN_KEY = "jurishome_redefinicao_token";
 
     let bloqueioFim = 0, relogio;
-    const botoesAuth = () => [...document.querySelectorAll('#form-login button[type=submit],#form-2fatores button[type=submit],#form-recuperacao-codigo button[type=submit]')];
+    const botoesAuth = () => [...document.querySelectorAll('#form-login button[type=submit],#form-cadastro button[type=submit],#form-reset-2fa button[type=submit],#form-2fatores button[type=submit],#form-recuperacao-codigo button[type=submit]')];
     function mostrarEspera(segundos) {
         if (!Number.isFinite(segundos) || segundos <= 0) return;
         bloqueioFim = performance.now() + segundos * 1000;
@@ -49,6 +49,7 @@
         configurarLogin();
         configurarCadastro();
         configurar2FA();
+        configurarReset2FA();
         configurarRecuperacaoSenha();
         verificarEspera();
     }
@@ -81,10 +82,6 @@
                 return;
             }
             const botao = formulario.querySelector("button[type=submit]");
-            sessionStorage.setItem(
-                LEMBRAR_CONECTADO_KEY,
-                String(Boolean(document.getElementById("manter-conectado")?.checked)),
-            );
             alternarCarregamento(botao, true, "Entrando...");
 
             try {
@@ -95,6 +92,7 @@
                         senha,
                     }),
                 });
+                sessionStorage.setItem(LEMBRAR_CONECTADO_KEY, document.getElementById("lembrar-conectado").checked ? "sim" : "nao");
                 if (resposta.requer_configuracao_2fa) {
                     iniciarConfiguracao2FA(resposta);
                     return;
@@ -121,7 +119,6 @@
     function configurarCadastro() {
         const formulario = document.getElementById("form-cadastro");
         if (!formulario) return;
-        sessionStorage.setItem(LEMBRAR_CONECTADO_KEY, "false");
 
         formulario.addEventListener("submit", async (evento) => {
             evento.preventDefault();
@@ -183,12 +180,33 @@
                         versao_documentos: document.getElementById("cadastro-lgpd").dataset.versaoDocumentos,
                     }),
                 });
+                sessionStorage.removeItem(LEMBRAR_CONECTADO_KEY);
                 iniciarConfiguracao2FA(resposta);
             } catch (erro) {
                 mostrarMensagem(erro.message);
             } finally {
                 alternarCarregamento(botao, false, "Criar conta");
             }
+        });
+    }
+
+    function configurarReset2FA() {
+        const formulario = document.getElementById('form-reset-2fa');
+        if (!formulario) return;
+        formulario.addEventListener('submit', async evento => {
+            evento.preventDefault();
+            if (formulario.dataset.enviando === 'true') return;
+            const botao = formulario.querySelector('button[type=submit]');
+            const campoSenha = document.getElementById('reset-2fa-senha');
+            alternarCarregamento(botao, true, 'Enviando...');
+            try {
+                const resposta = await requisitar('/api/solicitar-reset-2fa', {
+                    method: 'POST', body: JSON.stringify({email: document.getElementById('reset-2fa-email').value.trim().toLowerCase(), senha: campoSenha.value})
+                });
+                campoSenha.value = '';
+                mostrarMensagem(resposta.mensagem, false);
+            } catch (erro) { mostrarMensagem(erro.message); }
+            finally { alternarCarregamento(botao, false, 'Solicitar recuperação'); }
         });
     }
 
@@ -340,11 +358,12 @@
                     body: JSON.stringify({
                         desafio_token: token,
                         codigo: document.getElementById("code").value.trim(),
-                        lembrar_conectado: sessionStorage.getItem(LEMBRAR_CONECTADO_KEY) === "true",
+                        lembrar_conectado: sessionStorage.getItem(LEMBRAR_CONECTADO_KEY) === "sim",
                     }),
                 });
                 sessionStorage.removeItem(DESAFIO_2FA_KEY);
                 sessionStorage.removeItem(CONFIGURACAO_2FA_KEY);
+                sessionStorage.removeItem(LEMBRAR_CONECTADO_KEY);
                 concluirLogin(resposta);
             } catch (erro) {
                 mostrarMensagem(erro.message);
@@ -437,7 +456,6 @@
             throw new Error("A autenticação não foi concluída. Tente novamente.");
         }
         localStorage.removeItem(TOKEN_KEY);
-        sessionStorage.removeItem(LEMBRAR_CONECTADO_KEY);
         const destino = resposta.usuario?.tipo_usuario === "administrador" ? "/home_admin" : "/home_usuario";
         window.location.href = destino;
     }

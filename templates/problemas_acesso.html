@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Problemas para acessar | JurisHome</title>
+    <link rel="stylesheet" href="/static/css/login.css?v=20260925-4">
+    <link rel="stylesheet" href="/static/css/auth-figma.css?v=20261106-limites">
+    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+</head>
+<body class="bg-recovery">
+    <div class="overlay-login"></div>
+    <main class="card-2fatores auth-panel auth-two-factor">
+        <header class="header-2fatores"><a href="/" aria-label="Voltar ao login">←</a><h1>Problemas para acessar?</h1></header>
+        <div class="linha-divisoria"></div>
+        <details open>
+            <summary>Perdi acesso ao Authenticator</summary>
+            <p>Confirme seu e-mail e senha para solicitar a recuperação aos administradores.</p>
+            <form id="form-reset-2fa" class="form-2fatores">
+                <label for="reset-2fa-email">E-mail</label>
+                <input id="reset-2fa-email" type="email" maxlength="150" autocomplete="email" required>
+                <label for="reset-2fa-senha">Senha</label>
+                <input id="reset-2fa-senha" type="password" maxlength="72" autocomplete="current-password" required>
+                <p class="auth-message" id="auth-message" role="status" aria-live="polite" hidden></p>
+                <button type="submit" class="btn-proximo">Solicitar recuperação</button>
+            </form>
+        </details>
+        <p><a href="/recuperar-senha">Esqueci minha senha</a></p>
+    </main>
+    {% include "_legal_links.html" %}
+    <script src="/static/js/auth.js?v=20261115-recuperacao"></script>
+</body>
+</html>

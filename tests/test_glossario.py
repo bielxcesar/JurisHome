@@ -1,11 +1,16 @@
-import json
 import unittest
-from pathlib import Path
 
 from services.glossario import consultar_glossario, normalizar
 
 
 class GlossarioTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from database import Base, engine
+        from services.glossario import instalar_catalogo_inicial
+        Base.metadata.create_all(engine)
+        instalar_catalogo_inicial(engine)
+
     def test_consulta_por_tipo_numero_e_ano_no_glossario(self):
         from unittest.mock import patch
         from routes.glossario import ConsultaLegislacao, consultar_legislacao, pagina_glossario, redirecionar_consulta_lei
@@ -93,17 +98,34 @@ class GlossarioTests(unittest.TestCase):
         self.assertEqual(consultar_glossario("   ")["total"], len(nomes))
 
     def test_catalogo_tem_ids_unicos_exemplos_e_fontes_legais(self):
-        arquivo = Path(__file__).resolve().parents[1] / "data" / "glossario.json"
-        catalogo = json.loads(arquivo.read_text(encoding="utf-8"))
-        termos = catalogo["termos"]
+        termos = consultar_glossario()["itens"]
         self.assertEqual(len(termos), len({t["id"] for t in termos}))
         for termo in termos:
             with self.subTest(termo=termo["termo"]):
                 self.assertTrue(termo["definicao"].strip())
                 self.assertTrue(termo["exemplo"].strip())
                 self.assertTrue(termo["referencia"].strip())
-                self.assertIn(termo["fonte_id"], catalogo["fontes"])
-                self.assertTrue(catalogo["fontes"][termo["fonte_id"]]["url"].startswith("https://www.planalto.gov.br/"))
+                self.assertTrue(termo["fonte"]["url"].startswith("https://www.planalto.gov.br/"))
+
+    def test_migracao_idempotente_preserva_edicoes_no_banco(self):
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import Session
+        from database import Base
+        from model.models import GlossarioTermo
+        from services.glossario import instalar_catalogo_inicial
+
+        engine = create_engine('sqlite://')
+        Base.metadata.create_all(engine)
+        instalar_catalogo_inicial(engine)
+        with Session(engine) as db:
+            db.get(GlossarioTermo, 'acordao').definicao = 'Definição atualizada no banco.'
+            db.commit()
+        instalar_catalogo_inicial(engine)
+        with Session(engine) as db:
+            resultado = consultar_glossario('atualizada', db=db)
+            self.assertEqual([t['id'] for t in resultado['itens']], ['acordao'])
+            self.assertEqual(resultado['total_catalogo'], 50)
+        engine.dispose()
 
 
 if __name__ == "__main__":

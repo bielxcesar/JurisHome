@@ -42,6 +42,127 @@ from routes.auth import (
 
 
 class TestesSeguranca(unittest.TestCase):
+    def test_cadastro_limite_por_origem_e_penalidade_persistente(self):
+        dados = {'nome': 'João', 'sobrenome': 'Silva', 'interesse': 'Direito Civil',
+                 'email': 'primeiro@example.test', 'senha': 'NovaSenha!123',
+                 'confirmar_senha': 'NovaSenha!123', 'consentimento_lgpd': True}
+        status, _, _ = self._request('POST', '/api/auth/cadastro', dados, cliente='198.51.100.5')
+        self.assertEqual(status, 201)
+
+        for tentativa in range(1, 4):
+            status, headers, corpo = self._request('POST', '/api/auth/cadastro',
+                {**dados, 'email': f'outro{tentativa}@example.test'}, cliente='198.51.100.5')
+            self.assertEqual(status, 429)
+            if tentativa == 3:
+                self.assertGreaterEqual(int(headers['retry-after']), 3599)
+                self.assertIn('uma hora', json.loads(corpo)['detail'])
+        status, _, _ = self._request('POST', '/api/auth/cadastro',
+            {**dados, 'email': 'outra-rede@example.test'}, cliente='198.51.100.6')
+        self.assertEqual(status, 201)
+        registro = self.db.query(models.LimiteOperacao).filter(models.LimiteOperacao.bloqueado_ate.isnot(None)).one()
+        registro.bloqueado_ate = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=1)
+        registro.proxima_em = registro.bloqueado_ate
+        self.db.commit()
+        status, _, _ = self._request('POST', '/api/auth/cadastro',
+            {**dados, 'email': 'liberado@example.test'}, cliente='198.51.100.5')
+        self.assertEqual(status, 201)
+
+
+    def test_cadastros_simultaneos_nao_contornam_espera(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from threading import Barrier
+        from fastapi import HTTPException
+        from starlette.requests import Request
+        from services import limites_operacoes
+
+        with TemporaryDirectory() as pasta:
+            engine = create_engine('sqlite:///' + str(Path(pasta) / 'concorrencia.db'), connect_args={'timeout': 10})
+            models.LimiteOperacao.__table__.create(engine)
+            sessoes = sessionmaker(bind=engine)
+            inicio = Barrier(2)
+            def tentar():
+                with sessoes() as db:
+                    request = Request({'type': 'http', 'method': 'POST', 'path': '/', 'headers': [], 'client': ('198.51.100.2', 12)})
+                    inicio.wait()
+                    try:
+                        registro = limites_operacoes.verificar_cadastro(db, request)
+                        limites_operacoes.concluir(registro, 5)
+                        db.commit()
+                        return 201
+                    except HTTPException as erro:
+                        return erro.status_code
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                self.assertEqual(sorted(pool.map(lambda _: tentar(), range(2))), [201, 429])
+            engine.dispose()
+
+    def test_materia_limite_individual_de_quinze_minutos(self):
+        primeiro = self._usuario(TipoUsuario.ADMINISTRADOR)
+        segundo = self._usuario(TipoUsuario.ADMINISTRADOR)
+        categoria = models.Categoria(nome='Direito Civil')
+        self.db.add(categoria)
+        self.db.commit()
+        dados = {'titulo': 'Matéria de teste', 'corpo_texto': 'Texto de teste',
+                 'categoria_id': categoria.uuid, 'aceite_editorial': True, 'versao_termos': '2026-10-30'}
+        token1, token2 = criar_access_token(primeiro), criar_access_token(segundo)
+        self.assertEqual(self._request('POST', '/criar-materia', dados, token=token1)[0], 200)
+        status, headers, _ = self._request('POST', '/criar-materia', dados, token=token1)
+        self.assertEqual(status, 429)
+        self.assertGreaterEqual(int(headers['retry-after']), 899)
+        self.assertEqual(self._request('POST', '/criar-materia', dados, token=token2)[0], 200)
+        registro = self.db.query(models.LimiteOperacao).filter_by(chave=__import__('services.tentativas_auth', fromlist=['chave']).chave('operacao-materia', primeiro.uuid)).one()
+        registro.proxima_em = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=1)
+        self.db.commit()
+        self.assertEqual(self._request('POST', '/criar-materia', dados, token=token1)[0], 200)
+
+    def test_pedido_2fa_vai_para_feedback_e_resolucao_exige_nova_configuracao(self):
+        leitor = self._usuario(email='leitor-2fa@example.test')
+        suporte = self._usuario(TipoUsuario.ADMINISTRADOR)
+        dados = {'email': leitor.email, 'senha': 'SenhaSegura123!'}
+        self.assertEqual(self._request('POST', '/api/solicitar-reset-2fa', {**dados, 'senha': 'Errada123!'})[0], 401)
+        self.assertEqual(self.db.query(models.FeedbackAtendimento).count(), 0)
+        status, _, corpo = self._request('POST', '/api/solicitar-reset-2fa', dados)
+        self.assertEqual(status, 200)
+        self.assertIn('administradores', json.loads(corpo)['mensagem'])
+        self.assertEqual(self._request('POST', '/api/solicitar-reset-2fa', dados)[0], 200)
+        self.assertEqual(self.db.query(models.FeedbackAtendimento).count(), 1)
+        token = criar_access_token(suporte)
+        status, _, corpo = self._request('GET', '/api/admin/usuarios', token=token)
+        self.assertTrue(next(item for item in json.loads(corpo) if item['uuid'] == leitor.uuid)['solicitou_ajuda'])
+        self.assertEqual(self._request('POST', '/api/admin/resetar-2fa/' + leitor.uuid, token=token)[0], 200)
+        self.db.expire_all()
+        self.assertFalse(self.db.get(Usuario, leitor.uuid).is_2fa_enabled)
+        self.assertEqual(self.db.query(models.FeedbackAtendimento).one().status, 'Resolvido')
+        status, _, corpo = self._request('POST', '/api/auth/login', dados)
+        self.assertEqual(status, 200)
+        self.assertTrue(json.loads(corpo)['requer_configuracao_2fa'])
+
+    def test_recuperacao_2fa_com_banco_de_feedback_separado(self):
+        from routes.auth import PedidoReset2FA, solicitar_reset_2fa
+        from routes.admin import listar_usuarios_filtro, resetar_2fa
+        from starlette.requests import Request
+
+        feedback_engine = create_engine('sqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
+        models.FeedbackAtendimento.__table__.create(feedback_engine)
+        feedback = sessionmaker(bind=feedback_engine)()
+        try:
+            leitor = self._usuario(email='separado@example.test')
+            suporte = self._usuario(TipoUsuario.ADMINISTRADOR)
+            request = Request({'type': 'http', 'method': 'POST', 'path': '/', 'headers': [], 'client': ('198.51.100.9', 12)})
+            solicitar_reset_2fa(PedidoReset2FA(email=leitor.email, senha='SenhaSegura123!'),
+                                 db=self.db, request=request, feedback_db=feedback)
+            self.assertEqual(feedback.query(models.FeedbackAtendimento).count(), 1)
+            self.assertEqual(self.db.query(models.FeedbackAtendimento).count(), 0)
+            usuarios = listar_usuarios_filtro(tipo=None, db=self.db, usuario_logado=suporte, feedback_db=feedback)
+            self.assertTrue(next(u for u in usuarios if u['uuid'] == leitor.uuid)['solicitou_ajuda'])
+            resetar_2fa(leitor.uuid, db=self.db, usuario_logado=suporte, feedback_db=feedback)
+            self.assertEqual(feedback.query(models.FeedbackAtendimento).one().status, 'Resolvido')
+            self.assertFalse(self.db.get(Usuario, leitor.uuid).is_2fa_enabled)
+        finally:
+            feedback.close()
+            feedback_engine.dispose()
+
     def test_documentacao_exclusiva_do_administrador_principal(self):
         leitor = self._usuario()
         suporte = self._usuario(TipoUsuario.ADMINISTRADOR)
@@ -845,7 +966,7 @@ class TestesSeguranca(unittest.TestCase):
         status,_,_=self._request('POST','/api/auth/login',{'email':'naoexiste5@example.test','senha':'Errada!123'},cliente='198.51.100.11')
         self.assertEqual(status,401)  # Só uma falha nesta conta, bloqueio anterior era da origem.
 
-    def test_cookie_sessao_sem_lembrar_e_lembrar_com_mfa_tem_15_minutos(self):
+    def test_cookie_persistente_somente_quando_solicitado_e_limitado_a_15_minutos(self):
         from http.cookies import SimpleCookie
         import pyotp
         from routes.auth import Codigo2FA,validar_2fa
@@ -860,12 +981,11 @@ class TestesSeguranca(unittest.TestCase):
                 cookies.load(valor)
             acesso=cookies['jurishome_access_token']
             sessao=self.db.get(models.SessaoAutenticada,security._decodificar_token(acesso.value)['sid'])
-            self.assertEqual(acesso['max-age'],'900' if lembrar else '')
+            self.assertEqual(acesso['max-age'], '900' if lembrar else '')
             self.assertEqual(acesso['httponly'],True)
             refresh=cookies['jurishome_refresh_token']
-            self.assertEqual(refresh['max-age'],'900' if lembrar else '0')
-            self.assertLessEqual((sessao.expira_em-sessao.criada_em).total_seconds(),900 if lembrar else 1800)
-            if lembrar:self.assertEqual(refresh['samesite'],'strict')
+            self.assertEqual(refresh['max-age'], '0')
+            self.assertLessEqual((sessao.expira_em-sessao.criada_em).total_seconds(), 900)
 
     @classmethod
     def setUpClass(cls):
@@ -892,6 +1012,8 @@ class TestesSeguranca(unittest.TestCase):
     def setUp(self):
         Base.metadata.drop_all(bind=self.engine)
         Base.metadata.create_all(bind=self.engine)
+        from services.glossario import instalar_catalogo_inicial
+        instalar_catalogo_inicial(self.engine)
         self.db = self.Session()
         from services.juridle import garantir_banco_inicial
         garantir_banco_inicial(self.db)

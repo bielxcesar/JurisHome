@@ -1,6 +1,9 @@
 /* O navegador envia apenas cookies HttpOnly; a renovação é serializada entre abas. */
 (() => {
     if (window.JurisHomeRenovarSessao) return;
+    window.addEventListener('pageshow', evento => {
+        if (evento.persisted) location.reload();
+    });
     const originalFetch = window.fetch.bind(window);
     let pendente;
     async function renovar() {
@@ -17,7 +20,7 @@
         const copia = request.clone();
         const resposta = await originalFetch(request);
         if (resposta.status !== 401 || url.origin !== location.origin
-            || url.pathname.startsWith('/api/auth/')) return resposta;
+            || url.pathname.startsWith('/api/auth/') || url.pathname === '/api/solicitar-reset-2fa') return resposta;
         const renovacao = await renovar();
         return renovacao.ok ? originalFetch(copia) : resposta;
     };
