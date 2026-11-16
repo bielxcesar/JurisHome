@@ -399,6 +399,19 @@ async def cadastrar_usuario(
     try:
         db.flush()
         configuracao = preparar_configuracao_2fa(usuario, db, commit=False)
+        for acao, recurso_tipo in (
+            ("aceite_termo", "termo_aceite"),
+            ("aceite_politica_privacidade", "politica_privacidade"),
+        ):
+            registrar_auditoria(
+                db,
+                acao=acao,
+                recurso_tipo=recurso_tipo,
+                recurso_id=versao_atual,
+                resultado="sucesso",
+                usuario=usuario,
+                detalhes={"versao": versao_atual, "origem": "cadastro"},
+            )
         if limite_cadastro is not None:
             limites_operacoes.concluir(limite_cadastro, 5)
         registrar_auditoria(

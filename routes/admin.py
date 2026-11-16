@@ -306,7 +306,7 @@ def pagina_nova_materia_ex(request: Request):
     return templates.TemplateResponse(request=request, name="novaMateriaEX.html", context={"tipo_usuario": "administrador"})
 
 @router.get("/configuracao", response_class=HTMLResponse)
-def pagina_configuracao(request: Request):
+def pagina_configuracao(request: Request, usuario_logado: Usuario = Depends(get_current_user)):
     return templates.TemplateResponse(
         request=request,
         name="confUsuario.html",
@@ -319,6 +319,7 @@ def pagina_configuracao(request: Request):
             "feedback_interno": False,
             "mostrar_auditoria": True,
             "mostrar_exclusao_dados": False,
+            "e_root_admin": bool(usuario_logado.e_root_admin),
         },
     )
 

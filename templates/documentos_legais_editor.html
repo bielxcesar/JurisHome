@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Editor de documentos legais | JurisHome</title>
-    <link rel="stylesheet" href="/static/css/legal.css?v=documentos-legais">
+    <link rel="stylesheet" href="/static/css/legal.css?v=20261116-historico">
 </head>
 <body class="legal-page">
     <main class="legal-document">
-        <a href="/perfil">← Voltar ao perfil</a>
+        <a href="/configuracao">← Voltar às configurações</a>
         <h1>Editor de documentos legais</h1>
-        <p>Versão vigente {{ versao }}. Publicar uma alteração exige nova confirmação de todos, inclusive do administrador principal.</p>
+        <p>Versão vigente {{ versao }}. Uma publicação cria uma nova versão e solicita a confirmação dos estudantes.</p>
+        {% if publicada %}<p class="legal-notice" role="status">A nova versão foi publicada e o histórico foi atualizado.</p>{% endif %}
         <nav class="legal-tabs" aria-label="Documento para editar">
             <a href="/perfil/documentos-legais?tipo=termos"{% if tipo == "termos" %} aria-current="page"{% endif %}>Termo de Aceite</a>
             <a href="/perfil/documentos-legais?tipo=privacidade"{% if tipo == "privacidade" %} aria-current="page"{% endif %}>Política de Privacidade</a>
@@ -22,6 +23,10 @@
                 <p id="ajuda-texto">Edite o texto completo. Use linhas em branco para separar seções.</p>
                 {% if erro %}<p class="legal-notice" role="alert">{{ erro }}</p>{% endif %}
                 <textarea id="texto-legal" name="texto" rows="22" maxlength="{{ limite }}" aria-describedby="ajuda-texto" required>{{ texto }}</textarea>
+                <details class="legal-preview">
+                    <summary>Prévia do documento</summary>
+                    <pre>{{ texto }}</pre>
+                </details>
                 {% if pode_publicar %}
                     <label><input type="checkbox" name="confirmar" value="sim" required> Revisei o texto e confirmo a publicação.</label>
                     <button type="submit">Publicar nova versão</button>
@@ -29,6 +34,20 @@
                     <a href="/perfil/documentos-legais?tipo={{ tipo }}" target="_blank" rel="noopener">Abrir editor atualizado em outra aba</a>
                 {% endif %}
             </form>
+        </section>
+        <section class="legal-history" aria-labelledby="historico-titulo">
+            <h2 id="historico-titulo">Histórico de versões</h2>
+            <p>As versões publicadas permanecem disponíveis para consulta.</p>
+            {% if historico %}
+                {% for item in historico %}
+                    <details>
+                        <summary>{{ item.versao }} · {% if item.inicial %}versão inicial registrada em{% else %}publicada em{% endif %} {{ item.publicada_em.strftime("%d/%m/%Y %H:%M") }}{% if item.responsavel %} · responsável: {{ item.responsavel }}{% endif %}</summary>
+                        <pre>{{ item.conteudo }}</pre>
+                    </details>
+                {% endfor %}
+            {% else %}
+                <p>Nenhuma versão foi publicada ainda.</p>
+            {% endif %}
         </section>
     </main>
     <script defer src="/static/js/erro.js?v=ultima-pagina"></script>
