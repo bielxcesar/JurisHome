@@ -258,6 +258,14 @@
     }
 
     function rotulo(valor) {
+        const rotulos = {
+            aceite_termo: "Termo de Aceite aceito",
+            aceite_politica_privacidade: "Política de Privacidade aceita",
+            documento_legal_publicado: "Nova versão legal publicada",
+            documentos_legais_aceitos: "Aceite dos documentos legais (registro anterior)",
+            documentos_legais_publicados: "Versão legal publicada (registro anterior)",
+        };
+        if (rotulos[valor]) return rotulos[valor];
         return String(valor || "").replaceAll("_", " ").replace(/^./, (letra) => letra.toUpperCase());
     }
 

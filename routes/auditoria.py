@@ -73,7 +73,12 @@ def listar_logs_auditoria(
         .limit(limite)
         .all()
     )
-    acoes = [linha[0] for linha in db.query(LogAuditoria.acao).distinct().order_by(LogAuditoria.acao).all()]
+    # Mantém todas as ações já registradas e disponibiliza também as ações legais
+    # antes que o primeiro evento desse tipo seja gravado.
+    acoes = sorted(
+        {linha[0] for linha in db.query(LogAuditoria.acao).distinct().all()}
+        | {"aceite_termo", "aceite_politica_privacidade", "documento_legal_publicado"}
+    )
     return {
         "itens": [serializar_log(registro) for registro in registros],
         "totalExibido": len(registros),

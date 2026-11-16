@@ -4,9 +4,10 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from model.models import RevisaoLegal, Usuario
+from model.models import RevisaoLegal, Usuario, obter_hora_local
 
 TERMOS_VERSAO = "2.2"
 POLITICA_PRIVACIDADE_VERSAO = "2.2"
@@ -18,15 +19,40 @@ DOCUMENTOS = {
 }
 
 
+VERSAO_BASE_ANTERIOR = "__versao_estatica_inicial__"
+
+
 def revisao_vigente(db: Session) -> RevisaoLegal | None:
-    return db.scalar(select(RevisaoLegal).order_by(RevisaoLegal.id.desc()).limit(1))
+    revisao = db.scalar(select(RevisaoLegal).order_by(RevisaoLegal.id.desc()).limit(1))
+    if revisao is not None:
+        return revisao
+
+    # Registra o conteúdo que já existia nos arquivos como versão-base, sem
+    # alterar o identificador 2.2 aceito pelas contas anteriores.
+    base = RevisaoLegal(
+        anterior=VERSAO_BASE_ANTERIOR,
+        termos=texto_inicial("termos"),
+        politica=texto_inicial("privacidade"),
+        publicada_em=obter_hora_local().replace(tzinfo=None),
+    )
+    db.add(base)
+    try:
+        db.commit()
+        return base
+    except IntegrityError:
+        db.rollback()
+        return db.scalar(select(RevisaoLegal).order_by(RevisaoLegal.id.desc()).limit(1))
 
 
 def versao_legal(revisao: RevisaoLegal | None) -> str:
-    return f"legal-{revisao.id}" if revisao else TERMOS_VERSAO
+    if revisao is None or revisao.anterior == VERSAO_BASE_ANTERIOR:
+        return TERMOS_VERSAO
+    return f"legal-{revisao.id}"
 
 
 def aceite_pendente(db: Session, usuario: Usuario) -> bool:
+    if getattr(usuario.tipo_usuario, "value", usuario.tipo_usuario) != "estudante":
+        return False
     revisao = revisao_vigente(db)
     return revisao is not None and (
         not usuario.consentimento_lgpd or usuario.versao_termos != versao_legal(revisao)

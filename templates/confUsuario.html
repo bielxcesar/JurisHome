@@ -109,6 +109,19 @@
 
             <!-- Área de Conteúdo -->
             <main class="flex-1 bg-[#25262a] border border-gray-800 rounded-xl p-6 md:p-8 shadow-lg relative">
+                {% if e_root_admin|default(false) %}
+                <section class="mb-8 rounded-xl border border-amber-500/50 bg-[#1e1e1e] p-5 md:p-6" aria-labelledby="documentos-legais-configuracao">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h2 id="documentos-legais-configuracao" class="text-xl font-bold text-white">Termo de Aceite e Política de Privacidade</h2>
+                            <p class="mt-2 text-sm text-gray-400">Publique novas versões e consulte o histórico dos documentos legais.</p>
+                        </div>
+                        <a href="/perfil/documentos-legais?tipo=termos" class="inline-flex shrink-0 items-center justify-center rounded-lg border border-amber-500 px-4 py-3 font-semibold text-amber-300 transition hover:bg-amber-500 hover:text-black">
+                            Gerenciar versões
+                        </a>
+                    </div>
+                </section>
+                {% endif %}
                 
                 <!-- Seção: Trocar Senha -->
                 <section class="config-section" id="config-section-senha" data-config-panel="senha">

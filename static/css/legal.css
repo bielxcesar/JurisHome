@@ -89,6 +89,46 @@
     padding: clamp(1.75rem, 5vw, 3.75rem) 0 1rem;
 }
 
+.legal-preview,
+.legal-history details {
+    margin-top: 1rem;
+    border: 1px solid #3f4248;
+    border-radius: .65rem;
+    background: #202124;
+    color: #e5e7eb;
+}
+
+.legal-preview summary,
+.legal-history summary {
+    cursor: pointer;
+    padding: .85rem 1rem;
+    font-weight: 600;
+}
+
+.legal-preview pre,
+.legal-history pre {
+    margin: 0;
+    padding: 1rem;
+    border-top: 1px solid #3f4248;
+    color: #cbd5e1;
+    font: inherit;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.legal-history {
+    margin-top: 2rem;
+}
+
+.legal-history h2 {
+    margin-bottom: .5rem;
+}
+
+.legal-history > p {
+    color: #aeb8c6;
+}
+
 .legal-heading {
     margin-bottom: 1.5rem;
     padding: clamp(1.25rem, 5vw, 3rem);

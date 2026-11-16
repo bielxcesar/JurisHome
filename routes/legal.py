@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import IntegrityError
@@ -11,10 +11,10 @@ from sqlalchemy.orm import Session
 
 from auth.security import get_current_user_sem_aceite
 from database import get_db
-from model.models import RevisaoLegal, TipoUsuario, Usuario
+from model.models import LogAuditoria, RevisaoLegal, TipoUsuario, Usuario
 from services.administradores import exigir_root
 from services.auditoria import registrar_auditoria
-from services.lgpd import DOCUMENTOS, LIMITE_DOCUMENTO, revisao_vigente, texto_inicial, versao_legal
+from services.lgpd import DOCUMENTOS, LIMITE_DOCUMENTO, TERMOS_VERSAO, revisao_vigente, texto_inicial, versao_legal
 from services.validacao import texto_simples
 
 router = APIRouter()
@@ -57,14 +57,42 @@ def pagina_politica_de_privacidade(request: Request, db: Session = Depends(get_d
 def editor(
     request: Request,
     tipo: TipoDocumento = "termos",
+    publicada: bool = False,
     db: Session = Depends(get_db),
     root: Usuario = Depends(exigir_root),
 ):
     revisao = revisao_vigente(db)
-    return _render_editor(request, tipo, revisao)
+    return _render_editor(request, tipo, revisao, db=db, publicada=publicada)
 
 
-def _render_editor(request, tipo, revisao, *, erro=None, rascunho=None, status_code=200):
+def _historico_documento(db: Session, tipo: TipoDocumento):
+    _, _, campo = DOCUMENTOS[tipo]
+    revisoes = db.query(RevisaoLegal).order_by(RevisaoLegal.id.desc()).all()
+    versoes = [versao_legal(item) for item in revisoes]
+    responsaveis = {}
+    if versoes:
+        registros = db.query(LogAuditoria).filter(
+            LogAuditoria.acao.in_(("documento_legal_publicado", "documentos_legais_publicados")),
+            LogAuditoria.recurso_id.in_(versoes),
+        ).order_by(LogAuditoria.criado_em.desc(), LogAuditoria.id.desc()).all()
+        for registro in registros:
+            responsaveis.setdefault(registro.recurso_id, registro.usuario_id)
+
+    return [
+        {
+            "versao": versao_legal(item),
+            "inicial": versao_legal(item) == TERMOS_VERSAO,
+            "conteudo": getattr(item, campo, None) or texto_inicial(tipo),
+            "publicada_em": item.publicada_em,
+            "responsavel": responsaveis.get(versao_legal(item)) or (
+                "Versão inicial do sistema" if versao_legal(item) == TERMOS_VERSAO else None
+            ),
+        }
+        for item in revisoes
+    ]
+
+
+def _render_editor(request, tipo, revisao, *, db: Session, erro=None, rascunho=None, publicada=False, status_code=200):
     titulo, _, campo = DOCUMENTOS[tipo]
     texto = getattr(revisao, campo, None)
     return templates.TemplateResponse(
@@ -77,6 +105,8 @@ def _render_editor(request, tipo, revisao, *, erro=None, rascunho=None, status_c
             "versao": versao_legal(revisao),
             "limite": LIMITE_DOCUMENTO,
             "erro": erro,
+            "publicada": publicada,
+            "historico": _historico_documento(db, tipo),
             "pode_publicar": status_code != 409,
         },
         headers=SEM_CACHE,
@@ -98,21 +128,21 @@ def publicar(
     atual = versao_legal(revisao)
     mensagem_conflito = "Outra versão foi publicada. Abra o editor atualizado e compare com seu rascunho antes de publicar."
     if versao != atual:
-        return _render_editor(request, tipo, revisao, erro=mensagem_conflito, rascunho=texto, status_code=409)
+        return _render_editor(request, tipo, revisao, db=db, erro=mensagem_conflito, rascunho=texto, status_code=409)
     try:
         texto = texto_simples(texto.replace("\r\n", "\n").replace("\r", "\n"))
         if not texto:
             raise ValueError("Preencha o conteúdo antes de publicar.")
     except ValueError as erro:
-        return _render_editor(request, tipo, revisao, erro=str(erro), rascunho=texto, status_code=422)
+        return _render_editor(request, tipo, revisao, db=db, erro=str(erro), rascunho=texto, status_code=422)
 
     _, _, campo = DOCUMENTOS[tipo]
     if texto == (getattr(revisao, campo, None) or texto_inicial(tipo)):
-        return _render_editor(request, tipo, revisao, erro="Faça uma alteração antes de publicar.")
+        return _render_editor(request, tipo, revisao, db=db, erro="Faça uma alteração antes de publicar.")
     nova = RevisaoLegal(
         anterior=atual,
-        termos=getattr(revisao, "termos", None),
-        politica=getattr(revisao, "politica", None),
+        termos=(getattr(revisao, "termos", None) if revisao else None) or texto_inicial("termos"),
+        politica=(getattr(revisao, "politica", None) if revisao else None) or texto_inicial("privacidade"),
         publicada_em=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     setattr(nova, campo, texto)
@@ -120,18 +150,18 @@ def publicar(
         db.add(nova)
         db.flush()
         registrar_auditoria(
-            db, acao="documentos_legais_publicados", recurso_tipo="revisao_legal",
+            db, acao="documento_legal_publicado", recurso_tipo=tipo,
             recurso_id=versao_legal(nova), resultado="sucesso", usuario=root,
-            detalhes={"tipo": tipo, "versao_anterior": atual},
+            detalhes={"tipo": tipo, "versao": versao_legal(nova), "versao_anterior": atual},
         )
         db.commit()
     except IntegrityError:
         db.rollback()
         return _render_editor(
-            request, tipo, revisao_vigente(db), erro=mensagem_conflito,
+            request, tipo, revisao_vigente(db), db=db, erro=mensagem_conflito,
             rascunho=texto, status_code=409,
         )
-    return RedirectResponse("/aceitar-documentos", status_code=303, headers=SEM_CACHE)
+    return RedirectResponse(f"/perfil/documentos-legais?tipo={tipo}&publicada=1", status_code=303, headers=SEM_CACHE)
 
 
 def _render_aceite(request, revisao, *, erro=None, status_code=200):
@@ -151,6 +181,8 @@ def pagina_aceite(
     usuario: Usuario = Depends(get_current_user_sem_aceite),
 ):
     revisao = revisao_vigente(db)
+    if usuario.tipo_usuario != TipoUsuario.ESTUDANTE:
+        return RedirectResponse(_painel(usuario), status_code=303, headers=SEM_CACHE)
     if not revisao or (usuario.consentimento_lgpd and usuario.versao_termos == versao_legal(revisao)):
         return RedirectResponse(_painel(usuario), status_code=303, headers=SEM_CACHE)
     return _render_aceite(request, revisao)
@@ -165,6 +197,8 @@ def aceitar(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user_sem_aceite),
 ):
+    if usuario.tipo_usuario != TipoUsuario.ESTUDANTE:
+        raise HTTPException(status_code=403, detail="Este aceite é destinado a estudantes.")
     revisao = revisao_vigente(db)
     if not revisao or versao != versao_legal(revisao):
         return _render_aceite(request, revisao, erro="Os documentos mudaram. Leia a nova versão antes de confirmar.", status_code=409)
@@ -179,8 +213,14 @@ def aceitar(
         usuario.versao_termos = versao
         usuario.data_consentimento = datetime.now(timezone.utc).replace(tzinfo=None)
         registrar_auditoria(
-            db, acao="documentos_legais_aceitos", recurso_tipo="revisao_legal",
+            db, acao="aceite_termo", recurso_tipo="termo_aceite",
             recurso_id=versao, resultado="sucesso", usuario=usuario,
+            detalhes={"versao": versao},
+        )
+        registrar_auditoria(
+            db, acao="aceite_politica_privacidade", recurso_tipo="politica_privacidade",
+            recurso_id=versao, resultado="sucesso", usuario=usuario,
+            detalhes={"versao": versao},
         )
         db.commit()
     return RedirectResponse(_painel(usuario), status_code=303, headers=SEM_CACHE)
