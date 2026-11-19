@@ -25,9 +25,8 @@ A plataforma centraliza informações jurídicas confiáveis em um ambiente orga
 
 Quando a aplicação tiver um endereço público, ele poderá ser publicado aqui:
 
-```markdown
-**Acesse a aplicação:** https://SEU-ENDERECO-HOSPEDADO
-```
+**Acesse a aplicação:** https://jurishome.up.railway.app/
+
 
 ## ✨ Funcionalidades
 
