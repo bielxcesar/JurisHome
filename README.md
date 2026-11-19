@@ -21,8 +21,6 @@ A plataforma centraliza informações jurídicas confiáveis em um ambiente orga
 
 **Repositório:** https://github.com/bielxcesar/JurisHome
 
-Quando a aplicação tiver um endereço público, ele poderá ser publicado aqui:
-
 **Acesse a aplicação:** https://jurishome.up.railway.app/
 
 
