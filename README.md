@@ -13,9 +13,9 @@
 
 ## 📌 Sobre o projeto
 
-O **JurisHome** é uma plataforma web desenvolvida como Projeto de Final de Curso (PFC) do bacharelado em Engenharia de Software da Universidade de Mogi das Cruzes (UMC).
+O **JurisHome** é uma plataforma web desenvolvido para ser a casa de estudo do pessoal de DIREITO
 
-A plataforma centraliza informações jurídicas confiáveis em um ambiente organizado para estudantes, com navegação por áreas do Direito, matérias curadas, glossário, consulta legislativa e recursos educacionais.
+A plataforma centraliza informações jurídicas confiáveis em um ambiente organizado para estudantes, com navegação por áreas do Direito, matérias curadas, glossário, consulta legislativa, gamificação e recursos educacionais.
 
 ## 🌐 Aplicação hospedada
 
