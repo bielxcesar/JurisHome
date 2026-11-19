@@ -19,8 +19,6 @@ A plataforma centraliza informações jurídicas confiáveis em um ambiente orga
 
 ## 🌐 Aplicação hospedada
 
-> Ainda não foi informado um endereço público de deploy. O link abaixo direciona para o repositório do projeto:
-
 **Repositório:** https://github.com/bielxcesar/JurisHome
 
 Quando a aplicação tiver um endereço público, ele poderá ser publicado aqui:
