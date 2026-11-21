@@ -36,10 +36,10 @@ def revogar_sessoes(db: Session, alvo: Usuario):
     db.query(SessaoAutenticada).filter_by(usuario_id=alvo.uuid).update({'revogada': True}, synchronize_session=False)
 
 
-def serializar_admin(db: Session, alvo: Usuario):
+def serializar_admin(db: Session, alvo: Usuario, *, incluir_email: bool = False):
     agora = datetime.now(timezone.utc).replace(tzinfo=None)
     return {
-        'uuid': alvo.uuid, 'nome': alvo.nome, 'email': mascarar_email(alvo.email),
+        'uuid': alvo.uuid, 'nome': alvo.nome, 'email': alvo.email if incluir_email else mascarar_email(alvo.email),
         'foto': url_imagem_segura(alvo.foto_perfil),
         'criadoEm': alvo.criado_em.isoformat() if alvo.criado_em else None,
         'versao': alvo.atualizado_em.isoformat(),

@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Matérias jurídicas recentes e organizadas por categoria no JurisHome">
     <title>{% if visao == 'recentes' %}Exibir mais{% else %}Categorias{% endif %} | JurisHome</title>
-    <link rel="icon" href="/static/images/micrologo.png.png" type="image/x-icon">
-    <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+<link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
     <!-- Tailwind via CDN substituindo os CSS bloqueados -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -26,6 +25,7 @@
     <link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav">
     <link rel="stylesheet" href="/static/css/conteudo-educacional.css?v=20261103-1">
     {% if tipo_usuario != 'administrador' %}<script src="/static/js/categoria-acesso.js?v=20261103-1" defer></script>{% endif %}
+    {% include "_favicon.html" %}
 </head>
 <body class="juris-ui juris-list bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col" data-visao="{{ visao }}" data-tipo-usuario="{{ tipo_usuario }}">
     

@@ -30,3 +30,7 @@
 #admin-perfil-retorno {padding:14px;border:1px solid var(--juris-yellow);border-radius:9px;font-size:14px;line-height:1.7;}
 .admin-profile :is(input,button,a):focus-visible {outline:3px solid var(--juris-yellow);outline-offset:3px;}
 @media(max-width:640px){.admin-profile-card {padding:20px;}.admin-profile-identity {gap:14px;align-items:flex-start;}.admin-profile-avatar {width:60px;height:60px;font-size:26px;}.admin-profile-identity h2 {font-size:22px;}.admin-profile-stats {grid-template-columns:1fr;}.admin-profile-fields {grid-template-columns:1fr;}.admin-profile-actions button {width:100%;}}
+
+.admin-profile-identity>div:last-child{min-width:0}.admin-profile-identity p{overflow-wrap:anywhere}.admin-profile-contact{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:8px 0 28px;padding-top:24px;border-top:1px solid var(--juris-border)}.admin-profile-contact dt{font-size:13px;color:var(--juris-muted);margin-bottom:8px}.admin-profile-contact dd{margin:0;font-size:15px;color:var(--juris-text);overflow-wrap:anywhere}@media(max-width:640px){.admin-profile-contact{grid-template-columns:1fr}}
+
+.admin-profile-back{display:inline-flex;align-items:center;gap:9px;min-height:40px;padding:9px 14px;border:1px solid var(--juris-border);border-radius:9px;background:var(--juris-panel);color:var(--juris-text);font-size:13px;font-weight:500;text-decoration:none;transition:border-color .15s,color .15s}.admin-profile-back svg{flex-shrink:0}.admin-profile-back:hover{color:var(--juris-yellow);border-color:var(--juris-yellow)}

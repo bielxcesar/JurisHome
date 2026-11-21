@@ -7,7 +7,8 @@
     <link rel="stylesheet" href="/static/css/login.css?v=20260925-4">
     <link rel="stylesheet" href="/static/css/auth-figma.css?v=20261106-limites">
     <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
-    <link rel="stylesheet" href="/static/css/problemas-acesso.css?v=20261121-1">
+    <link rel="stylesheet" href="/static/css/problemas-acesso.css?v=20261121-2">
+    {% include "_favicon.html" %}
 </head>
 <body class="bg-recovery access-help-page">
     <div class="overlay-login" aria-hidden="true"></div>
@@ -19,16 +20,24 @@
         <header class="access-help-heading">
             <span class="access-help-kicker">RECUPERAÇÃO DE ACESSO</span>
             <h1 id="access-help-title">Problemas para acessar?</h1>
-            <p>Perdeu o acesso ao autenticador? Confirme seus dados para solicitar ajuda à equipe.</p>
+            <p>Vamos ajudar você a voltar à sua conta.</p>
         </header>
+        <div class="access-help-context">
+            <span class="access-help-context-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 4 6v6c0 4 4 7 8 9 4-2 8-5 8-9V6l-8-3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m8.5 12 2.3 2.3 4.7-4.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <div><h2>Recuperar autenticador</h2><p>Confirme seu e-mail e senha para solicitar a redefinição à equipe.</p></div>
+        </div>
         <form id="form-reset-2fa" class="access-help-form">
             <div class="access-help-field">
                 <label for="reset-2fa-email">E-mail da conta</label>
-                <input id="reset-2fa-email" type="email" maxlength="150" autocomplete="email" placeholder="seuemail@exemplo.com" required>
+                <div class="access-help-control">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <input id="reset-2fa-email" type="email" maxlength="150" autocomplete="email" placeholder="seuemail@exemplo.com" required>
+                </div>
             </div>
             <div class="access-help-field">
                 <label for="reset-2fa-senha">Senha</label>
-                <div class="password-input-wrap">
+                <div class="password-input-wrap access-help-control">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                     <input id="reset-2fa-senha" type="password" maxlength="72" autocomplete="current-password" placeholder="Digite sua senha" required>
                     <button class="password-toggle" type="button" data-password-toggle="reset-2fa-senha" aria-label="Mostrar senha" aria-pressed="false">Mostrar</button>
                 </div>
@@ -36,8 +45,8 @@
             <p class="auth-message" id="auth-message" role="status" aria-live="polite" hidden></p>
             <button type="submit" class="access-help-submit">Solicitar recuperação</button>
         </form>
-        <p class="access-help-note"><strong>O que acontece depois?</strong> Um administrador receberá sua solicitação. Após a redefinição, você poderá configurar um novo autenticador no próximo acesso.</p>
-        <div class="access-help-footer"><span>Não lembra a senha?</span><a href="/recuperar-senha">Recuperar minha senha <span aria-hidden="true">→</span></a></div>
+        <p class="access-help-note">Após a análise da equipe, você poderá configurar um novo autenticador.</p>
+        <div class="access-help-footer"><span>O problema é com a senha?</span><a href="/recuperar-senha">Esqueci minha senha <span aria-hidden="true">→</span></a></div>
     </main>
     {% include "_legal_links.html" %}
     <script src="/static/js/auth.js?v=validacao-20261121"></script>

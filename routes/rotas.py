@@ -140,3 +140,9 @@ def pagina_juridle(request: Request, usuario: Usuario = Depends(get_current_user
         "tipo_usuario": usuario.tipo_usuario.value,
     })
 
+
+
+@router.get("/sobre-nos", response_class=HTMLResponse)
+def pagina_sobre_nos(request: Request, usuario: Usuario | None = Depends(get_current_user_optional)):
+    return templates.TemplateResponse(request=request, name="sobre-nos.html",
+        context={"tipo_usuario": usuario.tipo_usuario.value if usuario else "usuario"})

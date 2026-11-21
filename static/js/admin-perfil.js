@@ -15,7 +15,7 @@ $('admin-perfil-form').addEventListener('submit',async evento=>{
   const corpo=await resposta.json().catch(()=>({}));
   if(!resposta.ok)throw new Error(typeof corpo.detail==='string'?corpo.detail:Array.isArray(corpo.detail)?corpo.detail.map(item=>item.msg.replace(/^Value error, /,'')).join(' '):'Não foi possível salvar. Tente novamente.');
   administrador=corpo.administrador;
-  $('admin-nome').value=administrador.nome;$('admin-email').value='';$('admin-email').placeholder=administrador.email;
+  $('admin-nome').value=administrador.nome;$('admin-email').value=administrador.email;
   $('admin-nome-resumo').textContent=administrador.nome;$('admin-email-resumo').textContent=administrador.email;
   $('admin-2fa-status').textContent=administrador.is_2fa_enabled?'Ativa':'Configuração pendente';$('admin-sessoes').textContent=administrador.sessoesAtivas;
   $('admin-nova-senha').value='';$('admin-encerrar').checked=false;$('admin-reset-2fa').checked=false;

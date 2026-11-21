@@ -102,14 +102,17 @@ class ExclusaoAdministrador(ModeloSeguro):
 def pagina_manutencao_admin(usuario_id: str, request: Request, db: Session = Depends(get_db),
                            root: Usuario = Depends(exigir_root)):
     alvo = buscar_admin(db, usuario_id, root)
+    registrar_consulta_contato(db, alvo, root)
     return templates.TemplateResponse(request=request, name="admin-perfil.html", context={
-        "tipo_usuario": root.tipo_usuario.value, "administrador": serializar_admin(db, alvo),
+        "tipo_usuario": root.tipo_usuario.value, "administrador": serializar_admin(db, alvo, incluir_email=True),
     })
 
 
 @router.get("/api/admin/administradores/{usuario_id}")
 def consultar_administrador(usuario_id: str, db: Session = Depends(get_db), root: Usuario = Depends(exigir_root)):
-    return serializar_admin(db, buscar_admin(db, usuario_id, root))
+    alvo = buscar_admin(db, usuario_id, root)
+    registrar_consulta_contato(db, alvo, root)
+    return serializar_admin(db, alvo, incluir_email=True)
 
 
 @router.put("/api/admin/administradores/{usuario_id}")
@@ -141,7 +144,7 @@ def manter_administrador(usuario_id: str, dados: ManutencaoAdministrador,
         db.rollback()
         raise HTTPException(409, "Não foi possível salvar. Confira se o e-mail já foi usado.") from erro
     db.refresh(alvo)
-    return {"mensagem": "Administrador atualizado com sucesso.", "administrador": serializar_admin(db, alvo)}
+    return {"mensagem": "Administrador atualizado com sucesso.", "administrador": serializar_admin(db, alvo, incluir_email=True)}
 
 
 @router.delete("/api/admin/administradores/{usuario_id}")
@@ -683,15 +686,23 @@ def decidir_materia(
     return {"mensagem": "Matéria aprovada." if dados.decisao == "aprovar" else "Matéria devolvida ao autor."}
 
 
-@router.get("/api/admin/usuarios/{usuario_id}/detalhes")
-def detalhes_usuario(usuario_id: str, db: Session = Depends(get_db),
-                     administrador: Usuario = Depends(get_current_user)):
+def registrar_consulta_contato(db: Session, alvo: Usuario, administrador: Usuario) -> None:
+    registrar_auditoria(db, acao="dados_usuario_consultados", recurso_tipo="usuario",
+                        recurso_id=alvo.uuid, resultado="sucesso", usuario=administrador,
+                        detalhes={"escopo": "perfil_contato"}, commit=True)
+
+
+@router.get("/admin/usuarios/{usuario_id}", response_class=HTMLResponse)
+def consultar_perfil_usuario(usuario_id: str, request: Request, db: Session = Depends(get_db),
+                             administrador: Usuario = Depends(get_current_user)):
     if administrador.tipo_usuario != TipoUsuario.ADMINISTRADOR:
         raise HTTPException(403, "Acesso negado.")
     alvo = db.get(Usuario, usuario_id)
     if alvo is None or db.get(AdministradorExcluido, usuario_id):
         raise HTTPException(404, "Usuário não encontrado.")
-    registrar_auditoria(db, acao="dados_usuario_consultados", recurso_tipo="usuario",
-                        recurso_id=alvo.uuid, resultado="sucesso", usuario=administrador,
-                        detalhes={"escopo": "contato"}, commit=True)
-    return JSONResponse({"nome": alvo.nome, "email": alvo.email}, headers={"Cache-Control": "no-store"})
+    registrar_consulta_contato(db, alvo, administrador)
+    conta = serializar_admin(db, alvo, incluir_email=True)
+    conta["perfil"] = ("Administrador principal" if alvo.e_root_admin else "Administrador de suporte") if alvo.tipo_usuario == TipoUsuario.ADMINISTRADOR else "Leitor"
+    return templates.TemplateResponse(request=request, name="usuario-perfil.html",
+        context={"tipo_usuario": administrador.tipo_usuario.value, "conta": conta},
+        headers={"Cache-Control": "no-store"})

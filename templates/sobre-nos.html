@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Conheça o JurisHome e a equipe que desenvolve o projeto acadêmico de acesso ao conhecimento jurídico.">
+    <title>Sobre nós | JurisHome</title>
+<!-- Tailwind via CDN para padronização -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav">
+<link rel="stylesheet" href="/static/css/home.css?v=20261108-nav">
+<script>(()=>{let claro=false;try{claro=localStorage.getItem('tema_juris')==='claro';}catch(_){}document.documentElement.dataset.theme=claro?'light':'dark';document.documentElement.classList.toggle('dark',!claro);})();</script>
+<script src="/static/js/session.js?v=validacao-20261121" defer></script><script src="/static/js/curiosidades.js?v=20261108-nav" defer></script>
+<link rel="stylesheet" href="/static/css/sobre-nos.css?v=20261121-1">
+    {% include "_favicon.html" %}
+</head>
+<body class="juris-ui home-shell bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Barra de Navegação -->
+    <a class="home-skip" href="#conteudo-principal">Pular para o conteúdo</a>
+{% include "_juris_nav.html" %}
+
+<main class="home-main about-main" id="conteudo-principal">
+    <p id="home-aviso" role="status" hidden></p>
+    <header class="about-heading"><span class="home-eyebrow">CONHEÇA O JURISHOME</span><h1>Tecnologia para facilitar<br>o estudo do Direito.</h1><p>Um projeto feito por estudantes, para aproximar pessoas do conhecimento jurídico.</p></header>
+    <section class="about-intro" aria-labelledby="about-project">
+        <div><h2 id="about-project">Sobre o projeto</h2><p>O JurisHome nasceu como Projeto Final de Curso, com a proposta de reunir conteúdos jurídicos em um ambiente simples e organizado.</p><p>Com matérias por área do Direito, glossário e atividades como o Juridle, queremos tornar a consulta e o aprendizado mais acessíveis. Desenvolvemos o projeto com atenção à clareza das informações, à segurança e à experiência de quem está começando.</p></div>
+        <div class="about-brand"><img src="/static/images/logo.png" alt="JurisHome" width="260"><span>Conhecimento, organização e aprendizado.</span></div>
+    </section>
+    <section class="about-team" aria-labelledby="about-team-title">
+        <header><span class="home-eyebrow">QUEM FAZ ACONTECER</span><h2 id="about-team-title">Nossa equipe</h2><p>Três integrantes, construindo e aprimorando o JurisHome em conjunto.</p></header>
+        <div class="about-team-grid">
+            {% for iniciais, nome in [('ES', 'Erick Santos Barbosa'), ('GF', 'Gabriel Agustín Fernández Alves'), ('PH', 'Pedro Henrique Harada Pecegueiro')] %}
+            <article class="about-person"><span class="about-initials" aria-hidden="true">{{ iniciais }}</span><h3>{{ nome }}</h3><p>Equipe de desenvolvimento</p></article>
+            {% endfor %}
+        </div>
+    </section>
+    <section class="about-contact"><div><h2>Vamos conversar?</h2><p>Dúvidas, sugestões ou comentários sobre o projeto são bem-vindos.</p></div><a href="mailto:jurishome2026@gmail.com">jurishome2026@gmail.com</a></section>
+</main>{% include "_legal_links.html" %}</body></html>

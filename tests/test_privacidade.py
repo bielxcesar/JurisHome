@@ -70,7 +70,7 @@ class PrivacidadeTests(unittest.TestCase):
         self.db.commit()
         resultado = manter_administrador(alvo.uuid, ManutencaoAdministrador(nome="Suporte Alterado", versao=alvo.atualizado_em.isoformat()), self.db, root)
         self.assertEqual("suporte@example.invalid", alvo.email)
-        self.assertNotIn(alvo.email, json.dumps(resultado))
+        self.assertEqual(alvo.email, resultado["administrador"]["email"])
 
     def test_remocao_desvincula_suporte_e_elimina_identificadores_de_logs(self):
         feedback = self._feedback()

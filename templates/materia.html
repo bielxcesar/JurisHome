@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ materia.titulo }} | JurisHome</title>
-    <link rel="icon" href="/static/images/micrologo.png.png" type="image/png">
-    <script>try { document.documentElement.dataset.theme = localStorage.getItem('tema_juris') === 'claro' ? 'light' : 'dark'; document.documentElement.classList.toggle('dark', document.documentElement.dataset.theme !== 'light'); } catch {}</script>
+<script>try { document.documentElement.dataset.theme = localStorage.getItem('tema_juris') === 'claro' ? 'light' : 'dark'; document.documentElement.classList.toggle('dark', document.documentElement.dataset.theme !== 'light'); } catch {}</script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
     <link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav">
     <link rel="stylesheet" href="/static/css/materia.css?v=20261030-5-4">
     <script defer src="/static/js/materia.js?v=20261108-nav"></script>
+    {% include "_favicon.html" %}
 </head>
 <body class="juris-ui materia-shell">
     <a class="materia-skip" href="#conteudo-materia">Ir para o conteúdo da matéria</a>

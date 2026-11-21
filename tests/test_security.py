@@ -42,6 +42,17 @@ from routes.auth import (
 
 
 class TestesSeguranca(unittest.TestCase):
+    def test_sobre_nos_menu_e_equipe_sem_secoes_recolhiveis(self):
+        status, _, corpo = self._request('GET', '/sobre-nos')
+        self.assertEqual(200, status)
+        pagina = corpo.decode()
+        for nome in ('Erick Santos Barbosa', 'Gabriel Agustín Fernández Alves', 'Pedro Henrique Harada Pecegueiro'):
+            self.assertIn(nome, pagina)
+        self.assertNotIn('<details', pagina)
+        self.assertIn('href="/sobre-nos" aria-current="page"', pagina)
+        self.assertIn('href="/"', pagina)
+        self.assertIn('href="mailto:jurishome2026@gmail.com"', pagina)
+
     def test_validacao_mensagem_novo_acesso_e_revogacao_administrativa(self):
         usuario = self._usuario()
         antigo = criar_access_token(usuario)
@@ -60,21 +71,29 @@ class TestesSeguranca(unittest.TestCase):
         self.assertEqual(401, status)
         self.assertNotIn('x-session-reason', headers)
 
-    def test_validacao_email_completo_somente_na_consulta_administrativa(self):
+    def test_validacao_email_completo_somente_no_perfil_administrativo(self):
         leitor = self._usuario(email='leitor-contato@example.test')
         suporte = self._usuario(TipoUsuario.ADMINISTRADOR)
+        root = self._usuario(TipoUsuario.ADMINISTRADOR)
+        root.e_root_admin = True
+        self.db.commit()
         token = criar_access_token(suporte)
         status, _, corpo = self._request('GET', '/api/admin/usuarios', token=token)
         self.assertEqual(200, status)
         self.assertNotIn(leitor.email, corpo.decode())
-        url = '/api/admin/usuarios/'+leitor.uuid+'/detalhes'
+        url = '/admin/usuarios/'+leitor.uuid
         status, headers, corpo = self._request('GET', url, token=token)
         self.assertEqual(200, status)
-        self.assertEqual(leitor.email, json.loads(corpo)['email'])
+        self.assertIn(leitor.email, corpo.decode())
+        self.assertNotIn('<details', corpo.decode())
         self.assertIn('no-store', headers['cache-control'])
         self.assertEqual(1, self.db.query(models.LogAuditoria).filter_by(acao='dados_usuario_consultados').count())
-        self.assertEqual(403, self._request('GET', url, token=criar_access_token(leitor))[0])
-        self.assertEqual(401, self._request('GET', url)[0])
+        self.assertEqual(404, self._request('GET', url, token=criar_access_token(leitor))[0])
+        self.assertEqual(404, self._request('GET', url)[0])
+        token_root = criar_access_token(root)
+        status, _, corpo = self._request('GET', '/admin/administradores/'+suporte.uuid, token=token_root)
+        self.assertEqual(200, status)
+        self.assertIn(suporte.email, corpo.decode())
 
     def test_validacao_presenca_avisa_sobre_nova_versao_legal(self):
         from services.lgpd import revisao_vigente, versao_legal

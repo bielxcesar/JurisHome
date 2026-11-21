@@ -82,7 +82,7 @@ async def validar_origem_requisicao(request: Request, call_next):
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
-    return RedirectResponse(url="/static/images/logo.png")
+    return RedirectResponse(url="/static/images/micrologo.png.png?v=20261121", headers={"Cache-Control": "no-cache"})
 
 
 @app.middleware("http")
@@ -145,7 +145,7 @@ async def tratar_erro_http(request: Request, erro: StarletteHTTPException):
         resposta.delete_cookie("jurishome_refresh_token", path="/")
         return resposta
     if erro.status_code == 401 and (
-        request.url.path in paginas_protegidas or request.url.path.startswith(("/materia/", "/admin/administradores/"))
+        request.url.path in paginas_protegidas or request.url.path.startswith(("/materia/", "/admin/administradores/", "/admin/usuarios/"))
     ):
         if request.cookies.get("jurishome_refresh_token"):
             return RedirectResponse(url="/renovar-sessao?destino=" + quote(request.url.path, safe=""), status_code=303)

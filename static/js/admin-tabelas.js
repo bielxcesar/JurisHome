@@ -39,22 +39,9 @@ function usuarios() {
   tr.append(criar('td',u.e_root_admin?'Administrador principal':u.tipo==='administrador'?'Administrador':'Leitor'));
   const status=criar('td');status.append(criar('span',u.is_2fa_enabled?'Ativa':'Inativa','badge '+(u.is_2fa_enabled?'success':'neutral')));tr.append(status);
   tr.append(criar('td',u.solicitou_ajuda?'Recuperação 2FA solicitada':'Sem solicitação'));
-  const detalhes=criar('details');
-  const resumo=criar('summary','Ver informações');
-  const contato=criar('p');contato.setAttribute('aria-live','polite');
-  detalhes.append(resumo,contato);nome.append(detalhes);
-  let consulta=0;
-  detalhes.addEventListener('toggle',async()=>{
-   const atual=++consulta;
-   contato.textContent='';
-   if(!detalhes.open)return;
-   contato.textContent='Carregando contato...';
-   try{const dados=await requisitar('/api/admin/usuarios/'+encodeURIComponent(u.uuid)+'/detalhes');
-    if(detalhes.open&&consulta===atual)contato.textContent='E-mail: '+dados.email;
-   }catch(erro){if(detalhes.open&&consulta===atual)contato.textContent=erro.message;}
-  });
   const acoes=criar('td');
-  if(u.e_root_admin)acoes.textContent='Conta protegida';
+  const verPerfil=criar('a','Ver perfil','button');verPerfil.href='/admin/usuarios/'+encodeURIComponent(u.uuid);verPerfil.setAttribute('aria-label','Ver perfil de '+u.nome);acoes.append(verPerfil);
+  if(u.e_root_admin)acoes.append(criar('span','Conta protegida'));
   else if(root && u.tipo === 'administrador') {
    const grupo=criar('div',undefined,'actions');
    const editar=criar('a','Editar','button');editar.href='/admin/administradores/'+encodeURIComponent(u.uuid);editar.setAttribute('aria-label','Editar administrador '+u.nome);
@@ -62,7 +49,7 @@ function usuarios() {
    grupo.append(editar,excluir);acoes.append(grupo);
   }
   else if(!root && (u.is_2fa_enabled || u.solicitou_ajuda)) { const b=criar('button','Resetar 2FA','danger');b.addEventListener('click',()=>executar(b,async()=>{if(!confirm('O autenticador atual será revogado. Continuar?'))return;await requisitar('/api/admin/resetar-2fa/'+encodeURIComponent(u.uuid),'POST');aviso('Autenticador revogado. O usuário deverá configurar o 2FA novamente.');await carregar();}));acoes.append(b); }
-  else acoes.textContent='Somente leitura';
+  else acoes.append(criar('span','Somente leitura'));
   tr.append(acoes);body.append(tr);
  }
  if(!filtrados.length) { const r=criar('tr'); const td=criar('td','Nenhum usuário encontrado.');td.colSpan=5;r.append(td);body.append(r); }

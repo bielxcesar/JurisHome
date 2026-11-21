@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Painel inicial do JurisHome com matérias organizadas por categoria">
+    <title>Perfil do usuário | JurisHome</title>
+<!-- Tailwind via CDN para padronização -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav">
+<link rel="stylesheet" href="/static/css/home.css?v=20261108-nav">
+<script>(()=>{let claro=false;try{claro=localStorage.getItem('tema_juris')==='claro';}catch(_){}document.documentElement.dataset.theme=claro?'light':'dark';document.documentElement.classList.toggle('dark',!claro);})();</script>
+<script src="/static/js/session.js?v=validacao-20261121" defer></script><script src="/static/js/curiosidades.js?v=20261108-nav" defer></script>
+<link rel="stylesheet" href="/static/css/admin-perfil.css?v=perfil-contato-20261121">
+    {% include "_favicon.html" %}
+</head>
+<body class="juris-ui home-shell bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Barra de Navegação -->
+    <a class="home-skip" href="#conteudo-principal">Pular para o conteúdo</a>
+{% include "_juris_nav.html" %}
+
+<main class="home-main admin-profile" id="conteudo-principal">
+    <a class="admin-profile-back" href="/admin/tabela-noticias#usuarios"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Voltar aos usuários</span></a>
+    <header class="admin-profile-heading"><span class="home-eyebrow">ADMINISTRAÇÃO · CONSULTA DE CONTA</span><h1>Perfil do usuário</h1><p>Informações de contato e segurança para o atendimento desta conta.</p></header>
+    <section class="admin-profile-card">
+        <div class="admin-profile-identity">
+            <div class="admin-profile-avatar" aria-hidden="true">{% if conta.foto %}<img src="{{ conta.foto }}" alt="">{% else %}{{ conta.nome[:1] | upper }}{% endif %}</div>
+            <div><h2>{{ conta.nome }}</h2><p class="admin-profile-email">{{ conta.email }}</p><span class="admin-profile-role">{{ conta.perfil }}</span></div>
+        </div>
+        <dl class="admin-profile-contact">
+            <div><dt>Nome completo</dt><dd>{{ conta.nome }}</dd></div>
+            <div><dt>E-mail da conta</dt><dd>{{ conta.email }}</dd></div>
+            <div><dt>Perfil de acesso</dt><dd>{{ conta.perfil }}</dd></div>
+            <div><dt>Conta criada em</dt><dd>{% if conta.criadoEm %}{{ conta.criadoEm[8:10] }}/{{ conta.criadoEm[5:7] }}/{{ conta.criadoEm[:4] }}{% else %}Não registrada{% endif %}</dd></div>
+        </dl>
+        <div class="admin-profile-stats">
+            <div><span>Autenticação 2FA</span><strong>{{ 'Ativa' if conta.is_2fa_enabled else 'Configuração pendente' }}</strong></div>
+            <div><span>Sessões ativas</span><strong>{{ conta.sessoesAtivas }}</strong></div>
+        </div>
+        <p class="admin-profile-hint">Consulta restrita à equipe administrativa e registrada na auditoria. Esta página não altera dados ou permissões da conta.</p>
+    </section>
+</main>{% include "_legal_links.html" %}</body></html>
