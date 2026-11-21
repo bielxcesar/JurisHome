@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException, Response
 from sqlalchemy.exc import IntegrityError
 
-from auth.security import _decodificar_token, criar_access_token, prazo_sessao
+from auth.security import _decodificar_token, criar_access_token, prazo_sessao, erro_novo_acesso, sessao_substituida
 from model.models import DesafioConsumido, CodigoTotpConsumido, RefreshToken, SessaoAutenticada, Usuario
 
 
@@ -94,6 +94,8 @@ def renovar_sessao(db, token):
     garantir_transacao(db)
     registro = db.get(RefreshToken, digest(token)) if token else None
     sessao = db.query(SessaoAutenticada).filter_by(id=registro.sessao_id).populate_existing().with_for_update().first() if registro else None
+    if sessao and sessao_substituida(db, sessao):
+        raise erro_novo_acesso()
     if not sessao or sessao.revogada or prazo_sessao(sessao) <= agora():
         raise negar()
     # UPDATE condicional impede duas renovações com o mesmo token, inclusive entre processos.

@@ -42,10 +42,91 @@ from routes.auth import (
 
 
 class TestesSeguranca(unittest.TestCase):
+    def test_validacao_mensagem_novo_acesso_e_revogacao_administrativa(self):
+        usuario = self._usuario()
+        antigo = criar_access_token(usuario)
+        novo = criar_access_token(usuario)
+        status, headers, corpo = self._request('GET', '/api/usuarios/me', token=antigo)
+        self.assertEqual(401, status)
+        self.assertEqual('novo_acesso', headers['x-session-reason'])
+        self.assertIn('novo acesso', json.loads(corpo)['detail'])
+        self.assertEqual(200, self._request('GET', '/api/usuarios/me', token=novo)[0])
+        status, headers, _ = self._request('GET', '/perfil', cookie='jurishome_access_token='+antigo)
+        self.assertEqual(303, status)
+        self.assertEqual('/?sessao=substituida', headers['location'])
+        usuario.token_validos_apos = datetime.now(timezone.utc).replace(tzinfo=None)
+        self.db.commit()
+        status, headers, _ = self._request('GET', '/api/usuarios/me', token=antigo)
+        self.assertEqual(401, status)
+        self.assertNotIn('x-session-reason', headers)
+
+    def test_validacao_email_completo_somente_na_consulta_administrativa(self):
+        leitor = self._usuario(email='leitor-contato@example.test')
+        suporte = self._usuario(TipoUsuario.ADMINISTRADOR)
+        token = criar_access_token(suporte)
+        status, _, corpo = self._request('GET', '/api/admin/usuarios', token=token)
+        self.assertEqual(200, status)
+        self.assertNotIn(leitor.email, corpo.decode())
+        url = '/api/admin/usuarios/'+leitor.uuid+'/detalhes'
+        status, headers, corpo = self._request('GET', url, token=token)
+        self.assertEqual(200, status)
+        self.assertEqual(leitor.email, json.loads(corpo)['email'])
+        self.assertIn('no-store', headers['cache-control'])
+        self.assertEqual(1, self.db.query(models.LogAuditoria).filter_by(acao='dados_usuario_consultados').count())
+        self.assertEqual(403, self._request('GET', url, token=criar_access_token(leitor))[0])
+        self.assertEqual(401, self._request('GET', url)[0])
+
+    def test_validacao_presenca_avisa_sobre_nova_versao_legal(self):
+        from services.lgpd import revisao_vigente, versao_legal
+        leitor = self._usuario()
+        versao = versao_legal(revisao_vigente(self.db))
+        leitor.versao_termos = versao
+        self.db.commit()
+        token = criar_access_token(leitor)
+        cookie = 'jurishome_access_token='+token
+        origem = ((b'origin', b'http://testserver'),)
+        status, headers, _ = self._request('POST', '/api/auth/presenca', cookie=cookie, extra_headers=origem)
+        self.assertEqual(204, status)
+        self.assertNotIn('x-legal-acceptance', headers)
+        self.db.add(models.RevisaoLegal(anterior=versao, termos='Novo termo', politica='Nova política', publicada_em=datetime.now(timezone.utc).replace(tzinfo=None)))
+        self.db.commit()
+        status, headers, _ = self._request('POST', '/api/auth/presenca', cookie=cookie, extra_headers=origem)
+        self.assertEqual(204, status)
+        self.assertEqual('required', headers['x-legal-acceptance'])
+        self.assertEqual(428, self._request('GET', '/api/usuarios/me', token=token)[0])
+
+    def test_validacao_interface_recuperacao_e_perfil_sem_historico(self):
+        status, _, corpo = self._request('GET', '/problemas-acesso')
+        self.assertEqual(200, status)
+        self.assertIn('data-password-toggle="reset-2fa-senha"', corpo.decode())
+        status, _, corpo = self._request('GET', '/2fatores')
+        self.assertEqual(200, status)
+        self.assertNotIn('Perdeu o acesso ao autenticador?', corpo.decode())
+        admin = self._usuario(TipoUsuario.ADMINISTRADOR)
+        status, _, corpo = self._request('GET', '/perfil', token=criar_access_token(admin))
+        self.assertEqual(200, status)
+        self.assertNotIn('Histórico de aceite dos documentos', corpo.decode())
+        self.assertIn('Versão dos documentos', corpo.decode())
+
+    def test_validacao_recuperacao_limita_envios_e_nao_duplica_pedido(self):
+        usuario = self._usuario()
+        dados = {'email':usuario.email, 'senha':'SenhaSegura123!'}
+        self.assertEqual(200, self._request('POST','/api/solicitar-reset-2fa', dados)[0])
+        status, headers, _ = self._request('POST','/api/solicitar-reset-2fa', dados)
+        self.assertEqual(429, status)
+        self.assertGreater(int(headers['retry-after']), 0)
+        with patch('services.limites_operacoes.agora', return_value=datetime.now(timezone.utc).replace(tzinfo=None)+timedelta(minutes=2)):
+            status, _, corpo = self._request('POST','/api/solicitar-reset-2fa', dados)
+        self.assertEqual(200, status)
+        self.assertTrue(json.loads(corpo)['em_andamento'])
+        self.assertEqual(1, self.db.query(models.FeedbackAtendimento).count())
+
     def test_cadastro_limite_por_origem_e_penalidade_persistente(self):
         dados = {'nome': 'João', 'sobrenome': 'Silva', 'interesse': 'Direito Civil',
                  'email': 'primeiro@example.test', 'senha': 'NovaSenha!123',
                  'confirmar_senha': 'NovaSenha!123', 'consentimento_lgpd': True}
+        from services.lgpd import revisao_vigente, versao_legal
+        dados['versao_documentos'] = versao_legal(revisao_vigente(self.db))
         status, _, _ = self._request('POST', '/api/auth/cadastro', dados, cliente='198.51.100.5')
         self.assertEqual(status, 201)
 
@@ -125,7 +206,7 @@ class TestesSeguranca(unittest.TestCase):
         status, _, corpo = self._request('POST', '/api/solicitar-reset-2fa', dados)
         self.assertEqual(status, 200)
         self.assertIn('administradores', json.loads(corpo)['mensagem'])
-        self.assertEqual(self._request('POST', '/api/solicitar-reset-2fa', dados)[0], 200)
+        self.assertEqual(self._request('POST', '/api/solicitar-reset-2fa', dados)[0], 429)
         self.assertEqual(self.db.query(models.FeedbackAtendimento).count(), 1)
         token = criar_access_token(suporte)
         status, _, corpo = self._request('GET', '/api/admin/usuarios', token=token)

@@ -62,3 +62,14 @@ def verificar_materia(db, usuario_id):
 def concluir(registro, minutos):
     registro.proxima_em = agora() + timedelta(minutes=minutos)
     registro.insistencias = 0
+
+
+def verificar_recuperacao_2fa(db, request):
+    identificador = origem(request)
+    if not identificador:
+        return None
+    registro = obter(db, 'recuperacao-2fa', identificador)
+    if registro.proxima_em and registro.proxima_em > agora():
+        restante = max(1, math.ceil((registro.proxima_em - agora()).total_seconds()))
+        raise HTTPException(429, 'Aguarde um minuto entre solicitações de recuperação.', headers={'Retry-After': str(restante)})
+    return registro

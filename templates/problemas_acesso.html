@@ -20,7 +20,10 @@
                 <label for="reset-2fa-email">E-mail</label>
                 <input id="reset-2fa-email" type="email" maxlength="150" autocomplete="email" required>
                 <label for="reset-2fa-senha">Senha</label>
-                <input id="reset-2fa-senha" type="password" maxlength="72" autocomplete="current-password" required>
+                <div class="password-input-wrap">
+                    <input id="reset-2fa-senha" type="password" maxlength="72" autocomplete="current-password" required>
+                    <button class="password-toggle" type="button" data-password-toggle="reset-2fa-senha" aria-label="Mostrar senha" aria-pressed="false">Mostrar</button>
+                </div>
                 <p class="auth-message" id="auth-message" role="status" aria-live="polite" hidden></p>
                 <button type="submit" class="btn-proximo">Solicitar recuperação</button>
             </form>
@@ -28,6 +31,6 @@
         <p><a href="/recuperar-senha">Esqueci minha senha</a></p>
     </main>
     {% include "_legal_links.html" %}
-    <script src="/static/js/auth.js?v=20261115-recuperacao"></script>
+    <script src="/static/js/auth.js?v=validacao-20261121"></script>
 </body>
 </html>

@@ -40,11 +40,13 @@
         const parametros = new URLSearchParams(window.location.search);
         if (parametros.has("sessao")) {
             localStorage.removeItem(TOKEN_KEY);
-            mostrarMensagem("Sua sessão terminou. Entre novamente.");
+            mostrarMensagem(parametros.get("sessao") === "substituida" ? "Sua sessão foi encerrada porque houve um novo acesso à sua conta. Entre novamente para continuar." : "Sua sessão terminou. Entre novamente.");
         } else if (parametros.get("senha") === "alterada") {
             mostrarMensagem("Senha alterada com sucesso. Entre com a nova senha.", false);
         }
         if(parametros.get('bloqueio')==='encerrado')mostrarMensagem('Tempo de espera encerrado. Entre novamente para continuar.',false);
+        if (parametros.get('recuperacao') === 'enviada') mostrarMensagem('Solicitação enviada aos administradores. Aguarde a redefinição do autenticador antes de entrar novamente.', false);
+        if (parametros.get('recuperacao') === 'em-andamento') mostrarMensagem('Você já possui uma solicitação em andamento. Aguarde o atendimento dos administradores.', false);
         configurarAlternanciaSenha();
         configurarLogin();
         configurarCadastro();
@@ -196,6 +198,7 @@
         formulario.addEventListener('submit', async evento => {
             evento.preventDefault();
             if (formulario.dataset.enviando === 'true') return;
+            formulario.dataset.enviando = 'true';
             const botao = formulario.querySelector('button[type=submit]');
             const campoSenha = document.getElementById('reset-2fa-senha');
             alternarCarregamento(botao, true, 'Enviando...');
@@ -204,9 +207,9 @@
                     method: 'POST', body: JSON.stringify({email: document.getElementById('reset-2fa-email').value.trim().toLowerCase(), senha: campoSenha.value})
                 });
                 campoSenha.value = '';
-                mostrarMensagem(resposta.mensagem, false);
+                location.replace('/?recuperacao=' + (resposta.em_andamento ? 'em-andamento' : 'enviada'));
             } catch (erro) { mostrarMensagem(erro.message); }
-            finally { alternarCarregamento(botao, false, 'Solicitar recuperação'); }
+            finally { formulario.dataset.enviando = 'false'; alternarCarregamento(botao, false, 'Solicitar recuperação'); }
         });
     }
 

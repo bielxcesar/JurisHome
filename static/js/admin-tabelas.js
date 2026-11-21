@@ -39,6 +39,20 @@ function usuarios() {
   tr.append(criar('td',u.e_root_admin?'Administrador principal':u.tipo==='administrador'?'Administrador':'Leitor'));
   const status=criar('td');status.append(criar('span',u.is_2fa_enabled?'Ativa':'Inativa','badge '+(u.is_2fa_enabled?'success':'neutral')));tr.append(status);
   tr.append(criar('td',u.solicitou_ajuda?'Recuperação 2FA solicitada':'Sem solicitação'));
+  const detalhes=criar('details');
+  const resumo=criar('summary','Ver informações');
+  const contato=criar('p');contato.setAttribute('aria-live','polite');
+  detalhes.append(resumo,contato);nome.append(detalhes);
+  let consulta=0;
+  detalhes.addEventListener('toggle',async()=>{
+   const atual=++consulta;
+   contato.textContent='';
+   if(!detalhes.open)return;
+   contato.textContent='Carregando contato...';
+   try{const dados=await requisitar('/api/admin/usuarios/'+encodeURIComponent(u.uuid)+'/detalhes');
+    if(detalhes.open&&consulta===atual)contato.textContent='E-mail: '+dados.email;
+   }catch(erro){if(detalhes.open&&consulta===atual)contato.textContent=erro.message;}
+  });
   const acoes=criar('td');
   if(u.e_root_admin)acoes.textContent='Conta protegida';
   else if(root && u.tipo === 'administrador') {

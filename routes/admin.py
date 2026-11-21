@@ -681,3 +681,17 @@ def decidir_materia(
         detalhes={"versao": curadoria.versao})
     db.commit()
     return {"mensagem": "Matéria aprovada." if dados.decisao == "aprovar" else "Matéria devolvida ao autor."}
+
+
+@router.get("/api/admin/usuarios/{usuario_id}/detalhes")
+def detalhes_usuario(usuario_id: str, db: Session = Depends(get_db),
+                     administrador: Usuario = Depends(get_current_user)):
+    if administrador.tipo_usuario != TipoUsuario.ADMINISTRADOR:
+        raise HTTPException(403, "Acesso negado.")
+    alvo = db.get(Usuario, usuario_id)
+    if alvo is None or db.get(AdministradorExcluido, usuario_id):
+        raise HTTPException(404, "Usuário não encontrado.")
+    registrar_auditoria(db, acao="dados_usuario_consultados", recurso_tipo="usuario",
+                        recurso_id=alvo.uuid, resultado="sucesso", usuario=administrador,
+                        detalhes={"escopo": "contato"}, commit=True)
+    return JSONResponse({"nome": alvo.nome, "email": alvo.email}, headers={"Cache-Control": "no-store"})

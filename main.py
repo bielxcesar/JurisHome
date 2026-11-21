@@ -139,6 +139,11 @@ async def tratar_erro_http(request: Request, erro: StarletteHTTPException):
         "/exibir-mais", "/categorias",
         "/perfil", "/pesquisa", "/feedback", "/juridle", "/juridle/ampliar", "/curiosidades", "/conhecimento", "/admin/tabela-noticias",
     }
+    if erro.status_code == 401 and (erro.headers or {}).get("X-Session-Reason") == "novo_acesso" and eh_pagina(request):
+        resposta = RedirectResponse("/?sessao=substituida", status_code=303, headers={"Cache-Control": "no-store"})
+        resposta.delete_cookie("jurishome_access_token", path="/")
+        resposta.delete_cookie("jurishome_refresh_token", path="/")
+        return resposta
     if erro.status_code == 401 and (
         request.url.path in paginas_protegidas or request.url.path.startswith(("/materia/", "/admin/administradores/"))
     ):

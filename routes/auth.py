@@ -58,7 +58,7 @@ from model.models import (
 )
 from services.auditoria import registrar_auditoria
 from services.direitos_titular import (anonimizar_feedbacks_atendimento,anonimizar_feedbacks_legados,anonimizar_usuario, remover_vinculos_desnecessarios, remover_foto_local,)
-from services.lgpd import registrar_aceite, revisao_vigente, versao_legal
+from services.lgpd import aceite_pendente, registrar_aceite, revisao_vigente, versao_legal
 
 router = APIRouter(prefix="/api", tags=["Autenticação e usuários"])
 
@@ -293,6 +293,7 @@ class PedidoReset2FA(ModeloSeguro):
 @router.post("/solicitar-reset-2fa")
 def solicitar_reset_2fa(dados: PedidoReset2FA, db: Session = Depends(get_db), request: Request = None,
                        feedback_db: Session = Depends(get_feedback_db)):
+    limite_recuperacao = limites_operacoes.verificar_recuperacao_2fa(db, request)
     baldes = limites_auth.preparar(db, request, dados.email)
     usuario = db.query(Usuario).filter(Usuario.email == dados.email).populate_existing().with_for_update().first()
     limites_auth.exigir_liberado(baldes, usuario)
@@ -319,8 +320,11 @@ def solicitar_reset_2fa(dados: PedidoReset2FA, db: Session = Depends(get_db), re
         FeedbackAtendimento.arquivado.is_(False),
     ).first()
 
+    if limite_recuperacao is not None:
+        limites_operacoes.concluir(limite_recuperacao, 1)
     if pedido_existente:
-        return {"mensagem": "Você já possui uma solicitação em andamento. Aguarde o suporte."}
+        db.commit()
+        return {"mensagem": "Você já possui uma solicitação em andamento. Aguarde o suporte.", "em_andamento": True}
 
     protocolo_gerado = f"REQ-{str(uuid.uuid4())[:8].upper()}"
     novo_chamado = FeedbackAtendimento(
@@ -992,3 +996,4 @@ def confirmar_presenca(
         db.rollback()
         raise HTTPException(401, "Entre novamente para continuar.")
     db.commit()
+    return Response(status_code=204, headers={"X-Legal-Acceptance": "required"} if aceite_pendente(db, usuario) else {})

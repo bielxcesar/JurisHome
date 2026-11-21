@@ -15,7 +15,7 @@ from model.models import Categoria, TipoUsuario, Usuario
 from services.categorias import CATALOGO
 from services.dashboard_usuario import obter_dashboard_estudos, registrar_acesso_categoria
 from services.imagens import normalizar_imagem_bytes
-from services.lgpd import data_aceite_local, historico_aceites, revisao_vigente, versao_legal
+from services.lgpd import data_aceite_local, revisao_vigente, versao_legal
 from services.validacao import ModeloSeguro, area_interesse, linha, nome_pessoa
 
 router = APIRouter()
@@ -48,7 +48,6 @@ def pagina_perfil(
         context={
             "usuario": usuario,
             "data_aceite": data_aceite_local(usuario.data_consentimento),
-            "historico_aceites": historico_aceites(db, usuario),
             "dois_fatores_ativos": bool(usuario.is_2fa_enabled and usuario.totp_secret),
             "versao_legal_atual": versao_atual,
             "aceite_atual": bool(usuario.consentimento_lgpd and usuario.versao_termos == versao_atual),

@@ -300,6 +300,8 @@ def get_current_user_sem_aceite(
 
     agora_utc = datetime.now(timezone.utc)
     sessao = db.get(SessaoAutenticada, payload.get("sid")) if isinstance(payload.get("sid"), str) else None
+    if sessao and sessao.usuario_id == usuario.uuid and sessao_substituida(db, sessao):
+        raise erro_novo_acesso()
     if (not sessao or sessao.usuario_id != usuario.uuid or sessao.revogada
             or prazo_sessao(sessao) <= agora_utc.replace(tzinfo=None)):
         raise credenciais_invalidas
@@ -360,3 +362,24 @@ def get_current_admin(usuario: Usuario = Depends(get_current_user)) -> Usuario:
             detail="Acesso restrito a administradores.",
         )
     return usuario
+
+
+def sessao_substituida(db: Session, sessao: SessaoAutenticada) -> bool:
+    if not sessao.revogada:
+        return False
+    usuario = db.get(Usuario, sessao.usuario_id)
+    # Troca de senha e intervenção administrativa não são apresentadas como novo login.
+    if not usuario or (usuario.token_validos_apos and sessao.criada_em <= usuario.token_validos_apos.replace(tzinfo=None)):
+        return False
+    return db.query(SessaoAutenticada.id).filter(
+        SessaoAutenticada.usuario_id == sessao.usuario_id,
+        SessaoAutenticada.id != sessao.id,
+        SessaoAutenticada.criada_em >= sessao.criada_em,
+        SessaoAutenticada.revogada.is_(False),
+        SessaoAutenticada.expira_em > datetime.now(timezone.utc).replace(tzinfo=None),
+    ).first() is not None
+
+
+def erro_novo_acesso() -> HTTPException:
+    return HTTPException(401, "Sua sessão foi encerrada porque houve um novo acesso à sua conta. Entre novamente para continuar.",
+                         headers={"WWW-Authenticate": "Bearer", "X-Session-Reason": "novo_acesso"})
