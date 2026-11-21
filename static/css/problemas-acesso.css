@@ -1,0 +1,18 @@
+body.access-help-page{min-height:100svh;padding:32px 20px 20px;display:flex;flex-direction:column;justify-content:center;gap:24px;color:#f4f4f5;background-color:#18181b}
+body.access-help-page .overlay-login{background:rgba(0,0,0,.55)}
+.access-help-card{position:relative;z-index:1;width:min(100%,500px);margin:auto;padding:32px;border:1px solid #b8832c80;border-radius:24px;background:#191a1deb;box-shadow:0 24px 80px #0006;backdrop-filter:blur(18px)}
+.access-help-back{display:inline-flex;align-items:center;gap:8px;min-height:36px;color:#d7d7dc;text-decoration:none;font-size:14px;font-weight:500}
+.access-help-back svg{width:20px;height:20px}.access-help-back:hover{color:#ffbd38}
+.access-help-heading{margin:24px 0}.access-help-kicker{font-size:11px;font-weight:700;letter-spacing:.15em;color:#e7ac42}
+.access-help-heading h1{margin:10px 0 12px;font-size:clamp(24px,5vw,30px);line-height:1.2;letter-spacing:-.035em;color:#fff}
+.access-help-heading p{margin:0;color:#c0c0c9;font-size:15px;line-height:1.7}
+.access-help-form{display:flex;flex-direction:column;gap:20px}.access-help-field{display:flex;flex-direction:column;gap:8px}.access-help-field label{font-size:14px;font-weight:600;color:#e4e4e9}
+.access-help-field input{width:100%;height:52px;padding:0 15px;border:1px solid #505158;border-radius:10px;background:#101114;color:#fff;font-size:15px;transition:border-color .15s,box-shadow .15s}.access-help-field input::placeholder{color:#868792}.access-help-field input:focus{outline:none;border-color:#e7ac42;box-shadow:0 0 0 3px #e7ac4220}
+#form-reset-2fa .password-input-wrap{position:relative}#form-reset-2fa .password-input-wrap input{padding-right:90px}#form-reset-2fa .password-toggle{top:50%;right:10px;min-height:36px;font-size:13px;font-weight:600;color:#f1b64a}
+.access-help-submit{height:52px;padding:12px 20px;border:0;border-radius:10px;background:#f4ab1c;color:#17130a;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s,transform .15s}.access-help-submit:hover{background:#ffc44d}.access-help-submit:active{transform:translateY(1px)}.access-help-submit:disabled{opacity:.6;cursor:wait}
+.access-help-note{margin:24px 0;padding:15px 16px;border:1px solid #ffffff12;border-radius:12px;background:#ffffff05;font-size:13px;line-height:1.7;color:#acadb7}.access-help-note strong{display:block;margin-bottom:3px;color:#dedee4;font-weight:600}
+.access-help-footer{padding-top:20px;border-top:1px solid #ffffff14;display:flex;flex-wrap:wrap;gap:6px 10px;justify-content:space-between;font-size:13px;color:#a9aab4}.access-help-footer a{color:#edb74f;text-decoration:none;font-weight:600}.access-help-footer a:hover{text-decoration:underline}
+.access-help-page :is(a,button):focus-visible{outline:2px solid #f4ab1c;outline-offset:4px}
+.access-help-page>.legal-footer{position:relative;inset:auto;z-index:1;margin:0 auto;max-width:100%;flex-shrink:0}.access-help-page>.legal-footer nav{justify-content:center;flex-wrap:wrap}
+@media(max-width:520px){body.access-help-page{padding:20px 14px;gap:20px}.access-help-card{padding:24px 20px;border-radius:20px}.access-help-heading{margin:20px 0}.access-help-heading p{font-size:14px}.access-help-footer{flex-direction:column;gap:10px}}
+@media(prefers-reduced-motion:reduce){.access-help-page *{transition:none!important}}

@@ -1,34 +1,43 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Problemas para acessar | JurisHome</title>
     <link rel="stylesheet" href="/static/css/login.css?v=20260925-4">
     <link rel="stylesheet" href="/static/css/auth-figma.css?v=20261106-limites">
     <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
+    <link rel="stylesheet" href="/static/css/problemas-acesso.css?v=20261121-1">
 </head>
-<body class="bg-recovery">
-    <div class="overlay-login"></div>
-    <main class="card-2fatores auth-panel auth-two-factor">
-        <header class="header-2fatores"><a href="/" aria-label="Voltar ao login">←</a><h1>Problemas para acessar?</h1></header>
-        <div class="linha-divisoria"></div>
-        <details open>
-            <summary>Perdi acesso ao Authenticator</summary>
-            <p>Confirme seu e-mail e senha para solicitar a recuperação aos administradores.</p>
-            <form id="form-reset-2fa" class="form-2fatores">
-                <label for="reset-2fa-email">E-mail</label>
-                <input id="reset-2fa-email" type="email" maxlength="150" autocomplete="email" required>
+<body class="bg-recovery access-help-page">
+    <div class="overlay-login" aria-hidden="true"></div>
+    <main class="access-help-card" aria-labelledby="access-help-title">
+        <a class="access-help-back" href="/">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none"><path d="m14 6-6 6 6 6M8 12h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Voltar ao login
+        </a>
+        <header class="access-help-heading">
+            <span class="access-help-kicker">RECUPERAÇÃO DE ACESSO</span>
+            <h1 id="access-help-title">Problemas para acessar?</h1>
+            <p>Perdeu o acesso ao autenticador? Confirme seus dados para solicitar ajuda à equipe.</p>
+        </header>
+        <form id="form-reset-2fa" class="access-help-form">
+            <div class="access-help-field">
+                <label for="reset-2fa-email">E-mail da conta</label>
+                <input id="reset-2fa-email" type="email" maxlength="150" autocomplete="email" placeholder="seuemail@exemplo.com" required>
+            </div>
+            <div class="access-help-field">
                 <label for="reset-2fa-senha">Senha</label>
                 <div class="password-input-wrap">
-                    <input id="reset-2fa-senha" type="password" maxlength="72" autocomplete="current-password" required>
+                    <input id="reset-2fa-senha" type="password" maxlength="72" autocomplete="current-password" placeholder="Digite sua senha" required>
                     <button class="password-toggle" type="button" data-password-toggle="reset-2fa-senha" aria-label="Mostrar senha" aria-pressed="false">Mostrar</button>
                 </div>
-                <p class="auth-message" id="auth-message" role="status" aria-live="polite" hidden></p>
-                <button type="submit" class="btn-proximo">Solicitar recuperação</button>
-            </form>
-        </details>
-        <p><a href="/recuperar-senha">Esqueci minha senha</a></p>
+            </div>
+            <p class="auth-message" id="auth-message" role="status" aria-live="polite" hidden></p>
+            <button type="submit" class="access-help-submit">Solicitar recuperação</button>
+        </form>
+        <p class="access-help-note"><strong>O que acontece depois?</strong> Um administrador receberá sua solicitação. Após a redefinição, você poderá configurar um novo autenticador no próximo acesso.</p>
+        <div class="access-help-footer"><span>Não lembra a senha?</span><a href="/recuperar-senha">Recuperar minha senha <span aria-hidden="true">→</span></a></div>
     </main>
     {% include "_legal_links.html" %}
     <script src="/static/js/auth.js?v=validacao-20261121"></script>

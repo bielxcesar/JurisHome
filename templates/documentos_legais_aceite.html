@@ -5,28 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Confirme os documentos legais | JurisHome</title>
     <link rel="stylesheet" href="/static/css/legal.css?v=documentos-legais">
-</head>
-<body class="legal-page">
-    <main class="legal-document">
-        <h1>Confira os documentos atualizados</h1>
-        <p>Leia a versão {{ versao }} do Termo de Aceite e da Política de Privacidade antes de continuar.</p>
-        {% if erro %}<p class="legal-notice" role="alert">{{ erro }}</p>{% endif %}
-        <section>
-            <form class="legal-form" method="post" action="/aceitar-documentos">
-                <input type="hidden" name="versao" value="{{ versao }}">
-                <label>
-                    <input type="checkbox" name="aceite" value="sim" required>
-                    Li e aceito o <a href="/termos-de-aceite" target="_blank" rel="noopener">Termo de Aceite (abre em outra aba)</a>.
-                </label>
-                <label>
-                    <input type="checkbox" name="ciencia" value="sim" required>
-                    Li e declaro ciência da <a href="/politica-de-privacidade" target="_blank" rel="noopener">Política de Privacidade (abre em outra aba)</a>.
-                </label>
-                <button type="submit">Confirmar e continuar</button>
-            </form>
-        </section>
-    </main>
-    <script defer src="/static/js/erro.js?v=ultima-pagina"></script>
+    <link rel="stylesheet" href="/static/css/aceite-documentos.css?v=20261121-1">
+    <script defer src="/static/js/aceite-documentos.js?v=20261121-1"></script>
     <script defer src="/static/js/session.js?v=validacao-20261121"></script>
+</head>
+<body class="legal-page acceptance-page">
+    <main class="legal-document acceptance-main">
+        <header class="acceptance-heading"><span class="acceptance-kicker">TRANSPARÊNCIA E PRIVACIDADE</span>
+            <h1>Confira o que mudou</h1>
+            <p>Leia o Termo de Aceite e a Política de Privacidade para continuar usando o JurisHome.</p>
+            <span class="acceptance-version">Versão {{ versao }}</span>
+        </header>
+        {% if erro %}<p class="legal-notice" role="alert">{{ erro }}</p>{% endif %}
+        <noscript><p class="legal-notice">Ative o JavaScript para percorrer os documentos e registrar sua confirmação nesta tela.</p></noscript>
+        <form id="legal-acceptance-form" method="post" action="/aceitar-documentos" data-versao="{{ versao }}">
+            <input type="hidden" name="versao" value="{{ versao }}">
+            {% for tipo, titulo, conteudo, campo, rotulo in [('termos', 'Termo de Aceite', termos, 'aceite', 'Li e aceito o Termo de Aceite.'), ('privacidade', 'Política de Privacidade', politica, 'ciencia', 'Li e declaro ciência da Política de Privacidade.')] %}
+            <section class="acceptance-card" data-documento="{{ tipo }}">
+                <header><span class="acceptance-number">{{ loop.index }}</span><div><h2 id="titulo-{{ tipo }}">{{ titulo }}</h2><p>Percorra o texto até o final para liberar a confirmação.</p></div></header>
+                <div class="acceptance-reader" tabindex="0" role="region" aria-labelledby="titulo-{{ tipo }}" aria-describedby="estado-{{ tipo }}"><div class="acceptance-text">{{ conteudo }}</div></div>
+                <p class="acceptance-state" id="estado-{{ tipo }}" role="status" aria-live="polite">Aguardando a visualização até o final.</p>
+                <button class="acceptance-retry" type="button" hidden>Tentar novamente</button>
+                <input type="hidden" name="leitura_{{ tipo }}" value="">
+                <label class="acceptance-check"><input type="checkbox" name="{{ campo }}" value="sim" disabled required><span>{{ rotulo }}</span></label>
+            </section>
+            {% endfor %}
+            <div class="acceptance-actions"><p>As duas confirmações são necessárias para continuar.</p><button id="acceptance-submit" type="submit" disabled>Confirmar e continuar <span aria-hidden="true">→</span></button></div>
+        </form>
+    </main>
 </body>
 </html>

@@ -1,15 +1,17 @@
 """Publicação e aceite de versões dos documentos legais."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+
+import jwt
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from auth.security import get_current_user_sem_aceite
+from auth.security import ALGORITHM, SECRET_KEY, get_current_user_sem_aceite
 from database import get_db
 from model.models import LogAuditoria, RevisaoLegal, TipoUsuario, Usuario
 from services.administradores import exigir_root
@@ -168,7 +170,9 @@ def _render_aceite(request, revisao, *, erro=None, status_code=200):
     return templates.TemplateResponse(
         request=request,
         name="documentos_legais_aceite.html",
-        context={"versao": versao_legal(revisao), "erro": erro},
+        context={"versao": versao_legal(revisao), "erro": erro,
+                 "termos": revisao.termos or texto_inicial("termos"),
+                 "politica": revisao.politica or texto_inicial("privacidade")},
         headers=SEM_CACHE,
         status_code=status_code,
     )
@@ -192,12 +196,18 @@ def aceitar(
     versao: Annotated[str, Form(max_length=50)],
     aceite: Annotated[Literal["sim"], Form()],
     ciencia: Annotated[Literal["sim"], Form()],
+    leitura_termos: Annotated[str | None, Form(max_length=2000)] = None,
+    leitura_privacidade: Annotated[str | None, Form(max_length=2000)] = None,
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user_sem_aceite),
 ):
     revisao = revisao_vigente(db)
     if not revisao or versao != versao_legal(revisao):
         return _render_aceite(request, revisao, erro="Os documentos mudaram. Leia a nova versão antes de confirmar.", status_code=409)
+
+    if not (_visualizacao_valida(leitura_termos, usuario, versao, "termos")
+            and _visualizacao_valida(leitura_privacidade, usuario, versao, "privacidade")):
+        return _render_aceite(request, revisao, erro="Confira os dois documentos nesta tela antes de confirmar o aceite.", status_code=422)
 
     # Serializa confirmações simultâneas da mesma conta no PostgreSQL.
     usuario = db.query(Usuario).filter_by(uuid=usuario.uuid).populate_existing().with_for_update().one()
@@ -221,3 +231,30 @@ def aceitar(
         )
         db.commit()
     return RedirectResponse(_painel(usuario), status_code=303, headers=SEM_CACHE)
+
+
+@router.post("/api/legal/documentos/{tipo}/visualizacao")
+def registrar_visualizacao(tipo: TipoDocumento, versao: Annotated[str, Form(max_length=50)],
+                           db: Session = Depends(get_db),
+                           usuario: Usuario = Depends(get_current_user_sem_aceite)):
+    revisao = revisao_vigente(db)
+    if versao != versao_legal(revisao):
+        raise HTTPException(409, "Os documentos mudaram. Recarregue para conferir a nova versão.")
+    agora = datetime.now(timezone.utc)
+    recibo = jwt.encode({"sub": str(usuario.uuid), "tipo": "visualizacao_legal", "documento": tipo,
+                        "versao": versao, "iat": agora, "exp": agora + timedelta(minutes=30)},
+                       SECRET_KEY, algorithm=ALGORITHM)
+    return JSONResponse({"comprovante": recibo}, headers=SEM_CACHE)
+
+
+def _visualizacao_valida(comprovante, usuario, versao, tipo):
+    # É registro de apresentação do documento, não prova de leitura ou compreensão.
+    if not comprovante:
+        return False
+    try:
+        dados = jwt.decode(comprovante, SECRET_KEY, algorithms=[ALGORITHM],
+                           options={"require": ["sub", "tipo", "documento", "versao", "iat", "exp"]})
+    except jwt.PyJWTError:
+        return False
+    return (dados["sub"] == str(usuario.uuid) and dados["tipo"] == "visualizacao_legal"
+            and dados["versao"] == versao and dados["documento"] == tipo)
