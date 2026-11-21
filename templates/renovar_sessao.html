@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><title>Renovando sessão | JurisHome</title></head>
 <body><p id="estado">Renovando sua sessão…</p>
-<script src="/static/js/session.js?v=20261028-1"></script>
+<script src="/static/js/session.js?v=presenca-120s"></script>
 <script>
     window.JurisHomeRenovarSessao().then(resposta => {
         location.replace(resposta.ok ? {{ destino | tojson }} : '/?sessao=expirada');

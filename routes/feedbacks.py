@@ -1,4 +1,5 @@
 from services.validacao import ModeloSeguro
+from services.privacidade import mascarar_email
 import json
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -165,7 +166,7 @@ def _serializar(feedback: FeedbackAtendimento, incluir_interno: bool = True) -> 
         "usuario": {
             "id": feedback.usuario_id,
             "nome": feedback.usuario_nome,
-            "email": feedback.usuario_email,
+            "email": mascarar_email(feedback.usuario_email) if incluir_interno else feedback.usuario_email,
         },
         "tipo": feedback.tipo,
         "assunto": feedback.assunto,

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Revisão da matéria | JurisHome</title>
+    <link rel="stylesheet" href="/static/css/juris-ui.css">
+    <link rel="stylesheet" href="/static/css/materia.css">
+    <link rel="stylesheet" href="/static/css/legal.css">
+    <script src="/static/js/session.js?v=presenca-120s" defer></script>
+    <script src="/static/js/materia-curadoria.js" defer></script>
+</head>
+<body class="juris-ui materia-shell legal-page">
+<main class="legal-document" id="curadoria" data-id="{{ materia.uuid }}" data-versao="{{ curadoria.versao }}">
+    <a href="/admin/tabela-noticias">← Voltar às matérias</a>
+    <p>Versão {{ curadoria.versao }} · {{ 'Publicada' if materia.status.value == 'aprovado' else 'Devolvida para correção' if materia.status.value == 'rejeitado' else 'Aguardando revisão' }}</p>
+    {% if curadoria.orientacoes %}
+    <section aria-labelledby="orientacoes-titulo">
+        <h2 id="orientacoes-titulo">Orientações da curadoria</h2>
+        <p style="white-space:pre-wrap">{{ curadoria.orientacoes }}</p>
+    </section>
+    {% endif %}
+    <a href="/nova-materia?editar={{ materia.uuid }}">Editar texto, formatação, fontes e imagens</a>
+    <h1>{{ materia.titulo }}</h1>
+    {% if materia.sub_titulo %}<p>{{ materia.sub_titulo }}</p>{% endif %}
+    {% if fonte_original %}<p><a href="{{ fonte_original }}" target="_blank" rel="noopener noreferrer">Consultar fonte original ↗</a></p>{% endif %}
+    {% include "_materia_editorial.html" %}
+    {% if usuario.e_root_admin and materia.status.value == 'em_analise' %}
+    <section>
+        <h2>Decisão da curadoria</h2>
+        <form id="form-curadoria" class="legal-form">
+            <label for="orientacoes">Justificativa e orientações para correção</label>
+            <textarea id="orientacoes" maxlength="4000" rows="6" placeholder="Indique os trechos, problemas e correções necessárias.">{{ curadoria.orientacoes }}</textarea>
+            <label><input type="checkbox" id="revisao-conferida" required> Conferi o texto completo, a formatação, as fontes e as imagens.</label>
+            <button type="submit" value="aprovar">Aprovar e publicar</button>
+            <button type="submit" value="devolver">Devolver ao autor</button>
+        </form>
+        <p id="retorno-curadoria" role="status"></p>
+    </section>
+    {% endif %}
+</main>
+</body>
+</html>

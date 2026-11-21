@@ -52,12 +52,13 @@ from model.models import (
     JuridleRodada,
     RefreshToken,
     SessaoAutenticada,
+    PresencaSessao,
     TipoUsuario,
     Usuario,
 )
 from services.auditoria import registrar_auditoria
-from services.direitos_titular import (anonimizar_feedbacks_atendimento,anonimizar_feedbacks_legados,anonimizar_usuario,)
-from services.lgpd import revisao_vigente, versao_legal
+from services.direitos_titular import (anonimizar_feedbacks_atendimento,anonimizar_feedbacks_legados,anonimizar_usuario, remover_vinculos_desnecessarios, remover_foto_local,)
+from services.lgpd import registrar_aceite, revisao_vigente, versao_legal
 
 router = APIRouter(prefix="/api", tags=["Autenticação e usuários"])
 
@@ -221,7 +222,6 @@ def _salvar_cookie_de_sessao(response: Response, token: str, lembrar_conectado: 
         secure=os.getenv("COOKIE_SECURE", "false").lower() == "true",
         samesite="lax",
         path="/",
-        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60 if lembrar_conectado and validade_renovada is None else None,
     )
     if validade_renovada is not None:
         return
@@ -398,6 +398,7 @@ async def cadastrar_usuario(
     db.add(usuario)
     try:
         db.flush()
+        registrar_aceite(db, usuario)
         configuracao = preparar_configuracao_2fa(usuario, db, commit=False)
         for acao, recurso_tipo in (
             ("aceite_termo", "termo_aceite"),
@@ -803,7 +804,10 @@ def anonimizar_meus_dados(
     usuario_id = str(usuario.uuid)
     banco_feedback = db if feedback_db.get_bind() is db.get_bind() else feedback_db
 
+    foto_anterior = usuario.foto_perfil
     try:
+        remover_foto_local(foto_anterior)
+        remover_vinculos_desnecessarios(db, usuario)
         feedbacks_atendimento = anonimizar_feedbacks_atendimento(banco_feedback, usuario_id)
         feedbacks_legados = anonimizar_feedbacks_legados(db, usuario_id)
         db.query(JuridleQuestaoUso).filter_by(usuario_id=usuario_id).delete(synchronize_session=False)
@@ -837,16 +841,17 @@ def anonimizar_meus_dados(
             banco_feedback.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Não foi possível concluir a anonimização. Nenhuma nova tentativa foi iniciada.",
+            detail="Não foi possível concluir integralmente a remoção. Contate o suporte para conferir os registros nos bancos envolvidos.",
         ) from erro
 
     apagar_cookies(response)
     return {
-        "mensagem": "Dados pessoais anonimizados e sessão encerrada.",
+        "mensagem": "Dados pessoais removidos e sessão encerrada. Registros técnicos mínimos permanecem pseudonimizados.",
         "registro_preservado": {
             "usuario_id": usuario_id,
             "logs_auditoria": "preservados sem conteúdo sensível",
-            "protocolos_feedback": "preservados sem identificação ou mensagens",
+            "protocolos_feedback": "preservados sem vínculo com a conta ou mensagens; continuam sujeitos a acesso restrito",
+            "natureza": "pseudonimizacao_dos_registros_residuais",
         },
     }
 
@@ -961,3 +966,29 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
     _salvar_cookie_de_sessao(response, acesso, validade_renovada=validade)
     salvar_refresh(response, renovacao, None)
     return {"autenticado": True}
+
+
+@router.post("/auth/presenca", status_code=204)
+def confirmar_presenca(
+    request: Request,
+    usuario: Usuario = Depends(get_current_user_sem_aceite),
+    db: Session = Depends(get_db),
+):
+    token = request.cookies.get("jurishome_access_token")
+    if not token:
+        raise HTTPException(401, "Entre novamente para continuar.")
+    payload = _decodificar_token(token)
+    # UPDATE condicional evita prolongar uma sessão encerrada por outro login.
+    atualizadas = db.query(PresencaSessao).filter(
+        PresencaSessao.sessao_id == payload["sid"],
+        PresencaSessao.sessao_id.in_(
+            db.query(SessaoAutenticada.id).filter(
+                SessaoAutenticada.usuario_id == usuario.uuid,
+                SessaoAutenticada.revogada.is_(False),
+            )
+        ),
+    ).update({"confirmada_em": _agora_sem_fuso()}, synchronize_session=False)
+    if atualizadas != 1:
+        db.rollback()
+        raise HTTPException(401, "Entre novamente para continuar.")
+    db.commit()

@@ -1,11 +1,14 @@
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 from sqlalchemy.orm import Session
 
-from model.models import CategoriaAcesso, FeedbackAtendimento, LogAuditoria, Usuario, fuso_br
+from model.models import AceiteDocumento, CategoriaAcesso, ConteudoLeitura, FeedbackAtendimento, LogAuditoria, Usuario, fuso_br
 from services.auditoria import registrar_auditoria
 from services.dashboard_usuario import DIAS_RETENCAO_CATEGORIA, inicio_periodo
 from services.direitos_titular import anonimizar_feedback_atendimento
 
+
+from services.leituras import limite_leituras, limpar_leituras_antigas
 
 DIAS_FEEDBACK_APOS_ENCERRAMENTO = 180
 DIAS_LOG_GERAL = 365
@@ -66,6 +69,7 @@ def aplicar_retencao(
 
     resultado: dict[str, int | bool] = {
         "execucao_realizada": executar,
+        "leituras_para_excluir": db.query(ConteudoLeitura).filter(ConteudoLeitura.dia < limite_leituras(dia_local)).count(),
         "feedbacks_para_anonimizar": len(feedbacks),
         "logs_para_minimizar": len(logs_para_minimizar),
         "aceites_para_descartar": len(aceites),
@@ -82,7 +86,10 @@ def aplicar_retencao(
         log.usuario_id = None
         log.recurso_id = None
         log.detalhes_json = "{}"
+        log.correlacao_id = uuid4().hex
+    limpar_leituras_antigas(db, dia_local)
     for usuario in aceites:
+        db.query(AceiteDocumento).filter_by(usuario_id=usuario.uuid).delete(synchronize_session=False)
         usuario.consentimento_lgpd = False
         usuario.data_consentimento = None
         usuario.versao_termos = None
@@ -101,6 +108,7 @@ def aplicar_retencao(
             "logs_minimizados": len(logs_para_minimizar),
             "aceites_descartados": len(aceites),
             "acessos_categoria_excluidos": acessos_categoria_para_excluir,
+            "leituras_excluidas": resultado["leituras_para_excluir"],
         },
     )
     db.commit()

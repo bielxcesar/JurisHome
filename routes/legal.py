@@ -14,7 +14,7 @@ from database import get_db
 from model.models import LogAuditoria, RevisaoLegal, TipoUsuario, Usuario
 from services.administradores import exigir_root
 from services.auditoria import registrar_auditoria
-from services.lgpd import DOCUMENTOS, LIMITE_DOCUMENTO, TERMOS_VERSAO, revisao_vigente, texto_inicial, versao_legal
+from services.lgpd import DOCUMENTOS, LIMITE_DOCUMENTO, TERMOS_VERSAO, registrar_aceite, revisao_vigente, texto_inicial, versao_legal
 from services.validacao import texto_simples
 
 router = APIRouter()
@@ -181,8 +181,6 @@ def pagina_aceite(
     usuario: Usuario = Depends(get_current_user_sem_aceite),
 ):
     revisao = revisao_vigente(db)
-    if usuario.tipo_usuario != TipoUsuario.ESTUDANTE:
-        return RedirectResponse(_painel(usuario), status_code=303, headers=SEM_CACHE)
     if not revisao or (usuario.consentimento_lgpd and usuario.versao_termos == versao_legal(revisao)):
         return RedirectResponse(_painel(usuario), status_code=303, headers=SEM_CACHE)
     return _render_aceite(request, revisao)
@@ -197,8 +195,6 @@ def aceitar(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user_sem_aceite),
 ):
-    if usuario.tipo_usuario != TipoUsuario.ESTUDANTE:
-        raise HTTPException(status_code=403, detail="Este aceite é destinado a estudantes.")
     revisao = revisao_vigente(db)
     if not revisao or versao != versao_legal(revisao):
         return _render_aceite(request, revisao, erro="Os documentos mudaram. Leia a nova versão antes de confirmar.", status_code=409)
@@ -212,6 +208,7 @@ def aceitar(
         usuario.consentimento_lgpd = True
         usuario.versao_termos = versao
         usuario.data_consentimento = datetime.now(timezone.utc).replace(tzinfo=None)
+        registrar_aceite(db, usuario)
         registrar_auditoria(
             db, acao="aceite_termo", recurso_tipo="termo_aceite",
             recurso_id=versao, resultado="sucesso", usuario=usuario,

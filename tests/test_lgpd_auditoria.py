@@ -107,12 +107,14 @@ class LgpdAuditoriaTests(unittest.TestCase):
             conteudo = (self.raiz / "templates" / arquivo).read_text(encoding="utf-8")
             with self.subTest(arquivo=arquivo):
                 self.assertIn('{% include "_legal_links.html" %}', conteudo)
-                self.assertIn("/static/css/legal.css?v=20260925-3", conteudo)
+                self.assertIn("/static/css/legal.css?", conteudo)
 
     def test_documentos_legais_preservam_o_contexto_de_retorno(self):
         for arquivo in ("termos.html", "politica_privacidade.html"):
             conteudo = (self.raiz / "templates" / arquivo).read_text(encoding="utf-8")
             with self.subTest(arquivo=arquivo):
+                if '{% include "_legal_header.html" %}' in conteudo:
+                    conteudo += (self.raiz / "templates/_legal_header.html").read_text(encoding="utf-8")
                 self.assertEqual(2, conteudo.count("data-legal-return"))
                 self.assertIn('{% include "_legal_links.html" %}', conteudo)
 

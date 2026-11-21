@@ -76,3 +76,6 @@ html[data-theme="light"] .admin-tabelas .danger { color:#b91c1c; }
 #excluir-admin-dialog #excluir-admin-erro {color:#f87171;}
 
 .admin-tabelas .painel-retorno { margin-bottom: 16px; }
+
+.admin-tabelas tr.recuperacao-pendente { background: rgba(245, 158, 11, .10); }
+.admin-tabelas tr.recuperacao-pendente > td:first-child { border-left: 3px solid #f59e0b; }

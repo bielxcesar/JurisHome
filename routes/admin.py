@@ -3,13 +3,14 @@ from fastapi import APIRouter, Request, Depends, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import Field, ConfigDict, field_validator, model_validator
-from services.validacao import ModeloSeguro, email_valido, fonte_http, linha, nome_pessoa, nova_senha
+from services.validacao import ModeloSeguro, email_valido, fonte_http, linha, nome_pessoa, nova_senha, texto_simples
 from services.editorial import ConfiguracaoEditorial, montar_editorial, estilos_previa
 from types import SimpleNamespace
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from services.auditoria import registrar_auditoria
 from services import limites_operacoes
+from services.privacidade import mascarar_email
 from services.administradores import exigir_root, buscar_admin, revogar_sessoes, serializar_admin
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
@@ -22,6 +23,7 @@ from model.models import (
     Conteudo,
     ConteudoEditorial,
     ConteudoLeitura,
+    CuradoriaMateria,
     FeedbackAtendimento,
     LogAuditoria,
     StatusConteudo,
@@ -29,7 +31,7 @@ from model.models import (
     Usuario,
     gerar_uuid,
 )
-from services.imagens import normalizar_imagem, normalizar_imagem_bytes, LIMITE_IMAGEM_BYTES
+from services.imagens import normalizar_imagem, normalizar_imagem_bytes, url_fonte_segura, url_imagem_segura, LIMITE_IMAGEM_BYTES
 from services.categorias import (
     categoria_disponivel,
     categorias_disponiveis,
@@ -69,7 +71,7 @@ class CadastroAdministrador(ModeloSeguro):
 class ManutencaoAdministrador(ModeloSeguro):
     model_config = ConfigDict(extra="forbid")
     nome: str = Field(min_length=3, max_length=100)
-    email: str = Field(max_length=150)
+    email: Optional[str] = Field(default=None, max_length=150)
     versao: str = Field(min_length=10, max_length=50)
     nova_senha: Optional[str] = Field(default=None, min_length=8, max_length=25)
     encerrar_sessoes: bool = Field(default=False, strict=True)
@@ -83,7 +85,7 @@ class ManutencaoAdministrador(ModeloSeguro):
     @field_validator("email")
     @classmethod
     def validar_email(cls, valor):
-        return email_valido(valor)
+        return email_valido(valor) if valor is not None else None
 
     @field_validator("nova_senha")
     @classmethod
@@ -116,11 +118,12 @@ def manter_administrador(usuario_id: str, dados: ManutencaoAdministrador,
     alvo = buscar_admin(db, usuario_id, root, bloquear=True)
     if dados.versao != alvo.atualizado_em.isoformat():
         raise HTTPException(409, "Esta conta mudou desde que a página foi aberta. Recarregue antes de salvar.")
-    duplicado = db.query(Usuario.uuid).filter(func.lower(Usuario.email) == dados.email, Usuario.uuid != alvo.uuid).first()
+    novo_email = dados.email if dados.email is not None else alvo.email
+    duplicado = db.query(Usuario.uuid).filter(func.lower(Usuario.email) == novo_email, Usuario.uuid != alvo.uuid).first()
     if duplicado:
         raise HTTPException(409, "Este e-mail já está cadastrado.")
-    revogar = dados.encerrar_sessoes or dados.resetar_2fa or dados.nova_senha is not None or dados.email != alvo.email
-    alvo.nome, alvo.email = dados.nome, dados.email
+    revogar = dados.encerrar_sessoes or dados.resetar_2fa or dados.nova_senha is not None or novo_email != alvo.email
+    alvo.nome, alvo.email = dados.nome, novo_email
     if dados.nova_senha is not None:
         alvo.senha_hash = hash_senha(dados.nova_senha)
     if dados.resetar_2fa:
@@ -378,7 +381,7 @@ def listar_usuarios_filtro(
         {
             "uuid": str(u.uuid),
             "nome": u.nome,
-            "email": u.email,
+            "email": mascarar_email(u.email),
             "tipo": u.tipo_usuario.value,
             "is_2fa_enabled": u.is_2fa_enabled,
             "e_root_admin": u.e_root_admin, # IMPORTANTE: Informa se é o chefe supremo
@@ -463,6 +466,7 @@ def deletar_materia(
         raise HTTPException(status_code=404, detail="Matéria não encontrada.")
 
     db.query(ConteudoLeitura).filter_by(conteudo_id=materia.uuid).delete(synchronize_session=False)
+    db.query(CuradoriaMateria).filter_by(conteudo_id=materia.uuid).delete(synchronize_session=False)
     db.delete(materia)
     db.commit()
     return {"mensagem": "Matéria descartada com sucesso."}
@@ -524,10 +528,9 @@ def criar_materia(
     return {"mensagem": "Matéria enviada com sucesso e aguardando aprovação!"}
 
 @router.put("/editar-materia/{uuid}")
-def editar_materia(uuid: str, dados: MateriaUpdateSchema, db: Session = Depends(get_db)):
-    materia = db.query(Conteudo).filter(Conteudo.uuid == uuid).first()
-    if not materia:
-        raise HTTPException(status_code=404, detail="Matéria não encontrada.")
+def editar_materia(uuid: str, dados: MateriaUpdateSchema, db: Session = Depends(get_db),
+                   usuario: Usuario = Depends(get_current_user)):
+    materia, curadoria = materia_para_curadoria(db, uuid, usuario)
 
     alteracoes = dados.model_dump(exclude_unset=True)
     categoria = db.get(Categoria, alteracoes.get("categoria_id", materia.categoria_id))
@@ -540,36 +543,141 @@ def editar_materia(uuid: str, dados: MateriaUpdateSchema, db: Session = Depends(
     alteracoes["tags"] = ", ".join(combinar_tags(categoria.nome, extras))
     for key, value in alteracoes.items():
         setattr(materia, key, value)
-
+    materia.status = StatusConteudo.EM_ANALISE
+    curadoria.versao += 1
     db.commit()
-    return {"mensagem": "Matéria atualizada com sucesso!"}
+    return {"mensagem": "Matéria atualizada e enviada para análise."}
 
 @router.put("/aprovar-materia/{id_da_materia}")
-def aprovar_materia(
-    id_da_materia: str,
-    usuario_logado: Usuario = Depends(get_current_user),
-    db: Session = Depends(get_db)
+def aprovar_materia_legada(
+    id_da_materia: str, usuario: Usuario = Depends(exigir_root),
 ):
-    if not usuario_logado.e_root_admin:
-        raise HTTPException(status_code=403, detail="Apenas o Administrador Principal pode aprovar matérias.")
+    raise HTTPException(409, "Abra Revisar matéria para conferir o conteúdo completo e aprovar a versão atual.")
 
-    materia = db.query(Conteudo).filter(Conteudo.uuid == id_da_materia).first()
 
-    if not materia:
-        raise HTTPException(status_code=404, detail="Matéria não encontrada.")
+class ReenvioMateria(MateriaCreate):
+    versao: int = Field(strict=True, ge=0)
 
-    materia.status = StatusConteudo.APROVADO
-    
-    novo_log = LogAuditoria(
-        usuario_id=usuario_logado.uuid,
-        usuario_tipo="administrador_root",
-        acao="aprovacao_materia",
-        recurso_tipo="Conteudo",
-        recurso_id=materia.uuid,
-        resultado="sucesso",
-        correlacao_id=gerar_uuid()
-    )
-    db.add(novo_log)
-    
+
+class DecisaoMateria(ModeloSeguro):
+    versao: int = Field(strict=True, ge=0)
+    decisao: Literal["aprovar", "devolver"]
+    orientacoes: str = Field(default="", max_length=4000)
+
+    @field_validator("orientacoes")
+    @classmethod
+    def validar_orientacoes(cls, valor):
+        return texto_simples(valor)
+
+
+def materia_para_curadoria(db, identificador, usuario):
+    materia = db.query(Conteudo).filter_by(uuid=identificador).with_for_update().first()
+    if materia is None:
+        raise HTTPException(404, "Matéria não encontrada.")
+    if usuario.tipo_usuario != TipoUsuario.ADMINISTRADOR or (
+        not usuario.e_root_admin and materia.autor_id != usuario.uuid
+    ):
+        raise HTTPException(404, "Matéria não encontrada.")
+    curadoria = db.get(CuradoriaMateria, materia.uuid)
+    if curadoria is None:
+        curadoria = CuradoriaMateria(conteudo_id=materia.uuid, versao=0, orientacoes="")
+        db.add(curadoria)
+        db.flush()
+    return materia, curadoria
+
+
+@router.get("/admin/materias/{identificador}/revisao", response_class=HTMLResponse)
+def pagina_revisao_materia(
+    identificador: str, request: Request,
+    db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user),
+):
+    materia, curadoria = materia_para_curadoria(db, identificador, usuario)
     db.commit()
-    return {"mensagem": "A matéria foi aprovada e agora está visível para os estudantes!"}
+    return templates.TemplateResponse(
+        request=request, name="materia-curadoria.html",
+        headers={"Cache-Control": "no-store"},
+        context={
+            "materia": materia, "curadoria": curadoria, "usuario": usuario,
+            **montar_editorial(materia),
+            "capa_materia": url_imagem_segura(materia.imagem_miniatura),
+            "fonte_original": url_fonte_segura(materia.fonte_original),
+        },
+    )
+
+
+@router.get("/api/admin/materias/{identificador}/edicao")
+def dados_edicao_materia(
+    identificador: str, db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    materia, curadoria = materia_para_curadoria(db, identificador, usuario)
+    configuracao = None
+    if materia.editorial:
+        configuracao = ConfiguracaoEditorial.model_validate_json(materia.editorial.configuracao_json)
+    db.commit()
+    return {
+        **{campo: getattr(materia, campo) for campo in (
+            "titulo", "sub_titulo", "resumo_home", "corpo_texto", "categoria_id",
+            "fonte_original", "fonte_imagem", "imagem_miniatura", "imagem_corpo",
+            "imagem_extra_2", "imagem_extra_3", "tags",
+        )},
+        "versao": curadoria.versao, "orientacoes": curadoria.orientacoes,
+        "editorial": configuracao.model_dump() if configuracao else {"formatado": False},
+    }
+
+
+@router.put("/api/admin/materias/{identificador}/reenviar")
+def reenviar_materia(
+    identificador: str, dados: ReenvioMateria, db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    materia, curadoria = materia_para_curadoria(db, identificador, usuario)
+    if curadoria.versao != dados.versao:
+        raise HTTPException(409, "A matéria mudou. Reabra o editor para conferir a versão atual.")
+    if not dados.aceite_editorial or dados.versao_termos != "2026-10-30":
+        raise HTTPException(422, "Confirme as regras editoriais antes de reenviar.")
+    categoria = db.get(Categoria, dados.categoria_id)
+    if not categoria or not categoria_disponivel(categoria.nome):
+        raise HTTPException(422, "Selecione uma categoria válida.")
+    for campo in ("titulo", "sub_titulo", "resumo_home", "corpo_texto", "categoria_id", "fonte_original", "fonte_imagem"):
+        setattr(materia, campo, getattr(dados, campo))
+    materia.titulo = materia.titulo or "Sem título"
+    materia.resumo_home = materia.resumo_home or dados.corpo_texto[:150]
+    materia.imagem_miniatura = dados.imagem_miniatura or dados.miniatura or dados.imagem_principal
+    materia.imagem_corpo = dados.imagem_corpo or dados.corpo_1
+    materia.imagem_extra_2 = dados.imagem_extra_2 or dados.corpo_2
+    materia.imagem_extra_3 = dados.imagem_extra_3 or dados.corpo_3
+    materia.tags = ", ".join(combinar_tags(categoria.nome, dados.tags))
+    if dados.editorial:
+        if materia.editorial is None:
+            materia.editorial = ConteudoEditorial()
+        materia.editorial.titulo_home = dados.editorial.titulo_home
+        materia.editorial.configuracao_json = dados.editorial.model_dump_json()
+    materia.status = StatusConteudo.EM_ANALISE
+    curadoria.versao += 1
+    registrar_auditoria(db, acao="materia_reenviada", recurso_tipo="conteudo",
+        recurso_id=materia.uuid, usuario=usuario, resultado="sucesso",
+        detalhes={"versao": curadoria.versao})
+    db.commit()
+    return {"mensagem": "Correções enviadas para nova análise."}
+
+
+@router.post("/api/admin/materias/{identificador}/curadoria")
+def decidir_materia(
+    identificador: str, dados: DecisaoMateria, db: Session = Depends(get_db),
+    usuario: Usuario = Depends(exigir_root),
+):
+    materia, curadoria = materia_para_curadoria(db, identificador, usuario)
+    if dados.versao != curadoria.versao or materia.status != StatusConteudo.EM_ANALISE:
+        raise HTTPException(409, "A matéria mudou ou já foi revisada. Atualize a página.")
+    if dados.decisao == "devolver" and len(dados.orientacoes) < 10:
+        raise HTTPException(422, "Explique as correções necessárias com pelo menos dez caracteres.")
+    materia.status = StatusConteudo.APROVADO if dados.decisao == "aprovar" else StatusConteudo.REJEITADO
+    curadoria.orientacoes = dados.orientacoes
+    curadoria.revisada_em = datetime.now(timezone.utc).replace(tzinfo=None)
+    curadoria.versao += 1
+    registrar_auditoria(db, acao="materia_" + dados.decisao, recurso_tipo="conteudo",
+        recurso_id=materia.uuid, usuario=usuario, resultado="sucesso",
+        detalhes={"versao": curadoria.versao})
+    db.commit()
+    return {"mensagem": "Matéria aprovada." if dados.decisao == "aprovar" else "Matéria devolvida ao autor."}

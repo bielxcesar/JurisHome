@@ -26,6 +26,7 @@ if FEEDBACK_DATABASE_URL:
         FEEDBACK_DATABASE_URL,
         connect_args=feedback_connect_args,
         pool_pre_ping=True,
+        hide_parameters=True,
     )
     FeedbackSessionLocal = sessionmaker(
         autocommit=False,

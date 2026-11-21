@@ -891,7 +891,7 @@ class TestesSeguranca(unittest.TestCase):
 
     def test_cadastro_novo_guarda_interesse_limita_campos_e_nao_reflete_senha(self):
         dados = {'nome':'João','sobrenome':'da Silva','interesse':'Direito Civil','email':'joao.teste+estudo@example.test',
-            'senha':'NovaSenha!123','confirmar_senha':'NovaSenha!123','consentimento_lgpd':True}
+            'senha':'NovaSenha!123','confirmar_senha':'NovaSenha!123','consentimento_lgpd':True,'versao_documentos':'2.2'}
         for extras in ({'nome': {'$ne': None}}, {'nome':'<script>alert(1)</script>'}, {'nome':'A'*41},
                        {'sobrenome':'S'*51}, {'interesse':'Área inventada'}, {'senha':'NovaSenha123'},
                        {'senha':'A1!'+'x'*23}, {'e_root_admin':True}):
@@ -966,7 +966,133 @@ class TestesSeguranca(unittest.TestCase):
         status,_,_=self._request('POST','/api/auth/login',{'email':'naoexiste5@example.test','senha':'Errada!123'},cliente='198.51.100.11')
         self.assertEqual(status,401)  # Só uma falha nesta conta, bloqueio anterior era da origem.
 
-    def test_cookie_persistente_somente_quando_solicitado_e_limitado_a_15_minutos(self):
+    def test_perfil_seguranca_exibe_registros_reais(self):
+        from services.lgpd import revisao_vigente, versao_legal
+
+        usuario = self._usuario(TipoUsuario.ADMINISTRADOR)
+        versao = versao_legal(revisao_vigente(self.db))
+        usuario.consentimento_lgpd = False
+        usuario.versao_termos = "antiga"
+        usuario.data_consentimento = None
+        self.db.commit()
+        token = criar_access_token(usuario)
+        status, _, corpo = self._request("GET", "/perfil", token=token)
+        texto = corpo.decode()
+        self.assertEqual(200, status)
+        self.assertIn("Confirmação pendente", texto)
+        self.assertIn("Data de confirmação não registrada", texto)
+        self.assertIn("Versão vigente: " + versao, texto)
+        self.assertIn('href="/aceitar-documentos"', texto)
+        self.assertNotIn("12/08/2026", texto)
+
+        usuario.consentimento_lgpd = True
+        usuario.versao_termos = versao
+        usuario.data_consentimento = datetime(2026, 11, 20, 12)
+        self.db.commit()
+        status, _, corpo = self._request("GET", "/perfil", token=token)
+        self.assertEqual(200, status)
+        self.assertIn("Confirmação atualizada", corpo.decode())
+        self.assertIn("Confirmado em 20/11/2026", corpo.decode())
+        self.assertIn("Ativa no autenticador", corpo.decode())
+
+    def test_curadoria_materia_devolve_corrige_reenvia_e_aprova(self):
+        autor = self._usuario(TipoUsuario.ADMINISTRADOR)
+        outro = self._usuario(TipoUsuario.ADMINISTRADOR)
+        root = self._usuario(TipoUsuario.ADMINISTRADOR)
+        root.e_root_admin = True
+        categoria = models.Categoria(nome="Direito Civil")
+        self.db.add(categoria)
+        self.db.flush()
+        materia = models.Conteudo(
+            titulo="Matéria para revisão", resumo_home="Resumo da revisão", corpo_texto="Texto completo para análise.",
+            categoria_id=categoria.uuid, autor_id=autor.uuid,
+            fonte_original="https://example.com/fonte", status=models.StatusConteudo.EM_ANALISE,
+        )
+        self.db.add(materia)
+        self.db.commit()
+        token_autor = criar_access_token(autor)
+        token_outro = criar_access_token(outro)
+        token_root = criar_access_token(root)
+        api = "/api/admin/materias/" + materia.uuid
+        pagina = "/admin/materias/" + materia.uuid + "/revisao"
+        status, _, corpo = self._request("GET", pagina, token=token_root)
+        self.assertEqual(200, status)
+        self.assertIn("Texto completo para análise.", corpo.decode())
+        self.assertIn("Consultar fonte original", corpo.decode())
+        self.assertEqual(404, self._request("GET", pagina, token=token_outro)[0])
+        self.assertEqual(403, self._request("POST", api + "/curadoria", {
+            "versao": 0, "decisao": "aprovar",
+        }, token=token_autor)[0])
+        status, _, _ = self._request("POST", api + "/curadoria", {
+            "versao": 0, "decisao": "devolver", "orientacoes": "Corrija o segundo parágrafo e confira a fonte.",
+        }, token=token_root)
+        self.assertEqual(200, status)
+        self.assertEqual(409, self._request("POST", api + "/curadoria", {
+            "versao": 0, "decisao": "aprovar",
+        }, token=token_root)[0])
+        status, _, corpo = self._request("GET", api + "/edicao", token=token_autor)
+        self.assertEqual(200, status)
+        dados = json.loads(corpo)
+        self.assertEqual(1, dados["versao"])
+        self.assertIn("segundo parágrafo", dados["orientacoes"])
+        self.assertEqual(404, self._request("GET", api + "/edicao", token=token_outro)[0])
+        reenvio = {
+            "titulo": "Texto corrigido", "corpo_texto": "Segundo parágrafo corrigido.",
+            "categoria_id": categoria.uuid, "fonte_original": "https://example.com/fonte",
+            "versao": 1, "aceite_editorial": True, "versao_termos": "2026-10-30",
+            "editorial": {"titulo_home": "Chamada corrigida", "formatado": True},
+        }
+        self.assertEqual(200, self._request("PUT", api + "/reenviar", reenvio, token=token_autor)[0])
+        self.assertEqual(409, self._request("PUT", api + "/reenviar", reenvio, token=token_autor)[0])
+        self.assertEqual(200, self._request("POST", api + "/curadoria", {
+            "versao": 2, "decisao": "aprovar",
+        }, token=token_root)[0])
+        self.db.expire_all()
+        self.assertEqual(models.StatusConteudo.APROVADO, materia.status)
+        self.assertEqual("Texto corrigido", materia.titulo)
+        self.assertEqual("Chamada corrigida", materia.editorial.titulo_home)
+
+    def test_presenca_expirada_nao_pode_ser_reativada(self):
+        usuario = self._usuario()
+        token = criar_access_token(usuario)
+        sid = security._decodificar_token(token)["sid"]
+        cookie = "jurishome_access_token=" + token
+        status, _, _ = self._request(
+            "POST", "/api/auth/presenca", cookie=cookie,
+            extra_headers=((b"origin", b"http://testserver"),),
+        )
+        self.assertEqual(204, status)
+        presenca = self.db.get(models.PresencaSessao, sid)
+        presenca.confirmada_em = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=121)
+        self.db.commit()
+        status, _, _ = self._request("GET", "/api/usuarios/me", token=token)
+        self.assertEqual(401, status)
+        status, _, _ = self._request(
+            "POST", "/api/auth/presenca", cookie=cookie,
+            extra_headers=((b"origin", b"http://testserver"),),
+        )
+        self.assertEqual(401, status)
+
+    def test_novo_login_revoga_sessao_anterior(self):
+        from services.lgpd import revisao_vigente, versao_legal
+
+        usuario = self._usuario()
+        usuario.consentimento_lgpd = True
+        usuario.versao_termos = versao_legal(revisao_vigente(self.db))
+        self.db.commit()
+        primeiro = criar_access_token(usuario)
+        primeiro_id = security._decodificar_token(primeiro)["sid"]
+        segundo = criar_access_token(usuario)
+        segundo_id = security._decodificar_token(segundo)["sid"]
+        self.db.expire_all()
+        self.assertTrue(self.db.get(models.SessaoAutenticada, primeiro_id).revogada)
+        self.assertFalse(self.db.get(models.SessaoAutenticada, segundo_id).revogada)
+        status, _, _ = self._request("GET", "/api/usuarios/me", token=primeiro)
+        self.assertEqual(401, status)
+        status, _, _ = self._request("GET", "/api/usuarios/me", token=segundo)
+        self.assertEqual(200, status)
+
+    def test_cookie_sessao_sem_persistencia_e_limitado_a_15_minutos(self):
         from http.cookies import SimpleCookie
         import pyotp
         from routes.auth import Codigo2FA,validar_2fa
@@ -981,7 +1107,8 @@ class TestesSeguranca(unittest.TestCase):
                 cookies.load(valor)
             acesso=cookies['jurishome_access_token']
             sessao=self.db.get(models.SessaoAutenticada,security._decodificar_token(acesso.value)['sid'])
-            self.assertEqual(acesso['max-age'], '900' if lembrar else '')
+            self.assertEqual(acesso['max-age'], '')
+            self.assertEqual(acesso['expires'], '')
             self.assertEqual(acesso['httponly'],True)
             refresh=cookies['jurishome_refresh_token']
             self.assertEqual(refresh['max-age'], '0')
@@ -1032,6 +1159,9 @@ class TestesSeguranca(unittest.TestCase):
             is_2fa_enabled=True,
         )
         self.db.add(usuario)
+        from services.lgpd import revisao_vigente, versao_legal
+        usuario.consentimento_lgpd = True
+        usuario.versao_termos = versao_legal(revisao_vigente(self.db))
         self.db.commit()
         return usuario
 
@@ -1068,33 +1198,33 @@ class TestesSeguranca(unittest.TestCase):
 
             publicado = client.post(editor + "/termos", headers=headers_root, data=publicacao)
             self.assertEqual(303, publicado.status_code)
-            self.assertEqual(aceite, publicado.headers["location"])
+            self.assertEqual("/perfil/documentos-legais?tipo=termos&publicada=1", publicado.headers["location"])
             self.assertIn("Novo texto do termo &amp; referência.", client.get("/termos-de-aceite").text)
             self.assertNotIn("Novo texto do termo", client.get("/politica-de-privacidade").text)
 
             self.assertEqual(428, client.get("/api/usuarios/me", headers=headers_leitor).status_code)
             self.assertEqual(aceite, client.get("/home_usuario", headers=headers_leitor).headers["location"])
             pagina = client.get(aceite, headers=headers_leitor)
-            self.assertIn("legal-1", pagina.text)
-            confirmacao = {"versao": "legal-1", "aceite": "sim", "ciencia": "sim"}
+            self.assertIn("legal-2", pagina.text)
+            confirmacao = {"versao": "legal-2", "aceite": "sim", "ciencia": "sim"}
             self.assertEqual(401, client.post(aceite, data=confirmacao).status_code)
             self.assertEqual(409, client.post(aceite, headers=headers_leitor, data=dict(confirmacao, versao="2.2")).status_code)
-            self.assertEqual(422, client.post(aceite, headers=headers_leitor, data={"versao": "legal-1", "aceite": "sim"}).status_code)
+            self.assertEqual(422, client.post(aceite, headers=headers_leitor, data={"versao": "legal-2", "aceite": "sim"}).status_code)
             self.assertEqual(303, client.post(aceite, headers=headers_leitor, data=confirmacao).status_code)
             self.assertEqual(200, client.get("/api/usuarios/me", headers=headers_leitor).status_code)
 
             self.assertEqual(303, client.post(aceite, headers=headers_root, data=confirmacao).status_code)
             self.assertEqual(409, client.post(editor + "/privacidade", headers=headers_root, data=publicacao).status_code)
-            politica = dict(publicacao, versao="legal-1", texto="Política atualizada para teste.")
+            politica = dict(publicacao, versao="legal-2", texto="Política atualizada para teste.")
             self.assertEqual(303, client.post(editor + "/privacidade", headers=headers_root, data=politica).status_code)
             self.assertIn("Política atualizada para teste.", client.get("/politica-de-privacidade").text)
             self.assertIn("Novo texto do termo", client.get("/termos-de-aceite").text)
             self.assertEqual(428, client.get("/api/usuarios/me", headers=headers_leitor).status_code)
 
         self.db.expire_all()
-        self.assertEqual("legal-1", leitor.versao_termos)
+        self.assertEqual("legal-2", leitor.versao_termos)
         self.assertIsNotNone(leitor.data_consentimento)
-        self.assertEqual(2, self.db.query(models.RevisaoLegal).count())
+        self.assertEqual(3, self.db.query(models.RevisaoLegal).count())
 
     def _banco_teste(self):
         sessao = self.Session()
@@ -1246,7 +1376,7 @@ class TestesSeguranca(unittest.TestCase):
         root = self._usuario(TipoUsuario.ADMINISTRADOR)
         root.e_root_admin = True
         self.db.commit()
-        status, _, _ = self._request("PUT", f"/aprovar-materia/{materia.uuid}", token=criar_access_token(root))
+        status, _, _ = self._request("POST", f"/api/admin/materias/{materia.uuid}/curadoria", token=criar_access_token(root), data={"versao": 0, "decisao": "aprovar"})
         self.assertEqual(200, status)
         status, _, corpo = self._request("GET", "/api/conteudos")
         self.assertEqual(["Matéria Base64"], [item["titulo"] for item in json.loads(corpo)])

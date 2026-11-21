@@ -31,7 +31,9 @@ function usuarios() {
  const filtrados=estado.usuarios.filter(u=>(!estado.filtroUsuario || (estado.filtroUsuario==='administrador'?u.tipo==='administrador':u.tipo!=='administrador')) && normalizar(u.nome+' '+u.email).includes(busca));
  const body=$('lista-usuarios'); body.replaceChildren();
  for(const u of filtrados.slice((estado.paginaUsuario-1)*limite,estado.paginaUsuario*limite)) {
-  const tr=criar('tr'); const td=criar('td'); const identity=criar('div',undefined,'identity');
+  const tr=criar('tr');
+  if(u.solicitou_ajuda) tr.classList.add('recuperacao-pendente');
+  const td=criar('td'); const identity=criar('div',undefined,'identity');
   identity.append(criar('span',String(u.nome||'?').split(/\s+/).filter(Boolean).slice(0,2).map(s=>s[0]).join('').toUpperCase(),'avatar'));
   const nome=criar('div'); nome.append(criar('strong',u.nome),criar('small',u.email)); identity.append(nome);td.append(identity);tr.append(td);
   tr.append(criar('td',u.e_root_admin?'Administrador principal':u.tipo==='administrador'?'Administrador':'Leitor'));
@@ -81,7 +83,7 @@ window.salvarNovoAdmin=()=>executar($('modalNovoAdmin').querySelector('button:la
 });
 $('novo-admin')?.addEventListener('click',()=>{['novoAdminNome','novoAdminEmail','novoAdminSenha'].forEach(id=>$(id).value='');abrir('modalNovoAdmin');});
 $('lista-materias').addEventListener('click',e=>{const b=e.target.closest('button[data-action]');if(!b)return;const r=b.closest('tr');
- if(b.dataset.action==='editar'){$('editUuid').value=r.dataset.id;$('editTitulo').value=r.cells[0].textContent;abrir('modalEdicao');return;}
+ if(b.dataset.action==='editar'){location.assign('/nova-materia?editar='+encodeURIComponent(r.dataset.id));return;}
  executar(b,async()=>{const aprovar=b.dataset.action==='aprovar';if(!confirm(aprovar?'Publicar esta matéria para os leitores?':'Excluir permanentemente esta matéria?'))return;
  await requisitar((aprovar?'/aprovar-materia/':'/deletar-materia/')+encodeURIComponent(r.dataset.id),aprovar?'PUT':'DELETE');location.reload();});
 });

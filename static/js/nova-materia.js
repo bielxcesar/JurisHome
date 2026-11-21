@@ -3,6 +3,11 @@
 const $=id=>document.getElementById(id),form=$('form-nova-materia');
 const tags=JSON.parse($('categorias-tags').textContent),cache=new Map(),urls=new Map();
 let etapa=0,ocupado=false,previaValida=false,ultimoPayload=null,previaHtml="",urlPrevia=null;
+const idEdicao = new URLSearchParams(location.search).get('editar');
+const imagensExistentes = new Map();
+let versaoEdicao = null;
+let textoFormatado = true;
+let tagsExtras = [];
 const cancelarMateria = $('cancelar-materia');
 cancelarMateria.addEventListener('click', evento => {
     if (cancelarMateria.dataset.enviada === 'true') return;
@@ -25,22 +30,71 @@ $('editor-avancar').addEventListener('click',()=>ir(etapa+1));$('editor-voltar')
 form.addEventListener('input',e=>{if(e.target.id==='aceite-editorial'){travar(false);return;}previaValida=false;$('aceite-editorial').checked=false;$('btn-enviar').disabled=true;$('previa-status').textContent='O conteúdo foi alterado. Atualize a chamada e confira o modelo novamente.';});
 function contador(){$('editor-contador').textContent=$('corpo_texto').value.length.toLocaleString('pt-BR')+' caracteres';}
 $('corpo_texto').addEventListener('input',contador);
-document.querySelectorAll('[data-format]').forEach(b=>{b.addEventListener('mousedown',e=>e.preventDefault());b.addEventListener('click',()=>{const t=$('corpo_texto'),a=t.selectionStart,z=t.selectionEnd;let texto=t.value.slice(a,z)||'seu texto',resultado;const tipo=b.dataset.format;
+document.querySelectorAll('[data-format]').forEach(b=>{b.addEventListener('mousedown',e=>e.preventDefault());b.addEventListener('click',()=>{const t=$('corpo_texto'),a=t.selectionStart,z=t.selectionEnd;let texto=t.value.slice(a,z)||'seu texto',resultado;const tipo=b.dataset.format;textoFormatado=true;
 if(tipo==='maiusculas')resultado=texto.toLocaleUpperCase('pt-BR');else if(['subtitulo','citacao','lista'].includes(tipo)){const prefixo={subtitulo:'## ',citacao:'> ',lista:'- '}[tipo];const inicio=t.value.lastIndexOf('\n',a-1)+1;texto=t.value.slice(inicio,z)||'Novo bloco';t.setRangeText(texto.split('\n').map(l=>prefixo+l).join('\n'),inicio,z,'select');t.focus();t.dispatchEvent(new Event('input',{bubbles:true}));contador();return;}else{const marca={negrito:'**',italico:'_',destaque:'=='}[tipo];resultado=marca+texto+marca;}t.setRangeText(resultado,a,z,'select');t.focus();t.dispatchEvent(new Event('input',{bubbles:true}));contador();});});
 const ids=['miniatura','corpo_1','corpo_2','corpo_3'];
-for(const id of ids){$('input_'+id).addEventListener('change',()=>{const input=$('input_'+id),img=$('preview_'+id),file=input.files[0];cache.delete(id);if(urls.has(id))URL.revokeObjectURL(urls.get(id));if(id!=='miniatura')$('fonte_'+id).required=!!file;
+for(const id of ids){$('input_'+id).addEventListener('change',()=>{const input=$('input_'+id),img=$('preview_'+id),file=input.files[0];cache.delete(id);imagensExistentes.delete(id);if(urls.has(id))URL.revokeObjectURL(urls.get(id));if(id!=='miniatura')$('fonte_'+id).required=!!file;
 if(!file){img.hidden=true;img.removeAttribute('src');return;}
 if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>8*1024*1024){input.value='';img.hidden=true;if(id!=='miniatura')$('fonte_'+id).required=false;aviso('Escolha uma imagem JPEG, PNG ou WebP de até 8 MB.');return;}
 const url=URL.createObjectURL(file);urls.set(id,url);img.src=url;img.hidden=false;});}
 document.querySelectorAll('[data-remove]').forEach(b=>b.addEventListener('click',()=>{const id='corpo_'+b.dataset.remove;$('input_'+id).value='';$('input_'+id).dispatchEvent(new Event('change'));previaValida=false;$('btn-enviar').disabled=true;}));
-async function comprimir(id){const file=$('input_'+id).files[0];if(!file)return null;const guardada=cache.get(id);if(guardada?.file===file)return guardada.data;
+async function comprimir(id){const file=$('input_'+id).files[0];if(!file)return imagensExistentes.get(id)||null;const guardada=cache.get(id);if(guardada?.file===file)return guardada.data;
 const data=await new Promise((resolve,reject)=>{const url=URL.createObjectURL(file),img=new Image();img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Não foi possível ler uma das imagens. Escolha outro arquivo.'));};img.onload=()=>{URL.revokeObjectURL(url);if(img.width*img.height>16000000){reject(new Error('A imagem ultrapassa 16 milhões de pixels. Escolha uma versão menor.'));return;}const escala=Math.min(1,800/img.width,800/img.height),canvas=document.createElement('canvas');canvas.width=Math.round(img.width*escala);canvas.height=Math.round(img.height*escala);const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);resolve(canvas.toDataURL('image/jpeg',0.7));};img.src=url;});cache.set(id,{file,data});return data;}
-async function payload(){const imagens=await Promise.all(ids.map(comprimir));return {titulo:$('titulo').value.trim(),sub_titulo:$('sub_titulo').value.trim(),corpo_texto:$('corpo_texto').value,categoria_id:$('categoria_id').value,tags:(tags[$('categoria_id').value]||[]).join(', '),resumo_home:$('resumo_home').value.trim(),fonte_original:$('fonte_original').value.trim(),fonte_imagem:$('fonte_miniatura').value.trim(),imagem_miniatura:imagens[0],imagem_corpo:imagens[1],imagem_extra_2:imagens[2],imagem_extra_3:imagens[3],editorial:{titulo_home:$('titulo_home').value.trim(),formatado:true,alinhamento:$('alinhamento').value,capa_legenda:$('capa_legenda').value.trim(),capa_alt:$('capa_alt').value.trim(),imagens:[1,2,3].map(i=>({fonte:$('fonte_corpo_'+i).value.trim(),legenda:$('legenda_corpo_'+i).value.trim(),alt:$('alt_corpo_'+i).value.trim(),apos_bloco:Number($('posicao_corpo_'+i).value||0),largura:$('largura_corpo_'+i).value}))}};}
+async function payload(){const imagens=await Promise.all(ids.map(comprimir));return {titulo:$('titulo').value.trim(),sub_titulo:$('sub_titulo').value.trim(),corpo_texto:$('corpo_texto').value,categoria_id:$('categoria_id').value,tags:(tags[$('categoria_id').value]||[]).join(', '),resumo_home:$('resumo_home').value.trim(),fonte_original:$('fonte_original').value.trim(),fonte_imagem:$('fonte_miniatura').value.trim(),imagem_miniatura:imagens[0],imagem_corpo:imagens[1],imagem_extra_2:imagens[2],imagem_extra_3:imagens[3],editorial:{titulo_home:$('titulo_home').value.trim(),formatado:textoFormatado,alinhamento:$('alinhamento').value,capa_legenda:$('capa_legenda').value.trim(),capa_alt:$('capa_alt').value.trim(),imagens:[1,2,3].map(i=>({fonte:$('fonte_corpo_'+i).value.trim(),legenda:$('legenda_corpo_'+i).value.trim(),alt:$('alt_corpo_'+i).value.trim(),apos_bloco:Number($('posicao_corpo_'+i).value||0),largura:$('largura_corpo_'+i).value}))}};}
 function erroDados(d){return typeof d.detail==='string'?d.detail:Array.isArray(d.detail)?d.detail.map(e=>e.msg.replace(/^Value error, /,'')).join(' '):'Não foi possível concluir. Tente novamente.';}
 function travar(valor){ocupado=valor;document.querySelectorAll('[data-step],#editor-voltar,#editor-avancar,#btn-preview,#btn-visualizar').forEach(b=>b.disabled=valor);$('btn-enviar').disabled=valor||!previaValida||!$('aceite-editorial').checked;}
 async function atualizarPrevia(){if(ocupado)return;travar(true);previaValida=false;$('btn-enviar').disabled=true;try{const d=await payload();const r=await fetch('/api/admin/materias/preview',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});if(!r.ok)throw new Error(erroDados(await r.json().catch(()=>({}))));const html=await r.text();previaHtml=html.replace('<html lang="pt-BR">','<html lang="pt-BR" data-theme="'+(document.documentElement.dataset.theme==='light'?'light':'dark')+'">');$('revisao-capa').src=d.imagem_miniatura;$('revisao-titulo').textContent=d.editorial.titulo_home;$('revisao-resumo').textContent=d.resumo_home;$('revisao-categoria').textContent=$('categoria_id').selectedOptions[0].textContent;ultimoPayload=d;previaValida=true;$('home-aviso').hidden=true;}catch(e){aviso(e.message);}finally{travar(false);}}
 $('btn-preview').addEventListener('click',atualizarPrevia);
 $('btn-visualizar').addEventListener('click',()=>{if(!previaValida){aviso('Atualize a chamada antes de visualizar o modelo.');return;}if(urlPrevia)URL.revokeObjectURL(urlPrevia);urlPrevia=URL.createObjectURL(new Blob([previaHtml],{type:'text/html'}));const link=document.createElement('a');link.href=urlPrevia;link.target='_blank';link.rel='noopener noreferrer';link.click();$('previa-status').textContent='Modelo aberto em uma nova aba. Esta visualização ainda não publica a matéria.';});
 window.addEventListener('pagehide',()=>{if(urlPrevia)URL.revokeObjectURL(urlPrevia);});
-form.addEventListener('submit',async e=>{e.preventDefault();if(etapa!==3){await ir(etapa+1);return;}if(ocupado||!previaValida)return;if(!validar(3))return;travar(true);try{const r=await fetch('/criar-materia',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({...ultimoPayload,aceite_editorial:$('aceite-editorial').checked,versao_termos:'2026-10-30'})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(erroDados(d));$('msg-retorno').textContent='Matéria enviada para análise. Você pode acompanhar a aprovação em Tabelas / Notícias.';$('msg-retorno').hidden=false;$('btn-enviar').textContent='Enviada para análise';cancelarMateria.dataset.enviada='true';cancelarMateria.textContent='Ir para Tabelas / Notícias';form.querySelectorAll('input,select,textarea,button').forEach(c=>c.disabled=true);$('msg-retorno').scrollIntoView({block:'center'});}catch(erro){aviso(erro.message);travar(false);}});
+form.addEventListener('submit',async e=>{e.preventDefault();if(etapa!==3){await ir(etapa+1);return;}if(ocupado||!previaValida)return;if(!validar(3))return;travar(true);try{const r=await fetch(idEdicao?'/api/admin/materias/'+encodeURIComponent(idEdicao)+'/reenviar':'/criar-materia',{method:idEdicao?'PUT':'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({...ultimoPayload,...(idEdicao?{versao:versaoEdicao}:{}),aceite_editorial:$('aceite-editorial').checked,versao_termos:'2026-10-30'})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(erroDados(d));$('msg-retorno').textContent='Matéria enviada para análise. Você pode acompanhar a aprovação em Tabelas / Notícias.';$('msg-retorno').hidden=false;$('btn-enviar').textContent='Enviada para análise';cancelarMateria.dataset.enviada='true';cancelarMateria.textContent='Ir para Tabelas / Notícias';form.querySelectorAll('input,select,textarea,button').forEach(c=>c.disabled=true);$('msg-retorno').scrollIntoView({block:'center'});}catch(erro){aviso(erro.message);travar(false);}});
+
+async function carregarEdicao() {
+    if (!idEdicao) return;
+    travar(true);
+    try {
+        const resposta = await fetch('/api/admin/materias/' + encodeURIComponent(idEdicao) + '/edicao', {credentials: 'same-origin'});
+        const dados = await resposta.json();
+        if (!resposta.ok) throw new Error(erroDados(dados));
+        versaoEdicao = dados.versao;
+        const padraoAnterior = new Set((tags[dados.categoria_id] || []).map(tag => tag.toLocaleLowerCase()));
+        tagsExtras = (dados.tags || '').split(',').map(tag => tag.trim()).filter(tag => tag && !padraoAnterior.has(tag.toLocaleLowerCase()));
+        for (const campo of ['titulo', 'sub_titulo', 'corpo_texto', 'categoria_id', 'resumo_home', 'fonte_original']) {
+            $(campo).value = dados[campo] || '';
+        }
+        $('fonte_miniatura').value = dados.fonte_imagem || '';
+        const editorial = dados.editorial || {};
+        textoFormatado = editorial.formatado !== false;
+        for (const campo of ['titulo_home', 'capa_legenda', 'capa_alt']) {
+            $(campo).value = editorial[campo] || (campo === 'titulo_home' ? dados.titulo : '');
+        }
+        $('alinhamento').value = editorial.alinhamento || 'esquerda';
+        $('mesmo-titulo').checked = $('titulo').value === $('titulo_home').value;
+        const imagens = [dados.imagem_miniatura, dados.imagem_corpo, dados.imagem_extra_2, dados.imagem_extra_3];
+        ids.forEach((id, indice) => {
+            if (imagens[indice]) {
+                imagensExistentes.set(id, imagens[indice]);
+                $('preview_' + id).src = imagens[indice];
+                $('preview_' + id).hidden = false;
+                $('input_' + id).required = false;
+            }
+            if (!indice) return;
+            const info = editorial.imagens?.[indice - 1] || {};
+            for (const campo of ['fonte', 'legenda', 'alt']) {
+                $(campo + '_corpo_' + indice).value = info[campo] || '';
+            }
+            $('posicao_corpo_' + indice).value = info.apos_bloco ?? indice;
+            $('largura_corpo_' + indice).value = info.largura || 'ampla';
+        });
+        atualizarTags();
+        contador();
+        if (dados.orientacoes) aviso('Orientações para correção: ' + dados.orientacoes);
+        $('btn-enviar').textContent = 'Reenviar para análise';
+        travar(false);
+    } catch (erro) {
+        aviso(erro.message);
+        form.querySelectorAll('input,select,textarea,button').forEach(campo => campo.disabled = true);
+    }
+}
+carregarEdicao();
 })();

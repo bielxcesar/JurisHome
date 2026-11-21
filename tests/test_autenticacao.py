@@ -105,6 +105,7 @@ class AutenticacaoTests(unittest.TestCase):
         resultado = asyncio.run(
             cadastrar_usuario(
                 CadastroUsuario(
+                    versao_documentos='2.2',
                     nome='Erick', sobrenome='Santos', interesse="Direito Civil",
                     email="erick@example.com",
                     senha="SenhaSegura123!",
@@ -141,6 +142,7 @@ class AutenticacaoTests(unittest.TestCase):
             asyncio.run(
                 cadastrar_usuario(
                     CadastroUsuario(
+                    versao_documentos='2.2',
                         nome='Ana', sobrenome='Silva', interesse="Direito Civil",
                         email="ana@example.com",
                         senha="SenhaSegura123!",
@@ -167,6 +169,7 @@ class AutenticacaoTests(unittest.TestCase):
             asyncio.run(
                 cadastrar_usuario(
                     CadastroUsuario(
+                    versao_documentos='2.2',
                         nome='Outra', sobrenome='Pessoa', interesse="Direito Civil",
                         email="duplicado@example.com",
                         senha="SenhaSegura123!",
@@ -226,7 +229,7 @@ class AutenticacaoTests(unittest.TestCase):
         self.db.refresh(suporte)
         self.assertTrue(suporte.email.startswith("anonimizado-"))
         self.assertIsNone(suporte.senha_hash)
-        self.assertEqual("Dados pessoais anonimizados e sessão encerrada.", resultado["mensagem"])
+        self.assertEqual("Dados pessoais removidos e sessão encerrada. Registros técnicos mínimos permanecem pseudonimizados.", resultado["mensagem"])
         self.assertIn("jurishome_access_token", resposta_suporte.headers.get("set-cookie", ""))
 
         self.assertEqual(
@@ -248,7 +251,7 @@ class AutenticacaoTests(unittest.TestCase):
             "email": "sem-arroba.exemplo.com",
             "senha": "SenhaSegura123!",
             "confirmar_senha": "SenhaSegura123!",
-            "consentimento_lgpd": True,
+            "consentimento_lgpd": True, "versao_documentos": "2.2",
         }
         codigo, _, corpo = self.requisicao_http("POST", "/api/auth/cadastro", dados)
         self.assertEqual(422, codigo)
@@ -275,6 +278,7 @@ class AutenticacaoTests(unittest.TestCase):
         asyncio.run(
             cadastrar_usuario(
                 CadastroUsuario(
+                    versao_documentos='2.2',
                     nome='Bruno', sobrenome='Lima', interesse="Direito Civil",
                     email="bruno@example.com",
                     senha="SenhaSegura123!",
@@ -299,6 +303,7 @@ class AutenticacaoTests(unittest.TestCase):
         asyncio.run(
             cadastrar_usuario(
                 CadastroUsuario(
+                    versao_documentos='2.2',
                     nome='Clara', sobrenome='Alves', interesse="Direito Civil",
                     email="clara@example.com",
                     senha="SenhaSegura123!",
@@ -433,6 +438,7 @@ class AutenticacaoTests(unittest.TestCase):
         configuracao = asyncio.run(
             cadastrar_usuario(
                 CadastroUsuario(
+                    versao_documentos='2.2',
                     nome='Diego', sobrenome='Nunes', interesse="Direito Civil",
                     email="diego@example.com",
                     senha="SenhaSegura123!",
@@ -479,6 +485,7 @@ class AutenticacaoTests(unittest.TestCase):
         configuracao = asyncio.run(
             cadastrar_usuario(
                 CadastroUsuario(
+                    versao_documentos='2.2',
                     nome='Marina', sobrenome='Costa', interesse="Direito Civil",
                     email="marina@example.com",
                     senha="SenhaSegura123!",
@@ -539,7 +546,7 @@ class AutenticacaoTests(unittest.TestCase):
 
         codigo, headers, corpo = self.requisicao_http(
             "POST", "/api/auth/cadastro",
-            {"nome": 'Teste', "sobrenome": 'Completo', "interesse": "Direito Civil", "email": "completo@example.com", "senha": "SenhaSegura123!", "confirmar_senha": "SenhaSegura123!", "consentimento_lgpd": True},
+            {"nome": 'Teste', "sobrenome": 'Completo', "interesse": "Direito Civil", "email": "completo@example.com", "senha": "SenhaSegura123!", "confirmar_senha": "SenhaSegura123!", "consentimento_lgpd": True, "versao_documentos": "2.2"},
         )
         cadastro = json.loads(corpo)
         self.assertEqual(201, codigo)

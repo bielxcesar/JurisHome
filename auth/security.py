@@ -14,7 +14,7 @@ from jwt import PyJWTError
 from sqlalchemy.orm import Session, object_session
 
 from database import get_db
-from model.models import Usuario, TipoUsuario, SessaoAutenticada
+from model.models import Usuario, TipoUsuario, SessaoAutenticada, PresencaSessao
 from services.auditoria import definir_ator_auditoria
 from services.lgpd import aceite_pendente
 from dotenv import load_dotenv
@@ -34,6 +34,7 @@ if len(SECRET_KEY.encode("utf-8")) < 32 or SECRET_KEY == "__GERAR_CHAVE_LOCAL__"
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
+PRESENCA_SESSAO_SEGUNDOS = 120
 SESSAO_PERSISTENTE_MINUTOS = 15
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
@@ -96,12 +97,19 @@ def criar_access_token(
         db = object_session(usuario)
         if db is None:
             raise ValueError("A emissão de sessão exige usuário persistido.")
+        # O bloqueio da conta serializa logins simultâneos no PostgreSQL.
+        db.query(Usuario).filter_by(uuid=usuario.uuid).with_for_update().one()
+        db.query(SessaoAutenticada).filter_by(
+            usuario_id=usuario.uuid, revogada=False,
+        ).update({"revogada": True}, synchronize_session=False)
         sessao = SessaoAutenticada(
             id=str(uuid.uuid4()), usuario_id=usuario.uuid,
             criada_em=agora.replace(tzinfo=None),
             expira_em=(agora + timedelta(minutes=minutos)).replace(tzinfo=None),
         )
         db.add(sessao)
+        db.flush()
+        db.add(PresencaSessao(sessao_id=sessao.id, confirmada_em=agora.replace(tzinfo=None)))
         db.commit()
     expira_em = min(agora + validade, prazo_sessao(sessao).replace(tzinfo=timezone.utc))
     payload = {
@@ -294,6 +302,9 @@ def get_current_user_sem_aceite(
     sessao = db.get(SessaoAutenticada, payload.get("sid")) if isinstance(payload.get("sid"), str) else None
     if (not sessao or sessao.usuario_id != usuario.uuid or sessao.revogada
             or prazo_sessao(sessao) <= agora_utc.replace(tzinfo=None)):
+        raise credenciais_invalidas
+    presenca = db.get(PresencaSessao, sessao.id)
+    if presenca is None or presenca.confirmada_em + timedelta(seconds=PRESENCA_SESSAO_SEGUNDOS) <= agora_utc.replace(tzinfo=None):
         raise credenciais_invalidas
     bloqueado_ate = usuario.bloqueado_ate
     if bloqueado_ate and bloqueado_ate.tzinfo is None:

@@ -270,7 +270,7 @@ class DashboardUsuarioTests(unittest.TestCase):
         self.assertEqual(404, contexto.exception.status_code)
 
     def test_dashboard_aparece_dentro_do_perfil_do_estudante(self):
-        resposta = pagina_perfil(self._requisicao_perfil(), self.estudante)
+        resposta = pagina_perfil(self._requisicao_perfil(), self.estudante, self.session)
         html = resposta.body.decode("utf-8")
 
         self.assertIn('id="perfil-dashboard"', html)
@@ -296,7 +296,7 @@ class DashboardUsuarioTests(unittest.TestCase):
             tipo_usuario=TipoUsuario.ADMINISTRADOR,
         )
 
-        resposta = pagina_perfil(self._requisicao_perfil(), administrador)
+        resposta = pagina_perfil(self._requisicao_perfil(), administrador, self.session)
         html = resposta.body.decode("utf-8")
 
         self.assertNotIn('id="perfil-dashboard"', html)

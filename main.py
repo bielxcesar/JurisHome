@@ -15,6 +15,8 @@ from fastapi.staticfiles import StaticFiles
 from database import engine, SessionLocal
 from services.categorias import garantir_categorias, corrigir_vinculos_legados
 from services.root_unico import garantir_root_unico
+from services.leituras import ciclo_retencao_metricas
+from services.lgpd import publicar_atualizacao_privacidade
 from services.administradores import exigir_root
 from services.entrada_http import EntradaSeguraMiddleware
 from services.erros import eh_pagina, resposta_erro
@@ -35,6 +37,7 @@ if engine.dialect.name in {"sqlite", "postgresql"}:
         )
 garantir_root_unico(engine)
 with SessionLocal() as db_catalogo:
+    publicar_atualizacao_privacidade(db_catalogo)
     garantir_categorias(db_catalogo)
     corrigir_vinculos_legados(db_catalogo)
     from services.juridle import garantir_banco_inicial
@@ -43,7 +46,7 @@ with SessionLocal() as db_catalogo:
     limpar_antigos(db_catalogo)
 criar_tabela_feedback()
 
-app = FastAPI(title="JurisHome", docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title="JurisHome", docs_url=None, redoc_url=None, openapi_url=None, lifespan=ciclo_retencao_metricas)
 app.add_middleware(EntradaSeguraMiddleware)
 
 CAMINHOS_DOCUMENTACAO = {"/docs", "/openapi.json"}

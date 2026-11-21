@@ -21,6 +21,7 @@ from services.conteudo_pedagogico import conteudo_categoria
 from services.editorial import montar_editorial
 from services.imagens import url_fonte_segura, url_imagem_segura
 from services.validacao import TextoBusca, padrao_busca
+from services.leituras import limpar_leituras_antigas
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -28,6 +29,8 @@ templates = Jinja2Templates(directory="templates")
 
 @router.get("/api/conteudos/em-alta")
 def conteudos_em_alta(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
+    limpar_leituras_antigas(db)
+    db.commit()
     inicio = (datetime.now(fuso_br).date() - timedelta(days=6)).isoformat()
     registros = db.query(Conteudo, func.count(ConteudoLeitura.usuario_id).label("leituras")).join(
         ConteudoLeitura, ConteudoLeitura.conteudo_id == Conteudo.uuid,
@@ -154,6 +157,7 @@ def pagina_materia(
 
     if usuario.tipo_usuario == TipoUsuario.ESTUDANTE:
         garantir_transacao(db)
+        limpar_leituras_antigas(db)
         chave = {"usuario_id": usuario.uuid, "conteudo_id": conteudo.uuid,
                  "dia": datetime.now(fuso_br).date().isoformat()}
         try:

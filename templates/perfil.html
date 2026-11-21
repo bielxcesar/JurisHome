@@ -20,7 +20,7 @@
             }
         })();
     </script>
-<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav"><link rel="stylesheet" href="/static/css/home.css?v=20261108-nav"><script src="/static/js/session.js" defer></script><script src="/static/js/curiosidades.js?v=20261108-nav" defer></script>
+<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav"><link rel="stylesheet" href="/static/css/home.css?v=20261108-nav"><script src="/static/js/session.js?v=presenca-120s" defer></script><script src="/static/js/curiosidades.js?v=20261108-nav" defer></script>
 {% if mostrar_dashboard %}<link rel="stylesheet" href="/static/css/perfil-dashboard.css?v=20261107-1"><script src="/static/js/perfil-dashboard.js?v=20261107-1" defer></script>{% endif %}
 </head>
 <body class="juris-ui home-shell bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
@@ -147,27 +147,43 @@
 
             <div class="mt-12 bg-[#1e1e1e] rounded-2xl p-6 border border-gray-800 shadow-inner">
                 <h3 class="text-white font-bold mb-6 border-b border-gray-700 pb-2">Segurança e consentimentos</h3>
+                <details class="mb-6"><summary>Histórico de aceite dos documentos</summary>
+                    <ul>{% for aceite in historico_aceites %}
+                        <li>Versão {{ aceite.versao }} · {{ aceite.aceito_em.strftime('%d/%m/%Y às %H:%M:%S') }} (Brasília)</li>
+                    {% else %}<li>Nenhum aceite registrado.</li>{% endfor %}</ul>
+                    <p>Exibimos os registros disponíveis; versões antigas sem comprovação não são presumidas como aceitas.</p>
+                </details>
                 
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div class="flex flex-col gap-1">
                         <span class="text-gray-300 font-semibold flex items-center gap-2">
-                            <i class="fa-solid fa-circle-check text-green-500"></i> Verificação em duas etapas
+                            <i aria-hidden="true" class="fa-solid {{ 'fa-circle-check text-green-500' if dois_fatores_ativos else 'fa-circle-exclamation text-amber-500' }}"></i>
+                            Verificação em duas etapas
                         </span>
-                        <span class="text-gray-500 text-sm ml-6">Ativa no autenticador</span>
+                        <span class="text-gray-400 text-sm">{{ 'Ativa no autenticador' if dois_fatores_ativos else 'Configuração pendente' }}</span>
+                        <a href="/problemas-acesso" class="text-amber-400 underline text-sm">Problemas com o autenticador?</a>
                     </div>
-
                     <div class="flex flex-col gap-1">
                         <span class="text-gray-300 font-semibold flex items-center gap-2">
-                            <i class="fa-solid fa-circle-check text-green-500"></i> Consentimento LGPD
+                            <i aria-hidden="true" class="fa-solid {{ 'fa-circle-check text-green-500' if aceite_atual else 'fa-circle-exclamation text-amber-500' }}"></i>
+                            Termos e privacidade
                         </span>
-                        <span class="text-gray-500 text-sm ml-6">Aceito</span>
+                        <span class="text-gray-400 text-sm">{{ 'Confirmação atualizada' if aceite_atual else 'Confirmação pendente' }}</span>
+                        {% if usuario.data_consentimento %}
+                            <span class="text-gray-400 text-sm">Confirmado em {{ data_aceite.strftime('%d/%m/%Y às %H:%M:%S') }} (Brasília)</span>
+                        {% else %}
+                            <span class="text-gray-400 text-sm">Data de confirmação não registrada</span>
+                        {% endif %}
+                        {% if not aceite_atual %}
+                            <a href="/aceitar-documentos" class="text-amber-400 underline text-sm">Ler e confirmar documentos</a>
+                        {% endif %}
                     </div>
-
                     <div class="flex flex-col gap-1">
-                        <span class="text-gray-300 font-semibold flex items-center gap-2">
-                            <i class="fa-solid fa-circle-check text-green-500"></i> Versão dos termos
-                        </span>
-                        <span class="text-gray-500 text-sm ml-6">1.0 • atualizado em 12/08/2026</span>
+                        <span class="text-gray-300 font-semibold">Versão dos documentos</span>
+                        <span class="text-gray-400 text-sm">Aceita pela conta: {{ usuario.versao_termos if usuario.consentimento_lgpd and usuario.versao_termos else 'Não registrada' }}</span>
+                        <span class="text-gray-400 text-sm">Versão vigente: {{ versao_legal_atual }}</span>
+                        <a href="/termos-de-aceite" target="_blank" rel="noopener" class="text-amber-400 underline text-sm">Ler Termo de Aceite ↗</a>
+                        <a href="/politica-de-privacidade" target="_blank" rel="noopener" class="text-amber-400 underline text-sm">Ler Política de Privacidade ↗</a>
                     </div>
                 </div>
             </div>

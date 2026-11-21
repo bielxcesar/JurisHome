@@ -144,7 +144,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const senha = document.getElementById("senha-anonimizacao").value;
             const confirmado = document.getElementById("confirmar-anonimizacao").checked;
             if (!senha || !confirmado) {
-                mostrarAvisoPrivacidade(privacyError, "Informe sua senha e confirme que entendeu a anonimização.");
+                mostrarAvisoPrivacidade(privacyError, "Informe sua senha e confirme que entendeu o encerramento e a retenção mínima.");
                 return;
             }
 

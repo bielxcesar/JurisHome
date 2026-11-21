@@ -11,6 +11,8 @@ from model.models import (
     fuso_br,
 )
 
+from services.leituras import limpar_leituras_antigas
+
 DIAS_RETENCAO_CATEGORIA = 90
 
 
@@ -77,6 +79,8 @@ def obter_dashboard_estudos(
 ) -> dict:
     """Calcula as matérias consultadas e categorias acessadas pelo próprio usuário."""
     data_final = hoje or datetime.now(fuso_br).date()
+    limpar_leituras_antigas(db, data_final)
+    db.commit()
     data_inicio = inicio_periodo(data_final, periodo_dias)
     inicio = data_inicio.isoformat()
     fim = data_final.isoformat()

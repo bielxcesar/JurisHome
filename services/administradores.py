@@ -8,6 +8,7 @@ from auth.security import get_current_user
 from auth.sessions import garantir_transacao
 from model.models import AdministradorExcluido, Conteudo, SessaoAutenticada, TipoUsuario, Usuario
 from services.imagens import url_imagem_segura
+from services.privacidade import mascarar_email
 
 
 def exigir_root(usuario: Usuario = Depends(get_current_user)) -> Usuario:
@@ -38,7 +39,7 @@ def revogar_sessoes(db: Session, alvo: Usuario):
 def serializar_admin(db: Session, alvo: Usuario):
     agora = datetime.now(timezone.utc).replace(tzinfo=None)
     return {
-        'uuid': alvo.uuid, 'nome': alvo.nome, 'email': alvo.email,
+        'uuid': alvo.uuid, 'nome': alvo.nome, 'email': mascarar_email(alvo.email),
         'foto': url_imagem_segura(alvo.foto_perfil),
         'criadoEm': alvo.criado_em.isoformat() if alvo.criado_em else None,
         'versao': alvo.atualizado_em.isoformat(),

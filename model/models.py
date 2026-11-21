@@ -124,6 +124,12 @@ class SessaoAutenticada(Base):
     revogada = Column(Boolean, nullable=False, default=False)
 
 
+class PresencaSessao(Base):
+    __tablename__ = "auth_presencas"
+    sessao_id = Column(String(36), ForeignKey("auth_sessoes.id"), primary_key=True)
+    confirmada_em = Column(DateTime, nullable=False)
+
+
 class RefreshToken(Base):
     __tablename__ = "auth_refresh_tokens"
     digest = Column(String(64), primary_key=True)
@@ -390,3 +396,20 @@ class LimiteAutenticacao(Base):
     ultima_em = Column(DateTime, nullable=False, index=True)
     bloqueado_ate = Column(DateTime, nullable=True)
     __table_args__ = (CheckConstraint('falhas >= 0', name='ck_auth_limite_falhas'),)
+
+
+class CuradoriaMateria(Base):
+    __tablename__ = "curadorias_materias"
+
+    conteudo_id = Column(String(36), ForeignKey("conteudos.uuid"), primary_key=True)
+    versao = Column(Integer, nullable=False, default=0)
+    orientacoes = Column(Text, nullable=False, default="")
+    revisada_em = Column(DateTime, nullable=True)
+
+
+class AceiteDocumento(Base):
+    """Histórico mínimo de versões aceitas, separado dos logs operacionais."""
+    __tablename__ = "aceites_documentos"
+    usuario_id = Column(CHAR(36), ForeignKey("usuarios.uuid"), primary_key=True)
+    versao = Column(String(50), primary_key=True)
+    aceito_em = Column(DateTime, nullable=False)
