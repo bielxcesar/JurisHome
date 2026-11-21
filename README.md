@@ -207,6 +207,7 @@ Ela contém o inventário de dados, bases de tratamento, retenção, direitos do
 - [`docs/INTEGRACAO_API_SENADO.md`](docs/INTEGRACAO_API_SENADO.md)
 - [`docs/INTEGRACAO_API_2FA.md`](docs/INTEGRACAO_API_2FA.md)
 - [`docs/REFATORACAO_SEGURANCA.md`](docs/REFATORACAO_SEGURANCA.md)
+- [`docs/OPERACAO_LOGS_DESEMPENHO_E_BACKUPS.md`](docs/OPERACAO_LOGS_DESEMPENHO_E_BACKUPS.md)
 - [`docs/lgpd/`](docs/lgpd/)
 
 ## 👥 Equipe

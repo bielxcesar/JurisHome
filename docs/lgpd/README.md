@@ -10,6 +10,7 @@ Equipe informada no projeto: Erick Santos Barbosa, Pedro Henrique Harada Pecegue
 - `direitos_titular.md`: procedimento operacional de atendimento.
 - `resposta_incidentes.md`: procedimento de segurança.
 - `fornecedores.md`: integrações e pontos que mudam na hospedagem.
+- [`../OPERACAO_LOGS_DESEMPENHO_E_BACKUPS.md`](../OPERACAO_LOGS_DESEMPENHO_E_BACKUPS.md): logs operacionais, metas de desempenho, disponibilidade, backups, recuperação e execução de retenção.
 
 Rotina de retenção (execução manual):
 

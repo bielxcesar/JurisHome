@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from dateutil import tz
 
 from sqlalchemy import (
-    Column, Integer, String, Text, DateTime, Enum, ForeignKey, Boolean,
+    Column, Integer, String, Text, DateTime, Enum, ForeignKey, Boolean, Float,
     CheckConstraint, UniqueConstraint, Index
 )
 from sqlalchemy.dialects.mysql import CHAR
@@ -340,6 +340,31 @@ class LogAuditoria(Base):
     detalhes_json = Column(Text, nullable=False, default="{}")
     
     criado_em = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+
+
+class LogOperacional(Base):
+    """Falhas e avisos técnicos sem dados do pedido ou da conta do usuário."""
+    __tablename__ = "logs_operacionais"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    criado_em = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    nivel = Column(String(16), nullable=False, index=True)
+    componente = Column(String(80), nullable=False)
+    evento = Column(String(60), nullable=False)
+    operacao = Column(String(100), nullable=True)
+    metodo = Column(String(12), nullable=True)
+    rota = Column(String(160), nullable=True)
+    status_http = Column(Integer, nullable=True)
+    duracao_ms = Column(Float, nullable=True)
+    correlacao_id = Column(String(36), nullable=False, index=True)
+    implantacao_id = Column(String(80), nullable=True)
+    tipo_excecao = Column(String(100), nullable=True)
+    quadros_json = Column(Text, nullable=False, default="[]")
+
+    __table_args__ = (
+        Index("ix_logs_operacionais_criado_em", "criado_em"),
+        Index("ix_logs_operacionais_nivel_criado_em", "nivel", "criado_em"),
+    )
 
 
 class JuridleQuestao(Base):

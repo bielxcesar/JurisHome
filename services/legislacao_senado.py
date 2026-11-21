@@ -7,6 +7,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from fastapi import HTTPException, status
+from services.logs_operacionais import registrar_falha_operacional
 
 
 URL_BASE = "https://legis.senado.leg.br/dadosabertos"
@@ -43,6 +44,11 @@ def _consultar_json(url: str) -> dict:
         json.JSONDecodeError,
         ValueError,
     ) as erro:
+        registrar_falha_operacional(
+            componente="integracao.senado",
+            operacao="consulta_legislacao",
+            erro=erro,
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="A consulta de legislação está indisponível no momento. Tente novamente mais tarde.",

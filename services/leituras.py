@@ -1,7 +1,6 @@
 """Retenção dos registros individuais usados na dashboard e em Em alta."""
 
 import asyncio
-import logging
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta
 
@@ -10,9 +9,9 @@ from sqlalchemy.orm import Session
 
 from database import SessionLocal
 from model.models import CategoriaAcesso, ConteudoLeitura, fuso_br
+from services.logs_operacionais import registrar_falha_operacional
 
 DIAS_RETENCAO_LEITURA = 90
-logger = logging.getLogger(__name__)
 
 
 def limite_leituras(hoje: date | None = None) -> str:
@@ -41,9 +40,13 @@ async def _rotina_metricas() -> None:
     while True:
         try:
             await run_in_threadpool(limpar_metricas_periodicamente)
-        except Exception:
-            # Sem detalhes da consulta, parâmetros ou dados dos titulares.
-            logger.error("Falha na limpeza de métricas; nova tentativa em uma hora.")
+        except Exception as erro:
+            # Não inclui a mensagem da exceção, que pode conter valores da consulta.
+            registrar_falha_operacional(
+                componente="retencao.metricas",
+                operacao="limpeza_diaria",
+                erro=erro,
+            )
             await asyncio.sleep(3600)
         else:
             await asyncio.sleep(24 * 60 * 60)

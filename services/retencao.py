@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 from sqlalchemy.orm import Session
 
-from model.models import AceiteDocumento, CategoriaAcesso, ConteudoLeitura, FeedbackAtendimento, LogAuditoria, Usuario, fuso_br
+from model.models import AceiteDocumento, CategoriaAcesso, ConteudoLeitura, FeedbackAtendimento, LogAuditoria, LogOperacional, Usuario, fuso_br
 from services.auditoria import registrar_auditoria
 from services.dashboard_usuario import DIAS_RETENCAO_CATEGORIA, inicio_periodo
 from services.direitos_titular import anonimizar_feedback_atendimento
@@ -13,6 +13,7 @@ from services.leituras import limite_leituras, limpar_leituras_antigas
 DIAS_FEEDBACK_APOS_ENCERRAMENTO = 180
 DIAS_LOG_GERAL = 365
 DIAS_LOG_INCIDENTE = 5 * 365
+DIAS_LOG_OPERACIONAL = 90
 DIAS_ACEITE_APOS_ANONIMIZACAO = 5 * 365
 
 
@@ -38,6 +39,9 @@ def aplicar_retencao(
     limite_feedback = referencia - timedelta(days=DIAS_FEEDBACK_APOS_ENCERRAMENTO)
     limite_log = referencia - timedelta(days=DIAS_LOG_GERAL)
     limite_incidente = referencia - timedelta(days=DIAS_LOG_INCIDENTE)
+    limite_log_operacional = (
+        referencia - timedelta(days=DIAS_LOG_OPERACIONAL)
+    ).replace(tzinfo=timezone.utc)
     limite_aceite = referencia - timedelta(days=DIAS_ACEITE_APOS_ANONIMIZACAO)
 
     feedbacks = feedback_db.query(FeedbackAtendimento).filter(
@@ -66,12 +70,18 @@ def aplicar_retencao(
         .filter(CategoriaAcesso.dia < limite_categoria)
         .count()
     )
+    logs_operacionais_para_excluir = (
+        db.query(LogOperacional)
+        .filter(LogOperacional.criado_em < limite_log_operacional)
+        .count()
+    )
 
     resultado: dict[str, int | bool] = {
         "execucao_realizada": executar,
         "leituras_para_excluir": db.query(ConteudoLeitura).filter(ConteudoLeitura.dia < limite_leituras(dia_local)).count(),
         "feedbacks_para_anonimizar": len(feedbacks),
         "logs_para_minimizar": len(logs_para_minimizar),
+        "logs_operacionais_para_excluir": logs_operacionais_para_excluir,
         "aceites_para_descartar": len(aceites),
         "acessos_categoria_para_excluir": acessos_categoria_para_excluir,
     }
@@ -97,6 +107,9 @@ def aplicar_retencao(
     db.query(CategoriaAcesso).filter(CategoriaAcesso.dia < limite_categoria).delete(
         synchronize_session=False
     )
+    db.query(LogOperacional).filter(
+        LogOperacional.criado_em < limite_log_operacional
+    ).delete(synchronize_session=False)
 
     registrar_auditoria(
         db,
@@ -106,6 +119,7 @@ def aplicar_retencao(
         detalhes={
             "feedbacks_anonimizados": len(feedbacks),
             "logs_minimizados": len(logs_para_minimizar),
+            "logs_operacionais_excluidos": logs_operacionais_para_excluir,
             "aceites_descartados": len(aceites),
             "acessos_categoria_excluidos": acessos_categoria_para_excluir,
             "leituras_excluidas": resultado["leituras_para_excluir"],

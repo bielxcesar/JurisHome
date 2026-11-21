@@ -1,5 +1,4 @@
 import os
-import logging
 
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.openapi.docs import get_swagger_ui_html
@@ -20,13 +19,23 @@ from services.lgpd import publicar_atualizacao_privacidade
 from services.administradores import exigir_root
 from services.entrada_http import EntradaSeguraMiddleware
 from services.erros import eh_pagina, resposta_erro
+from services.logs_operacionais import (
+    configurar_logs_operacionais,
+    configurar_persistencia_operacional,
+    definir_correlacao_operacional,
+    processar_requisicao_com_log,
+    restaurar_correlacao_operacional,
+)
 from feedback_database import criar_tabela_feedback
-from model.models import Base, Usuario, Conteudo, Categoria, StatusConteudo
+from model.models import Base, Usuario, Conteudo, Categoria, StatusConteudo, LogOperacional
 from auth.security import get_current_admin
 from routes import admin, auditoria, auth, conteudos, feedbacks, glossario, juridle, legal, perfil, rotas
 from services.auditoria import iniciar_contexto_auditoria, finalizar_contexto_auditoria
 
+configurar_logs_operacionais()
+
 Base.metadata.create_all(bind=engine)
+configurar_persistencia_operacional(SessionLocal, LogOperacional)
 from services.glossario import instalar_catalogo_inicial
 instalar_catalogo_inicial(engine)
 if engine.dialect.name in {"sqlite", "postgresql"}:
@@ -88,6 +97,7 @@ def favicon():
 @app.middleware("http")
 async def adicionar_correlacao_auditoria(request: Request, call_next):
     tokens, correlacao_id = iniciar_contexto_auditoria()
+    token_operacional = definir_correlacao_operacional(correlacao_id)
     request.state.correlacao_id = correlacao_id
     try:
         response = await call_next(request)
@@ -95,6 +105,12 @@ async def adicionar_correlacao_auditoria(request: Request, call_next):
         return response
     finally:
         finalizar_contexto_auditoria(tokens)
+        restaurar_correlacao_operacional(token_operacional)
+
+
+@app.middleware("http")
+async def registrar_requisicao_operacional(request: Request, call_next):
+    return await processar_requisicao_com_log(request, call_next)
 
 
 def adicionar_hsts(request: Request, resposta) -> None:
@@ -181,7 +197,6 @@ async def tratar_dados_invalidos(request: Request, erro: RequestValidationError)
 async def tratar_erro_inesperado(request: Request, erro: Exception):
     resposta = resposta_erro(request, 500)
     adicionar_hsts(request, resposta)
-    logging.getLogger("jurishome.erros").error("Falha interna. Tipo=%s Referencia=%s", type(erro).__name__, resposta.headers["X-Correlation-ID"])
     return resposta
 
 

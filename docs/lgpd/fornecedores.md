@@ -35,28 +35,22 @@ Consulta autenticada somente de leitura ao projeto JurisHome, ambiente productio
 | Contrato de tratamento | O [DPA público](https://railway.com/legal/dpa) descreve tratamento sob instruções do cliente e condições de devolução/eliminação. A leitura do documento não comprova assinatura específica, adesão institucional ou atendimento automático aos mecanismos brasileiros de transferência internacional. |
 | Suboperadores | O DPA remete ao [Trust Center](https://trust.railway.com/item/subprocessors). A página foi consultada, mas a lista detalhada não ficou acessível no conteúdo público retornado. O root deve obter a relação vigente no portal/suporte; não presumir lista completa. |
 | Proteção da plataforma | A [documentação de segurança](https://docs.railway.com/enterprise/security) informa criptografia em repouso e em trânsito. É declaração do fornecedor, não auditoria técnica independente desta equipe. |
-| Logs externos | A documentação de segurança indica 7 dias para Hobby, mas isso não é evidência da eliminação de todas as cópias internas. Há [respostas no canal do fornecedor](https://station.railway.com/questions/how-long-are-logs-actually-stored-on-the-c60999d6) distinguindo janela visível e armazenamento por 90 dias. Confirmar retenção efetiva, local e eventual exceção por escrito antes de prometer descarte em 7 dias. |
+| Logs do provedor | A documentação oficial de logs consultada em 21/11/2026 indica 7 dias de retenção visível para Hobby. Essa janela não comprova a eliminação de toda cópia interna do fornecedor; não afirmar descarte total após 7 dias sem confirmação. |
 
-### Backup: decisão e execução ainda necessárias
+### Backups e recuperação
 
-A [documentação de backups](https://docs.railway.com/volumes/backups) descreve agendas diária/semanal/mensal, retenções de 6/27/89 dias e cobrança por armazenamento incremental. A disponibilidade para o plano contratado precisa ser conferida antes de ativar. A [orientação publicada no suporte](https://station.railway.com/questions/need-to-get-backup-from-database-44a3320b) informa exigência de Pro para backups nativos. Não houve upgrade nem criação de cópia nesta conferência.
+Na consulta de painel registrada acima, feita em 20/11/2026, não havia backup de volume listado nem agenda configurada para `postgres-volume` no ambiente production. A equipe adiou a proposta de backup a cada 72 horas antes da implantação. Nenhuma cópia foi criada ou apagada e nenhum plano ou agendamento foi alterado. Essa constatação é histórica e não foi confirmada novamente durante a revisão de 21/11/2026.
 
-Opções propostas, ainda sem compromisso operacional aprovado:
+Na [documentação oficial de backups](https://docs.railway.com/volumes/backups), consultada em 21/11/2026, a Railway descreve cópias de volume manuais ou agendadas diariamente, semanalmente ou mensalmente, com retenção publicada de 6, 27 e 89 dias, respectivamente. O armazenamento incremental pode gerar cobrança. A documentação atual não confirma, por si só, a disponibilidade do recurso no plano usado pelo projeto; verificar no painel antes de planejar sua ativação.
 
-- Backup nativo diário, se a equipe aprovar as condições e o custo: acompanhar primeira execução bem-sucedida e expiração. Não confundir agendamento criado com cópia válida.
-- Exportação lógica com `pg_dump`, sem mudança de plano: definir responsável, frequência, destino protegido e prazo de descarte antes de chamar o procedimento de política implantada. Não guardar dump no Git nem em evidências acadêmicas; ele contém dados pessoais e hashes.
+O código do JurisHome não cria cópias, exportações `pg_dump` ou agendamentos. A documentação da Railway descreve que uma restauração de volume prepara outro volume para revisão, mantendo o anterior desanexado até a conclusão da implantação. A documentação de [Point-in-Time Recovery para PostgreSQL](https://docs.railway.com/volumes/point-in-time-recovery) também descreve restauração para um novo serviço. Não há evidência de que backups ou PITR estejam habilitados para este projeto.
 
-Antes de qualquer restauração: validar em ambiente isolado; conferir integridade e acesso; reaplicar remoções de titulares e retenção; registrar data, executor, resultado e origem da cópia. O teste em produção e qualquer restauração dependem de uma ação específica autorizada; não foram executados.
+Nenhuma restauração foi testada, e o projeto ainda não definiu RPO ou RTO. Antes de ativar backups, os responsáveis precisam definir frequência, retenção, destino, responsável e custos. Antes de liberar um ambiente restaurado, validar a cópia isoladamente e reaplicar solicitações de remoção e prazos de retenção. Backups externos não são atualizados automaticamente pelas rotinas da aplicação.
 
 ### Confirmações que ainda dependem da equipe ou do fornecedor
 
 - Substituto e triagem definidos pela equipe: administrador de suporte designado pelo root; confirmação e triagem em até 2 dias úteis. Registrar a designação nominal operacionalmente.
-- Backup adiado por decisão da equipe em 20/11/2026. A proposta de intervalo de 72 horas foi cancelada antes da implantação. Nenhuma criação, exclusão de cópia, mudança de plano ou ativação de agenda foi realizada. A ausência de backup configurado continua registrada como pendência operacional.
+- Confirmar no painel o plano, a existência de cópias/agendas, a disponibilidade do backup de volume e o estado de PITR. A aplicação e o repositório não fornecem essas informações.
+- Definir responsável, frequência, retenção, destino protegido, custos, RPO/RTO e teste de restauração antes de tratar backup como procedimento operacional implantado.
 - Identificação formal do controlador e mecanismo aplicável a transferências internacionais: validar com os responsáveis pelo projeto; não inferir conformidade LGPD apenas do DPA europeu.
 - Lista completa de suboperadores, localização física/replicação, retenção efetiva de logs e cópias internas: obter evidência contratual ou resposta do fornecedor.
-
-### Backup adiado pela equipe — 20/11/2026
-
-A equipe cancelou a proposta de backup a cada 3 dias antes de qualquer implantação. Nenhum backup ou agendamento foi criado por este trabalho; nenhum backup existente foi apagado, e não houve mudança de plano ou cobrança ativada. A conta consultada permanece sem backup de volume ou agendamento confirmado na conferência anterior.
-
-Não há compromisso de execução periódica nem tarefa de backup pendente de ativação. Se a equipe retomar o assunto, deverá definir novamente destino, frequência, retenção, responsável, teste de restauração e custos antes de implantar. A ausência de cópia recuperável configurada permanece uma pendência operacional documentada, sem declaração de conformidade integral.
