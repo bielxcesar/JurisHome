@@ -47,6 +47,7 @@
         if(parametros.get('bloqueio')==='encerrado')mostrarMensagem('Tempo de espera encerrado. Entre novamente para continuar.',false);
         if (parametros.get('recuperacao') === 'enviada') mostrarMensagem('Solicitação enviada aos administradores. Aguarde a redefinição do autenticador antes de entrar novamente.', false);
         if (parametros.get('recuperacao') === 'em-andamento') mostrarMensagem('Você já possui uma solicitação em andamento. Aguarde o atendimento dos administradores.', false);
+        if(parametros.get('aceite')==='revogado')mostrarMensagem('Seu aceite foi revogado e as sessões foram encerradas. Você poderá ler e confirmar os documentos ao entrar novamente.',false);
         configurarAlternanciaSenha();
         configurarLogin();
         configurarCadastro();

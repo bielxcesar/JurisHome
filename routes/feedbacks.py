@@ -1,5 +1,6 @@
 from services.validacao import ModeloSeguro
 from services.privacidade import mascarar_email
+from services.moderacao import validar_atendimento, proteger_eventos, proteger_texto_legado
 import json
 import uuid
 from types import SimpleNamespace
@@ -53,7 +54,7 @@ class FeedbackCriacao(ModeloSeguro):
         valor = valor.strip()
         if not 5 <= len(valor) <= 120:
             raise ValueError("O assunto deve ter entre 5 e 120 caracteres.")
-        return valor
+        return validar_atendimento(valor)
 
     @field_validator("mensagem")
     @classmethod
@@ -61,7 +62,7 @@ class FeedbackCriacao(ModeloSeguro):
         valor = valor.strip()
         if not 10 <= len(valor) <= 2000:
             raise ValueError("A mensagem deve ter entre 10 e 2.000 caracteres.")
-        return valor
+        return validar_atendimento(valor)
 
 
 class VersaoAtendimento(ModeloSeguro):
@@ -108,7 +109,7 @@ class MensagemAdministrativa(VersaoAtendimento):
         valor = valor.strip()
         if not valor:
             raise ValueError("Digite uma mensagem antes de enviar.")
-        return valor
+        return validar_atendimento(valor)
 
 
 def _agora() -> datetime:
@@ -184,20 +185,20 @@ def _serializar(feedback: FeedbackAtendimento, incluir_interno: bool = True) -> 
             "email": mascarar_email(feedback.usuario_email) if incluir_interno else feedback.usuario_email,
         },
         "tipo": feedback.tipo,
-        "assunto": feedback.assunto,
-        "mensagem": feedback.mensagem,
+        "assunto": proteger_texto_legado(feedback.assunto),
+        "mensagem": proteger_texto_legado(feedback.mensagem),
         "avaliacao": feedback.avaliacao,
         "status": feedback.status,
         "prioridade": feedback.prioridade,
         "criadoEm": _iso(feedback.criado_em),
         "atualizadoEm": _iso(feedback.atualizado_em),
-        "respostas": _ler_json(feedback.respostas_json),
-        "historico": historico,
+        "respostas": proteger_eventos(_ler_json(feedback.respostas_json)),
+        "historico": proteger_eventos(historico),
         "novo": feedback.novo,
         "arquivado": feedback.arquivado,
     }
     if incluir_interno:
-        resultado["observacoesInternas"] = _ler_json(feedback.observacoes_json)
+        resultado["observacoesInternas"] = proteger_eventos(_ler_json(feedback.observacoes_json))
     return resultado
 
 

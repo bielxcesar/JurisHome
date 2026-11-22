@@ -1081,13 +1081,8 @@ class TestesSeguranca(unittest.TestCase):
         self.db.commit()
         token = criar_access_token(usuario)
         status, _, corpo = self._request("GET", "/perfil", token=token)
-        texto = corpo.decode()
-        self.assertEqual(200, status)
-        self.assertIn("Confirmação pendente", texto)
-        self.assertIn("Data de confirmação não registrada", texto)
-        self.assertIn("Versão vigente: " + versao, texto)
-        self.assertIn('href="/aceitar-documentos"', texto)
-        self.assertNotIn("12/08/2026", texto)
+        self.assertEqual(303, status)
+        self.assertEqual(428, self._request("GET", "/api/usuarios/me", token=token)[0])
 
         usuario.consentimento_lgpd = True
         usuario.versao_termos = versao
@@ -1251,6 +1246,66 @@ class TestesSeguranca(unittest.TestCase):
 
     def tearDown(self):
         self.db.close()
+
+    def test_polimento_revogar_aceite_todos_perfis(self):
+        for papel, root in ((TipoUsuario.ESTUDANTE, False), (TipoUsuario.ADMINISTRADOR, False), (TipoUsuario.ADMINISTRADOR, True)):
+            pessoa = self._usuario(papel)
+            pessoa.e_root_admin = root
+            self.db.commit()
+            versao = pessoa.versao_termos
+            token = criar_access_token(pessoa)
+            url = "/api/usuarios/me/aceite"
+            self.assertEqual(400, self._request("DELETE", url, {"senha": "errada", "confirmacao": "REVOGAR"}, token=token)[0])
+            self.assertTrue(pessoa.consentimento_lgpd)
+            self.assertEqual(200, self._request("DELETE", url, {"senha": "SenhaSegura123!", "confirmacao": "REVOGAR"}, token=token)[0])
+            self.db.refresh(pessoa)
+            self.assertFalse(pessoa.consentimento_lgpd)
+            self.assertEqual(versao, pessoa.versao_termos)
+            self.assertEqual(401, self._request("GET", "/api/usuarios/me", token=token)[0])
+            novo = criar_access_token(pessoa)
+            self.assertEqual(428, self._request("GET", "/api/usuarios/me", token=novo)[0])
+
+    def test_polimento_suporte_mantem_leitor_sem_elevar_permissoes(self):
+        suporte = self._usuario(TipoUsuario.ADMINISTRADOR)
+        leitor = self._usuario()
+        token = criar_access_token(suporte)
+        antigo = criar_access_token(leitor)
+        chamado = models.FeedbackAtendimento(id="chamado-polimento", protocolo="POLIMENTO-TESTE", usuario_id=leitor.uuid,
+            usuario_nome=leitor.nome, usuario_email=leitor.email, tipo="Recuperacao 2FA", assunto="Recuperar autenticador",
+            mensagem="Solicitação de recuperação do autenticador.")
+        self.db.add(chamado)
+        self.db.commit()
+        url = "/api/admin/leitores/" + leitor.uuid
+        dados = {"nome": "Nome corrigido", "versao": leitor.atualizado_em.isoformat(), "resetar_2fa": True}
+        self.assertEqual(403, self._request("PUT", url, dados, token=antigo)[0])
+        status, _, corpo = self._request("GET", "/admin/usuarios/" + leitor.uuid, token=token)
+        self.assertEqual(200, status)
+        self.assertIn(url, corpo.decode())
+        self.assertEqual(200, self._request("PUT", url, dados, token=token)[0])
+        self.db.refresh(leitor)
+        self.db.refresh(chamado)
+        self.assertEqual("Resolvido", chamado.status)
+        self.assertFalse(leitor.is_2fa_enabled)
+        self.assertIsNone(leitor.totp_secret)
+        self.assertEqual(401, self._request("GET", "/api/usuarios/me", token=antigo)[0])
+        self.assertEqual(409, self._request("PUT", url, dados, token=token)[0])
+        self.assertEqual(404, self._request("PUT", "/api/admin/leitores/" + suporte.uuid, dados, token=token)[0])
+        dados["tipo_usuario"] = "administrador"
+        self.assertEqual(422, self._request("PUT", url, dados, token=token)[0])
+
+    def test_polimento_atualizacao_termos_bloqueia_admin_e_root_logados(self):
+        for root in (False, True):
+            pessoa = self._usuario(TipoUsuario.ADMINISTRADOR)
+            pessoa.e_root_admin = root
+            self.db.commit()
+            token = criar_access_token(pessoa)
+            self.db.add(models.RevisaoLegal(anterior=pessoa.versao_termos, termos="Novo termo", politica="Nova política", publicada_em=datetime.now(timezone.utc).replace(tzinfo=None)))
+            self.db.commit()
+            origem = ((b"origin", b"http://testserver"),)
+            status, headers, _ = self._request("POST", "/api/auth/presenca", cookie="jurishome_access_token="+token, extra_headers=origem)
+            self.assertEqual(204, status)
+            self.assertEqual("required", headers["x-legal-acceptance"])
+            self.assertEqual(428, self._request("GET", "/api/usuarios/me", token=token)[0])
 
     def _usuario(self, papel=TipoUsuario.ESTUDANTE, email=None):
         usuario = Usuario(

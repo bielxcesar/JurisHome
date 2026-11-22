@@ -18,9 +18,11 @@
             }
         })();
     </script>
-<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav"><link rel="stylesheet" href="/static/css/avatares-perfil.css?v=20261121-1"><link rel="stylesheet" href="/static/css/home.css?v=20261108-nav"><script src="/static/js/session.js?v=validacao-20261121" defer></script><script src="/static/js/curiosidades.js?v=20261108-nav" defer></script>
+<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav"><link rel="stylesheet" href="/static/css/avatares-perfil.css?v=20261121-1"><link rel="stylesheet" href="/static/css/home.css?v=20261108-nav"><script src="/static/js/session.js?v=polimento-20261122" defer></script><script src="/static/js/curiosidades.js?v=20261108-nav" defer></script>
 {% if mostrar_dashboard %}<link rel="stylesheet" href="/static/css/perfil-dashboard.css?v=20261107-1"><script src="/static/js/perfil-dashboard.js?v=20261107-1" defer></script>{% endif %}
     {% include "_favicon.html" %}
+<script defer src="/static/js/privacidade-conta.js?v=20261122-1"></script>
+<link rel="stylesheet" href="/static/css/senha-visivel.css?v=20261122-1"><script defer src="/static/js/senha-visivel.js?v=20261122-1"></script>
 </head>
 <body class="juris-ui home-shell bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col">
 
@@ -195,6 +197,17 @@
             </div>
 
         </div>
+<section class="mt-6 rounded-2xl border border-gray-700 bg-[#25262a] p-6" aria-labelledby="revogar-aceite-titulo">
+    <h2 id="revogar-aceite-titulo" class="text-lg font-bold">Revogar aceite dos documentos</h2>
+    <p class="text-sm text-gray-400 mt-2 mb-5">Você será desconectado de todas as sessões. As comprovações anteriores serão preservadas; essa ação não exclui a conta nem os registros mantidos por outras finalidades. Para retornar às funções protegidas, será necessário um novo aceite.</p>
+    <form id="form-revogar-aceite" class="max-w-md flex flex-col gap-4">
+        <label for="senha-revogacao">Confirme sua senha atual</label>
+        <input id="senha-revogacao" type="password" maxlength="72" autocomplete="current-password" required class="rounded-lg border border-gray-600 bg-[#1e1e1e] p-3">
+        <label class="flex gap-3 items-start text-sm"><input type="checkbox" required class="mt-1"><span>Quero revogar meu aceite e encerrar as sessões.</span></label>
+        <p id="revogacao-retorno" role="alert" hidden></p>
+        <button type="submit" class="rounded-lg border border-amber-500 px-4 py-3 text-amber-400 font-semibold">Revogar aceite e sair</button>
+    </form>
+</section>
     </main>
 
     {% include "_legal_links.html" %}

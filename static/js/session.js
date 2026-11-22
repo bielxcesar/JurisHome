@@ -36,7 +36,7 @@
             verificando = false;
         }
     }
-    const presencaTimer = setInterval(confirmarPresenca, 30000);
+    const presencaTimer = setInterval(confirmarPresenca, 15000);
     window.addEventListener('pageshow', confirmarPresenca);
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) confirmarPresenca();

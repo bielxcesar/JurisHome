@@ -2,7 +2,7 @@
 <html lang="pt-BR"><head><meta charset="utf-8"><title>Renovando sessão | JurisHome</title>    {% include "_favicon.html" %}
 </head>
 <body><p id="estado">Renovando sua sessão…</p>
-<script src="/static/js/session.js?v=validacao-20261121"></script>
+<script src="/static/js/session.js?v=polimento-20261122"></script>
 <script>
     window.JurisHomeRenovarSessao().then(resposta => {
         location.replace(resposta.ok ? {{ destino | tojson }} : '/?sessao=expirada');
