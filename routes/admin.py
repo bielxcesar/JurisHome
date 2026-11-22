@@ -39,6 +39,7 @@ from services.categorias import (
     normalizar,
     tags_padrao,
 )
+from auth.sessions import garantir_transacao
 from auth.security import get_current_user, hash_senha
 import base64
 
@@ -119,32 +120,8 @@ def consultar_administrador(usuario_id: str, db: Session = Depends(get_db), root
 def manter_administrador(usuario_id: str, dados: ManutencaoAdministrador,
                         db: Session = Depends(get_db), root: Usuario = Depends(exigir_root)):
     alvo = buscar_admin(db, usuario_id, root, bloquear=True)
-    if dados.versao != alvo.atualizado_em.isoformat():
-        raise HTTPException(409, "Esta conta mudou desde que a página foi aberta. Recarregue antes de salvar.")
-    novo_email = dados.email if dados.email is not None else alvo.email
-    duplicado = db.query(Usuario.uuid).filter(func.lower(Usuario.email) == novo_email, Usuario.uuid != alvo.uuid).first()
-    if duplicado:
-        raise HTTPException(409, "Este e-mail já está cadastrado.")
-    revogar = dados.encerrar_sessoes or dados.resetar_2fa or dados.nova_senha is not None or novo_email != alvo.email
-    alvo.nome, alvo.email = dados.nome, novo_email
-    if dados.nova_senha is not None:
-        alvo.senha_hash = hash_senha(dados.nova_senha)
-    if dados.resetar_2fa:
-        alvo.totp_secret = None
-        alvo.is_2fa_enabled = False
-    if revogar:
-        revogar_sessoes(db, alvo)
-    registrar_auditoria(db, acao="administrador_atualizado", recurso_tipo="usuario", recurso_id=alvo.uuid,
-                        resultado="sucesso", usuario=root,
-                        detalhes={"sessoes_revogadas": revogar, "reset_2fa": dados.resetar_2fa,
-                                  "senha_redefinida": dados.nova_senha is not None})
-    try:
-        db.commit()
-    except IntegrityError as erro:
-        db.rollback()
-        raise HTTPException(409, "Não foi possível salvar. Confira se o e-mail já foi usado.") from erro
-    db.refresh(alvo)
-    return {"mensagem": "Administrador atualizado com sucesso.", "administrador": serializar_admin(db, alvo, incluir_email=True)}
+    conta = salvar_manutencao_conta(db, alvo, dados, root)
+    return {"mensagem": "Administrador atualizado com sucesso.", "administrador": conta}
 
 
 @router.delete("/api/admin/administradores/{usuario_id}")
@@ -429,16 +406,7 @@ def resetar_2fa(
     usuario_alvo.token_validos_apos = datetime.now(timezone.utc).replace(tzinfo=None)
     
     chamados = db if feedback_db.get_bind() is db.get_bind() else feedback_db
-    pendentes = chamados.query(FeedbackAtendimento).filter(
-        FeedbackAtendimento.usuario_id == usuario_uuid,
-        FeedbackAtendimento.tipo == "Recuperacao 2FA",
-        FeedbackAtendimento.status.in_(["Recebido", "Em análise", "Respondido"]),
-        FeedbackAtendimento.arquivado.is_(False),
-    ).all()
-    
-    for chamado in pendentes:
-        chamado.status = "Resolvido"
-        chamado.observacoes_json = '["2FA resetado pelo suporte."]'
+    resolver_recuperacoes_2fa(chamados, usuario_uuid)
 
     novo_log = LogAuditoria(
         usuario_id=usuario_logado.uuid,
@@ -714,7 +682,77 @@ def consultar_perfil_usuario(usuario_id: str, request: Request, db: Session = De
         raise HTTPException(404, "Usuário não encontrado.")
     registrar_consulta_contato(db, alvo, administrador)
     conta = serializar_admin(db, alvo, incluir_email=True)
+    if alvo.tipo_usuario == TipoUsuario.ESTUDANTE:
+        return templates.TemplateResponse(request=request, name="admin-perfil.html",
+            context={"tipo_usuario": administrador.tipo_usuario.value, "administrador": conta,
+                     "rotulo_perfil": "Leitor", "titulo_perfil": "Perfil do leitor",
+                     "descricao_perfil": "Atualize informações e gerencie a segurança desta conta de leitor.",
+                     "endpoint_edicao": "/api/admin/leitores/" + str(alvo.uuid)},
+            headers={"Cache-Control": "no-store"})
     conta["perfil"] = ("Administrador principal" if alvo.e_root_admin else "Administrador de suporte") if alvo.tipo_usuario == TipoUsuario.ADMINISTRADOR else "Leitor"
     return templates.TemplateResponse(request=request, name="usuario-perfil.html",
         context={"tipo_usuario": administrador.tipo_usuario.value, "conta": conta},
         headers={"Cache-Control": "no-store"})
+
+
+def salvar_manutencao_conta(db, alvo, dados, responsavel):
+    if dados.versao != alvo.atualizado_em.isoformat():
+        raise HTTPException(409, "Esta conta mudou desde que a página foi aberta. Recarregue antes de salvar.")
+    novo_email = dados.email if dados.email is not None else alvo.email
+    duplicado = db.query(Usuario.uuid).filter(func.lower(Usuario.email) == novo_email, Usuario.uuid != alvo.uuid).first()
+    if duplicado:
+        raise HTTPException(409, "Este e-mail já está cadastrado.")
+    revogar = dados.encerrar_sessoes or dados.resetar_2fa or dados.nova_senha is not None or novo_email != alvo.email
+    alvo.nome, alvo.email = dados.nome, novo_email
+    if dados.nova_senha is not None:
+        alvo.senha_hash = hash_senha(dados.nova_senha)
+    if dados.resetar_2fa:
+        alvo.totp_secret = None
+        alvo.is_2fa_enabled = False
+    if revogar:
+        revogar_sessoes(db, alvo)
+    registrar_auditoria(db, acao="administrador_atualizado" if alvo.tipo_usuario == TipoUsuario.ADMINISTRADOR else "leitor_atualizado", recurso_tipo="usuario", recurso_id=alvo.uuid,
+                        resultado="sucesso", usuario=responsavel,
+                        detalhes={"sessoes_revogadas": revogar, "reset_2fa": dados.resetar_2fa,
+                                  "senha_redefinida": dados.nova_senha is not None})
+    try:
+        db.commit()
+    except IntegrityError as erro:
+        db.rollback()
+        raise HTTPException(409, "Não foi possível salvar. Confira se o e-mail já foi usado.") from erro
+    db.refresh(alvo)
+    return serializar_admin(db, alvo, incluir_email=True)
+
+
+
+@router.put("/api/admin/leitores/{usuario_id}")
+def manter_leitor(usuario_id: str, dados: ManutencaoAdministrador, db: Session = Depends(get_db),
+                  administrador: Usuario = Depends(get_current_user),
+                  feedback_db: Session = Depends(get_feedback_db)):
+    if administrador.tipo_usuario != TipoUsuario.ADMINISTRADOR:
+        raise HTTPException(403, "Acesso negado.")
+    garantir_transacao(db)
+    alvo = db.query(Usuario).filter_by(uuid=usuario_id, tipo_usuario=TipoUsuario.ESTUDANTE).populate_existing().with_for_update().first()
+    if alvo is None or alvo.e_root_admin:
+        raise HTTPException(404, "Leitor não encontrado.")
+    chamados = db if feedback_db.get_bind() is db.get_bind() else feedback_db
+    if dados.resetar_2fa:
+        resolver_recuperacoes_2fa(chamados, usuario_id)
+    conta = salvar_manutencao_conta(db, alvo, dados, administrador)
+    if dados.resetar_2fa and chamados is not db:
+        chamados.commit()
+    return {"mensagem": "Usuário atualizado com sucesso.", "conta": conta}
+
+
+def resolver_recuperacoes_2fa(chamados: Session, usuario_uuid: str) -> None:
+    pendentes = chamados.query(FeedbackAtendimento).filter(
+        FeedbackAtendimento.usuario_id == usuario_uuid,
+        FeedbackAtendimento.tipo == "Recuperacao 2FA",
+        FeedbackAtendimento.status.in_(["Recebido", "Em análise", "Respondido"]),
+        FeedbackAtendimento.arquivado.is_(False),
+    ).all()
+    
+    for chamado in pendentes:
+        chamado.status = "Resolvido"
+        chamado.observacoes_json = '["2FA resetado pelo suporte."]'
+

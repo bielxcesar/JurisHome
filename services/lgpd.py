@@ -54,8 +54,6 @@ def versao_legal(revisao: RevisaoLegal | None) -> str:
 
 
 def aceite_pendente(db: Session, usuario: Usuario) -> bool:
-    if getattr(usuario.tipo_usuario, "value", usuario.tipo_usuario) != "estudante":
-        return False
     revisao = revisao_vigente(db)
     return revisao is not None and (
         not usuario.consentimento_lgpd or usuario.versao_termos != versao_legal(revisao)

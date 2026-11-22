@@ -4,7 +4,7 @@
 <title>Painel administrativo | JurisHome</title>
 <link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-voltar">
 <link rel="stylesheet" href="/static/css/admin-tabelas.css?v=recuperacao-pendente">
-<script src="/static/js/session.js?v=validacao-20261121" defer></script><script src="/static/js/admin-tabelas.js?v=perfil-contato-20261121" defer></script>
+<script src="/static/js/session.js?v=polimento-20261122" defer></script><script src="/static/js/admin-tabelas.js?v=polimento-20261122" defer></script>
 <script>(()=>{try{document.documentElement.dataset.theme=localStorage.getItem('tema_juris')==='claro'?'light':'dark';}catch(_){}})();</script>
     {% include "_favicon.html" %}
 </head><body class="juris-ui admin-tabelas" data-root="{{ 'true' if usuario.e_root_admin else 'false' }}">
@@ -75,12 +75,12 @@
     </div>
 
 <dialog id="excluir-admin-dialog" aria-labelledby="excluir-admin-titulo" aria-describedby="excluir-admin-aviso">
-<form id="excluir-admin-form"><h2 id="excluir-admin-titulo">Excluir administrador</h2>
+<form id="excluir-admin-form"><h2 id="excluir-admin-titulo">Excluir usuário</h2>
 <p id="excluir-admin-pergunta"></p><p id="excluir-admin-aviso">A conta perderá o acesso e sairá da lista de administradores. As matérias e o histórico serão preservados.</p>
 <label for="excluir-admin-nome">Digite o nome completo para confirmar</label><strong id="excluir-admin-esperado"></strong>
 <input id="excluir-admin-nome" type="text" autocomplete="off" spellcheck="false" maxlength="100" required>
 <p id="excluir-admin-erro" role="alert" hidden></p>
-<div class="delete-admin-actions"><button id="excluir-admin-cancelar" type="button">Cancelar</button><button id="excluir-admin-confirmar" class="danger" type="submit" disabled>Excluir administrador</button></div>
+<div class="delete-admin-actions"><button id="excluir-admin-cancelar" type="button">Cancelar</button><button id="excluir-admin-confirmar" class="danger" type="submit" disabled>Excluir usuário</button></div>
 </form></dialog>
     <script defer src="/static/js/erro.js?v=ultima-pagina"></script>
 </body></html>

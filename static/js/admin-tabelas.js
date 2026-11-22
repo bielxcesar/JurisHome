@@ -45,7 +45,7 @@ function usuarios() {
   else if(root && u.tipo === 'administrador') {
    const grupo=criar('div',undefined,'actions');
    const editar=criar('a','Editar','button');editar.href='/admin/administradores/'+encodeURIComponent(u.uuid);editar.setAttribute('aria-label','Editar administrador '+u.nome);
-   const excluir=criar('button','Excluir','danger');excluir.type='button';excluir.setAttribute('aria-label','Excluir administrador '+u.nome);excluir.addEventListener('click',()=>abrirExclusaoAdmin(u));
+   const excluir=criar('button','Excluir usuário','danger');excluir.type='button';excluir.setAttribute('aria-label','Excluir usuário '+u.nome);excluir.addEventListener('click',()=>abrirExclusaoAdmin(u));
    grupo.append(editar,excluir);acoes.append(grupo);
   }
   else if(!root && (u.is_2fa_enabled || u.solicitou_ajuda)) { const b=criar('button','Resetar 2FA','danger');b.addEventListener('click',()=>executar(b,async()=>{if(!confirm('O autenticador atual será revogado. Continuar?'))return;await requisitar('/api/admin/resetar-2fa/'+encodeURIComponent(u.uuid),'POST');aviso('Autenticador revogado. O usuário deverá configurar o 2FA novamente.');await carregar();}));acoes.append(b); }

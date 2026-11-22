@@ -11,10 +11,10 @@ $('admin-perfil-form').addEventListener('submit',async evento=>{
  if(senha)dados.nova_senha=senha;
  salvando=true;$('admin-perfil-salvar').disabled=true;$('admin-perfil-retorno').hidden=true;
  try{
-  const resposta=await fetch('/api/admin/administradores/'+encodeURIComponent(administrador.uuid),{method:'PUT',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)});
+  const resposta=await fetch($('admin-perfil-form').dataset.endpoint,{method:'PUT',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)});
   const corpo=await resposta.json().catch(()=>({}));
   if(!resposta.ok)throw new Error(typeof corpo.detail==='string'?corpo.detail:Array.isArray(corpo.detail)?corpo.detail.map(item=>item.msg.replace(/^Value error, /,'')).join(' '):'Não foi possível salvar. Tente novamente.');
-  administrador=corpo.administrador;
+  administrador=corpo.administrador || corpo.conta;
   $('admin-nome').value=administrador.nome;$('admin-email').value=administrador.email;
   $('admin-nome-resumo').textContent=administrador.nome;$('admin-email-resumo').textContent=administrador.email;
   $('admin-2fa-status').textContent=administrador.is_2fa_enabled?'Ativa':'Configuração pendente';$('admin-sessoes').textContent=administrador.sessoesAtivas;

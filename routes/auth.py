@@ -57,6 +57,7 @@ from model.models import (
     Usuario,
 )
 from services.auditoria import registrar_auditoria
+from services.administradores import revogar_sessoes
 from services.direitos_titular import (anonimizar_feedbacks_atendimento,anonimizar_feedbacks_legados,anonimizar_usuario, remover_vinculos_desnecessarios, remover_foto_local,)
 from services.lgpd import aceite_pendente, registrar_aceite, revisao_vigente, versao_legal
 
@@ -997,3 +998,27 @@ def confirmar_presenca(
         raise HTTPException(401, "Entre novamente para continuar.")
     db.commit()
     return Response(status_code=204, headers={"X-Legal-Acceptance": "required"} if aceite_pendente(db, usuario) else {})
+
+
+class RevogacaoAceite(ModeloSeguro):
+    senha: str = Field(min_length=1, max_length=72)
+    confirmacao: Literal["REVOGAR"]
+
+
+@router.delete("/usuarios/me/aceite")
+def revogar_meu_aceite(dados: RevogacaoAceite, request: Request, response: Response,
+                      usuario: Usuario = Depends(get_current_user_sem_aceite), db: Session = Depends(get_db)):
+    baldes = limites_auth.preparar(db, request, usuario.email)
+    limites_auth.exigir_liberado(baldes, usuario)
+    if not usuario.senha_hash or not verificar_senha(dados.senha, usuario.senha_hash):
+        limites_auth.falhar(baldes)
+        db.commit()
+        limites_auth.exigir_liberado(baldes, usuario)
+        raise HTTPException(400, "A senha atual não confere.")
+    usuario.consentimento_lgpd = False
+    revogar_sessoes(db, usuario)
+    registrar_auditoria(db, acao="aceite_revogado", recurso_tipo="documentos_legais",
+                        recurso_id=usuario.versao_termos, resultado="sucesso", usuario=usuario)
+    db.commit()
+    apagar_cookies(response)
+    return {"mensagem": "Aceite revogado e sessões encerradas. Para voltar a usar as funções protegidas, será necessário confirmar os documentos novamente."}
