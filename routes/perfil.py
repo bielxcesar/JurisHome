@@ -1,9 +1,6 @@
 """Tela de perfil e operações de acompanhamento do leitor."""
 
-import uuid
-from pathlib import Path
-
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import Field, field_validator
@@ -11,12 +8,12 @@ from sqlalchemy.orm import Session
 
 from auth.security import get_current_user
 from database import get_db
-from model.models import Categoria, TipoUsuario, Usuario
+from model.models import Categoria, TipoUsuario, Usuario, obter_hora_local
 from services.categorias import CATALOGO
 from services.dashboard_usuario import obter_dashboard_estudos, registrar_acesso_categoria
-from services.imagens import normalizar_imagem_bytes
 from services.lgpd import data_aceite_local, revisao_vigente, versao_legal
 from services.validacao import ModeloSeguro, area_interesse, linha, nome_pessoa
+from services.avatares import AVATARES_PERFIL, AVATAR_POR_ID, AVATAR_POR_URL
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -47,6 +44,9 @@ def pagina_perfil(
         name="perfil.html",
         context={
             "usuario": usuario,
+            "avatares": AVATARES_PERFIL,
+            "avatar_atual_id": (AVATAR_POR_URL.get(usuario.foto_perfil) or AVATARES_PERFIL[0])["id"],
+            "foto_perfil_url": (AVATAR_POR_URL.get(usuario.foto_perfil) or AVATARES_PERFIL[0])["url"],
             "data_aceite": data_aceite_local(usuario.data_consentimento),
             "dois_fatores_ativos": bool(usuario.is_2fa_enabled and usuario.totp_secret),
             "versao_legal_atual": versao_atual,
@@ -61,19 +61,23 @@ def pagina_perfil(
 async def validar_campos_perfil(request: Request):
     formulario = await request.form()
     pares = list(formulario.multi_items())
-    if any(chave not in {'nome','faculdade','interesse','foto'} for chave, _ in pares) or len({chave for chave, _ in pares}) != len(pares):
-        raise HTTPException(422, 'Envie apenas os campos previstos do perfil, sem repetições.')
+    permitidos = {"nome", "faculdade", "interesse", "avatar_id", "versao"}
+    if any(chave not in permitidos for chave, _ in pares) or len({chave for chave, _ in pares}) != len(pares):
+        raise HTTPException(422, "Envie apenas os campos previstos do perfil, sem repetições.")
 
 
 @router.post("/api/perfil/atualizar", dependencies=[Depends(validar_campos_perfil)])
 def atualizar_perfil(
     nome: str = Form(...),
-    faculdade: str = Form(None),
-    interesse: str = Form(None),
-    foto: UploadFile = File(None),
+    faculdade: str | None = Form(None),
+    interesse: str | None = Form(None),
+    avatar_id: str | None = Form(None),
+    versao: str = Form(...),
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    if not usuario.atualizado_em or versao != usuario.atualizado_em.isoformat():
+        raise HTTPException(409, "Seu perfil foi alterado em outra sessão. Recarregue a página antes de salvar.")
     try:
         nome = nome_pessoa(nome)
         if faculdade is not None:
@@ -83,26 +87,27 @@ def atualizar_perfil(
     except ValueError as erro:
         raise HTTPException(422, str(erro)) from None
 
-    if foto and foto.filename:
-        limite = 2 * 1024 * 1024
-        conteudo = foto.file.read(limite + 1)
-        if len(conteudo) > limite:
-            raise HTTPException(status_code=413, detail="A foto deve ter no máximo 2 MB.")
-        try:
-            jpeg = normalizar_imagem_bytes(conteudo, limite=limite, tamanho=1024, qualidade=85)
-        except ValueError as erro:
-            raise HTTPException(status_code=422, detail=str(erro)) from erro
-        pasta = Path("static/uploads")
-        pasta.mkdir(parents=True, exist_ok=True)
-        nome_arquivo = f"{uuid.uuid4().hex}.jpg"
-        (pasta / nome_arquivo).write_bytes(jpeg)
-        usuario.foto_perfil = f"/static/uploads/{nome_arquivo}"
+    avatar = None
+    if avatar_id:
+        avatar = AVATAR_POR_ID.get(avatar_id)
+        if avatar is None:
+            raise HTTPException(422, "Escolha um avatar disponível na galeria.")
 
-    usuario.nome = nome
+    valores = {"nome": nome, "atualizado_em": obter_hora_local()}
     if faculdade is not None:
-        usuario.universidade = faculdade.strip() or None
+        valores["universidade"] = faculdade.strip() or None
     if interesse is not None:
-        usuario.especialidade_juridica = interesse.strip() or None
+        valores["especialidade_juridica"] = interesse.strip() or None
+    if avatar:
+        valores["foto_perfil"] = avatar["url"]
+
+    atualizadas = db.query(Usuario).filter(
+        Usuario.uuid == usuario.uuid,
+        Usuario.atualizado_em == usuario.atualizado_em,
+    ).update(valores, synchronize_session=False)
+    if atualizadas != 1:
+        db.rollback()
+        raise HTTPException(409, "Seu perfil foi alterado em outra sessão. Recarregue a página antes de salvar.")
     db.commit()
     db.refresh(usuario)
     return {"status": "sucesso", "mensagem": "Perfil atualizado com sucesso!"}

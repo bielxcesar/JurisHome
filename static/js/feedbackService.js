@@ -61,6 +61,14 @@
         return feedback ? copiar(feedback) : null;
     }
 
+    function versaoAtual(id) {
+        const feedback = buscarPorId(id);
+        if (!feedback || !feedback.atualizadoEm) {
+            throw new Error("Atualize a lista antes de alterar este atendimento.");
+        }
+        return feedback.atualizadoEm;
+    }
+
     async function criar(dados) {
         const feedback = await requisitar("/api/feedbacks", {
             method: "POST",
@@ -73,16 +81,16 @@
         return requisitar("/api/feedbacks/me");
     }
 
-    async function complementar(id, mensagem) {
+    async function complementar(id, mensagem, atualizadoEm) {
         return requisitar(`/api/feedbacks/${encodeURIComponent(id)}/mensagens`, {
-            method: 'POST', body: JSON.stringify({mensagem}),
+            method: 'POST', body: JSON.stringify({mensagem, atualizadoEm}),
         });
     }
 
     async function alterarStatus(id, status) {
         const feedback = await requisitar(`/api/admin/feedbacks/${encodeURIComponent(id)}/status`, {
             method: "PATCH",
-            body: JSON.stringify({ status }),
+            body: JSON.stringify({ status, atualizadoEm: versaoAtual(id) }),
         });
         return atualizarCache(feedback);
     }
@@ -90,7 +98,7 @@
     async function alterarPrioridade(id, prioridade) {
         const feedback = await requisitar(`/api/admin/feedbacks/${encodeURIComponent(id)}/prioridade`, {
             method: "PATCH",
-            body: JSON.stringify({ prioridade }),
+            body: JSON.stringify({ prioridade, atualizadoEm: versaoAtual(id) }),
         });
         return atualizarCache(feedback);
     }
@@ -98,7 +106,7 @@
     async function responder(id, mensagem) {
         const feedback = await requisitar(`/api/admin/feedbacks/${encodeURIComponent(id)}/respostas`, {
             method: "POST",
-            body: JSON.stringify({ mensagem }),
+            body: JSON.stringify({ mensagem, atualizadoEm: versaoAtual(id) }),
         });
         return atualizarCache(feedback);
     }
@@ -106,20 +114,20 @@
     async function adicionarObservacao(id, mensagem) {
         const feedback = await requisitar(`/api/admin/feedbacks/${encodeURIComponent(id)}/observacoes`, {
             method: "POST",
-            body: JSON.stringify({ mensagem }),
+            body: JSON.stringify({ mensagem, atualizadoEm: versaoAtual(id) }),
         });
         return atualizarCache(feedback);
     }
 
     async function arquivar(id) {
-        const feedback = await requisitar(`/api/admin/feedbacks/${encodeURIComponent(id)}/arquivar`, {
+        const feedback = await requisitar(`/api/admin/feedbacks/${encodeURIComponent(id)}/arquivar?atualizadoEm=${encodeURIComponent(versaoAtual(id))}`, {
             method: "PATCH",
         });
         return atualizarCache(feedback);
     }
 
     async function marcarComoVisto(id) {
-        const feedback = await requisitar(`/api/admin/feedbacks/${encodeURIComponent(id)}/visto`, {
+        const feedback = await requisitar(`/api/admin/feedbacks/${encodeURIComponent(id)}/visto?atualizadoEm=${encodeURIComponent(versaoAtual(id))}`, {
             method: "PATCH",
         });
         return atualizarCache(feedback);

@@ -421,16 +421,16 @@ class TestesSeguranca(unittest.TestCase):
         self.assertEqual(json.loads(duplicado)['id'], original['id'])
         caminho = '/api/feedbacks/' + original['id'] + '/mensagens'
         outro = self._usuario()
-        status, _, _ = self._request('POST', caminho, {'mensagem': 'Complemento privado'}, token=criar_access_token(outro))
+        status, _, _ = self._request('POST', caminho, {'mensagem': 'Complemento privado', 'atualizadoEm': original['atualizadoEm']}, token=criar_access_token(outro))
         self.assertEqual(status, 404)
-        status, _, corpo = self._request('POST', caminho, {'mensagem': 'Complemento do autor'}, token=token)
+        status, _, corpo = self._request('POST', caminho, {'mensagem': 'Complemento do autor', 'atualizadoEm': original['atualizadoEm']}, token=token)
         self.assertEqual(status, 200)
         d = json.loads(corpo)
         self.assertEqual(d['status'], 'Em análise')
         self.assertTrue(d['novo'])
         self.assertNotIn('observacoesInternas', d)
         self.assertEqual(d['respostas'][-1]['papel'], 'leitor')
-        self._request('POST', caminho, {'mensagem': 'Complemento do autor'}, token=token)
+        self._request('POST', caminho, {'mensagem': 'Complemento do autor', 'atualizadoEm': d['atualizadoEm']}, token=token)
         self.db.expire_all()
         self.assertEqual(len(json.loads(self.db.get(models.FeedbackAtendimento, original['id']).respostas_json)), 1)
         for i in range(4):
@@ -442,10 +442,11 @@ class TestesSeguranca(unittest.TestCase):
     def test_perfil_persiste_instituicao_interesse_e_mostra_data_real(self):
         from routes.perfil import atualizar_perfil
         leitor = self._usuario()
-        atualizar_perfil(nome='Leitor atualizado', faculdade='Universidade de teste', interesse='Direito Civil', foto=None, db=self.db, usuario=leitor)
+        atualizar_perfil(nome='Leitor atualizado', faculdade='Universidade de teste', interesse='Direito Civil', avatar_id='oceano', versao=leitor.atualizado_em.isoformat(), db=self.db, usuario=leitor)
         self.db.refresh(leitor)
         self.assertEqual(leitor.universidade, 'Universidade de teste')
         self.assertEqual(leitor.especialidade_juridica, 'Direito Civil')
+        self.assertEqual(leitor.foto_perfil, '/static/images/avatares/oceano.svg')
         status, _, corpo = self._request('GET', '/perfil', token=criar_access_token(leitor))
         self.assertEqual(status, 200)
         self.assertIn(b'Universidade de teste', corpo)
@@ -1452,17 +1453,25 @@ class TestesSeguranca(unittest.TestCase):
         )
         self.assertEqual(204, status)
 
-    def test_upload_rejeita_html_disfarcado_e_arquivo_grande(self):
-        from io import BytesIO
-        from fastapi import HTTPException, UploadFile
+    def test_perfil_rejeita_avatar_invalido_e_versao_antiga(self):
+        from fastapi import HTTPException
         from routes.perfil import atualizar_perfil
 
         usuario = self._usuario()
-        for dados, esperado in ((b"<script>alert(1)</script>", 422), (b"x" * (2 * 1024 * 1024 + 1), 413)):
-            with self.subTest(esperado=esperado):
-                with self.assertRaises(HTTPException) as contexto:
-                    atualizar_perfil(nome="Nome válido", faculdade=None, interesse=None, foto=UploadFile(filename="foto.jpg", file=BytesIO(dados)), db=self.db, usuario=usuario)
-                self.assertEqual(esperado, contexto.exception.status_code)
+        with self.assertRaises(HTTPException) as avatar_invalido:
+            atualizar_perfil(nome=usuario.nome, faculdade=None, interesse=None, avatar_id="externo.svg",
+                             versao=usuario.atualizado_em.isoformat(), db=self.db, usuario=usuario)
+        self.assertEqual(422, avatar_invalido.exception.status_code)
+
+        versao_antiga = usuario.atualizado_em.isoformat()
+        atualizar_perfil(nome="Nome atualizado", faculdade=None, interesse=None, avatar_id="aurora",
+                         versao=versao_antiga, db=self.db, usuario=usuario)
+        with self.assertRaises(HTTPException) as conflito:
+            atualizar_perfil(nome="Nome sobrescrito", faculdade=None, interesse=None, avatar_id="oceano",
+                             versao=versao_antiga, db=self.db, usuario=usuario)
+        self.assertEqual(409, conflito.exception.status_code)
+        self.db.refresh(usuario)
+        self.assertEqual("Nome atualizado", usuario.nome)
 
     def test_materia_base64_so_aparece_apos_aprovacao_do_root(self):
         from io import BytesIO
@@ -1526,9 +1535,10 @@ class TestesSeguranca(unittest.TestCase):
             criados.append(json.loads(corpo))
         admin = self._usuario(TipoUsuario.ADMINISTRADOR)
         token_admin = criar_access_token(admin)
-        status, _, _ = self._request("POST", f"/api/admin/feedbacks/{criados[0]['id']}/respostas", {"mensagem": "Você pode consultar em Meus atendimentos."}, token=token_admin)
+        status, _, corpo_admin = self._request("POST", f"/api/admin/feedbacks/{criados[0]['id']}/respostas", {"mensagem": "Você pode consultar em Meus atendimentos.", "atualizadoEm": criados[0]["atualizadoEm"]}, token=token_admin)
         self.assertEqual(200, status)
-        status, _, _ = self._request("POST", f"/api/admin/feedbacks/{criados[0]['id']}/observacoes", {"mensagem": "Anotação exclusiva da equipe."}, token=token_admin)
+        versao_atual = json.loads(corpo_admin)["atualizadoEm"]
+        status, _, _ = self._request("POST", f"/api/admin/feedbacks/{criados[0]['id']}/observacoes", {"mensagem": "Anotação exclusiva da equipe.", "atualizadoEm": versao_atual}, token=token_admin)
         self.assertEqual(200, status)
         status, _, corpo = self._request("GET", "/api/feedbacks/me", token=token_primeiro)
         self.assertEqual(200, status)
@@ -1578,7 +1588,7 @@ class TestesSeguranca(unittest.TestCase):
         status, _, corpo = self._request("POST", "/api/feedbacks", {"tipo": "Dúvida", "assunto": "Teste do responsável", "mensagem": "Mensagem de teste para validar a auditoria."}, token=criar_access_token(aluno))
         self.assertEqual(201, status)
         feedback = json.loads(corpo)
-        status, _, _ = self._request("POST", f"/api/admin/feedbacks/{feedback['id']}/respostas", {"mensagem": "Resposta administrativa."}, token=criar_access_token(admin))
+        status, _, _ = self._request("POST", f"/api/admin/feedbacks/{feedback['id']}/respostas", {"mensagem": "Resposta administrativa.", "atualizadoEm": feedback["atualizadoEm"]}, token=criar_access_token(admin))
         self.assertEqual(200, status)
         self.db.expire_all()
         registro = self.db.query(LogAuditoria).filter_by(acao="feedback_respondido").one()
@@ -1663,12 +1673,37 @@ class TestesSeguranca(unittest.TestCase):
         self.assertEqual(200, status)
         self.assertIn(b'Tags da mat', corpo)
         self.assertIn(b'>CLT</span>', corpo)
-        status, _, _ = self._request("PUT", f"/editar-materia/{materia.uuid}", {"categoria_id": civil.uuid}, token=token)
+        status, _, _ = self._request("PUT", f"/editar-materia/{materia.uuid}", {"categoria_id": civil.uuid, "versao": 0}, token=token)
         self.assertEqual(200, status)
         self.db.refresh(materia)
         self.assertIn("Código Civil", materia.tags)
         self.assertIn("bolsa de estudo", materia.tags)
         self.assertNotIn("CLT", materia.tags)
+
+    def test_materia_rejeita_edicao_e_exclusao_com_versao_antiga(self):
+        from model.models import Categoria, Conteudo, CuradoriaMateria
+
+        categoria = Categoria(uuid=str(uuid.uuid4()), nome="Direito Civil")
+        admin = self._usuario(TipoUsuario.ADMINISTRADOR)
+        materia = Conteudo(titulo="Matéria concorrente", resumo_home="Resumo", corpo_texto="Texto original",
+                           categoria_id=categoria.uuid, autor_id=admin.uuid)
+        self.db.add_all([categoria, materia])
+        self.db.flush()
+        self.db.add(CuradoriaMateria(conteudo_id=materia.uuid, versao=2, orientacoes=""))
+        self.db.commit()
+        token = criar_access_token(admin)
+
+        status, _, corpo = self._request("GET", "/admin/tabela-noticias", token=token)
+        self.assertEqual(200, status)
+        self.assertIn(b'data-versao="2"', corpo)
+
+        status, _, _ = self._request("PUT", f"/editar-materia/{materia.uuid}",
+                                     {"titulo": "Título desatualizado", "versao": 1}, token=token)
+        self.assertEqual(409, status)
+        status, _, _ = self._request("DELETE", f"/deletar-materia/{materia.uuid}?versao=1", token=token)
+        self.assertEqual(409, status)
+        self.db.expire_all()
+        self.assertEqual("Matéria concorrente", self.db.get(Conteudo, materia.uuid).titulo)
 
     def test_corrige_apenas_vinculo_de_categoria_de_exemplo_conhecido(self):
         from model.models import Conteudo, Categoria

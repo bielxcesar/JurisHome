@@ -2,11 +2,13 @@ from services.validacao import ModeloSeguro
 from services.privacidade import mascarar_email
 import json
 import uuid
+from types import SimpleNamespace
 from datetime import datetime, timedelta, timezone
 from auth.sessions import garantir_transacao
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import Field, field_validator
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -62,7 +64,20 @@ class FeedbackCriacao(ModeloSeguro):
         return valor
 
 
-class AlteracaoStatus(ModeloSeguro):
+class VersaoAtendimento(ModeloSeguro):
+    atualizadoEm: str = Field(min_length=20, max_length=50)
+
+    @field_validator("atualizadoEm")
+    @classmethod
+    def validar_versao(cls, valor: str) -> str:
+        try:
+            datetime.fromisoformat(valor.replace("Z", "+00:00"))
+        except ValueError:
+            raise ValueError("Atualize o atendimento antes de salvar.") from None
+        return valor
+
+
+class AlteracaoStatus(VersaoAtendimento):
     status: str
 
     @field_validator("status")
@@ -73,7 +88,7 @@ class AlteracaoStatus(ModeloSeguro):
         return valor
 
 
-class AlteracaoPrioridade(ModeloSeguro):
+class AlteracaoPrioridade(VersaoAtendimento):
     prioridade: str
 
     @field_validator("prioridade")
@@ -84,7 +99,7 @@ class AlteracaoPrioridade(ModeloSeguro):
         return valor
 
 
-class MensagemAdministrativa(ModeloSeguro):
+class MensagemAdministrativa(VersaoAtendimento):
     mensagem: str = Field(min_length=1, max_length=2000)
 
     @field_validator("mensagem")
@@ -186,11 +201,38 @@ def _serializar(feedback: FeedbackAtendimento, incluir_interno: bool = True) -> 
     return resultado
 
 
-def _confirmar_alteracao(db: Session, feedback: FeedbackAtendimento) -> dict:
-    feedback.atualizado_em = _agora()
+def _data_versao(valor: str) -> datetime:
+    try:
+        instante = datetime.fromisoformat(valor.replace("Z", "+00:00"))
+    except ValueError:
+        raise HTTPException(422, "Atualize o atendimento antes de salvar.") from None
+    if instante.tzinfo is not None:
+        instante = instante.astimezone(timezone.utc).replace(tzinfo=None)
+    return instante
+
+
+def _rascunho(feedback: FeedbackAtendimento) -> SimpleNamespace:
+    return SimpleNamespace(**{coluna.key: getattr(feedback, coluna.key)
+                              for coluna in FeedbackAtendimento.__table__.columns})
+
+
+def _confirmar_alteracao(db: Session, feedback: SimpleNamespace, atualizado_em_esperado: str) -> dict:
+    valores = {coluna.key: getattr(feedback, coluna.key)
+               for coluna in FeedbackAtendimento.__table__.columns
+               if coluna.key not in {"id", "atualizado_em"}}
+    agora = _agora().replace(tzinfo=None)
+    resultado = db.execute(
+        update(FeedbackAtendimento)
+        .where(FeedbackAtendimento.id == feedback.id,
+               FeedbackAtendimento.atualizado_em == _data_versao(atualizado_em_esperado))
+        .values(**valores, atualizado_em=agora)
+    )
+    if resultado.rowcount != 1:
+        db.rollback()
+        raise HTTPException(409, "Este atendimento foi alterado em outra sessão. Atualize os dados antes de salvar.")
     db.commit()
-    db.refresh(feedback)
-    return _serializar(feedback)
+    db.expire_all()
+    return _serializar(_buscar(db, feedback.id))
 
 
 def _auditar_se_disponivel(audit_db, **dados) -> None:
@@ -294,28 +336,31 @@ def complementar_feedback(feedback_id: str, dados: MensagemAdministrativa,
                          db: Session = Depends(get_feedback_db), usuario: Usuario = Depends(get_current_user),
                          audit_db: Session = Depends(get_db)):
     garantir_transacao(db)
-    feedback = db.query(FeedbackAtendimento).filter_by(id=feedback_id, usuario_id=usuario.uuid).with_for_update().first()
-    if not feedback:
+    existente = db.query(FeedbackAtendimento).filter_by(
+        id=feedback_id, usuario_id=usuario.uuid
+    ).with_for_update().first()
+    if not existente:
         raise HTTPException(404, "Atendimento não encontrado.")
-    if feedback.arquivado:
+    if existente.arquivado:
         raise HTTPException(409, "Este protocolo foi arquivado. Abra um novo atendimento.")
-    respostas = _ler_json(feedback.respostas_json)
-    minhas = [r for r in respostas if r.get("papel") == "leitor"]
+    respostas = _ler_json(existente.respostas_json)
+    minhas = [resposta for resposta in respostas if resposta.get("papel") == "leitor"]
     if minhas and minhas[-1]["mensagem"] == dados.mensagem:
-        return _serializar(feedback, incluir_interno=False)
-    recentes = [r for r in minhas if datetime.fromisoformat(r["criadoEm"]) >= _agora() - timedelta(minutes=10)]
+        return _serializar(existente, incluir_interno=False)
+    recentes = [resposta for resposta in minhas if datetime.fromisoformat(resposta["criadoEm"]) >= _agora() - timedelta(minutes=10)]
     if len(recentes) >= 5:
         raise HTTPException(429, "Aguarde alguns minutos antes de enviar mais mensagens neste protocolo.")
+    feedback = _rascunho(existente)
     respostas.append({"id": f"msg-{uuid.uuid4()}", "autor": usuario.nome, "papel": "leitor",
                       "mensagem": dados.mensagem, "criadoEm": _iso(_agora())})
     feedback.respostas_json = _salvar_json(respostas)
     feedback.status = "Em análise"
     feedback.novo = True
     _adicionar_historico(feedback, "mensagem_usuario", "O usuário complementou o atendimento.", "publica")
-    _confirmar_alteracao(db, feedback)
-    _auditar_se_disponivel(audit_db, acao="feedback_complementado", recurso_tipo="feedback", recurso_id=feedback.id,
+    _confirmar_alteracao(db, feedback, dados.atualizadoEm)
+    _auditar_se_disponivel(audit_db, acao="feedback_complementado", recurso_tipo="feedback", recurso_id=feedback_id,
                           resultado="sucesso", usuario=usuario)
-    return _serializar(feedback, incluir_interno=False)
+    return _serializar(_buscar(db, feedback_id), incluir_interno=False)
 
 
 @admin_router.get("/{feedback_id}")
@@ -330,19 +375,13 @@ def alterar_status(
     db: Session = Depends(get_feedback_db),
     audit_db: Session = Depends(get_db),
 ):
-    feedback = _buscar(db, feedback_id)
+    feedback = _rascunho(_buscar(db, feedback_id))
     feedback.status = dados.status
     feedback.arquivado = dados.status == "Arquivado"
     _adicionar_historico(feedback, "status", f"Status: {dados.status}.", "publica")
-    resultado = _confirmar_alteracao(db, feedback)
-    _auditar_se_disponivel(
-        audit_db,
-        acao="feedback_status_alterado",
-        recurso_tipo="feedback",
-        recurso_id=feedback.id,
-        resultado="sucesso",
-        detalhes={"novo_status": dados.status},
-    )
+    resultado = _confirmar_alteracao(db, feedback, dados.atualizadoEm)
+    _auditar_se_disponivel(audit_db, acao="feedback_status_alterado", recurso_tipo="feedback",
+                           recurso_id=feedback.id, resultado="sucesso", detalhes={"novo_status": dados.status})
     return resultado
 
 
@@ -353,18 +392,12 @@ def alterar_prioridade(
     db: Session = Depends(get_feedback_db),
     audit_db: Session = Depends(get_db),
 ):
-    feedback = _buscar(db, feedback_id)
+    feedback = _rascunho(_buscar(db, feedback_id))
     feedback.prioridade = dados.prioridade
     _adicionar_historico(feedback, "prioridade", f"Prioridade: {dados.prioridade}.", "interna")
-    resultado = _confirmar_alteracao(db, feedback)
-    _auditar_se_disponivel(
-        audit_db,
-        acao="feedback_prioridade_alterada",
-        recurso_tipo="feedback",
-        recurso_id=feedback.id,
-        resultado="sucesso",
-        detalhes={"nova_prioridade": dados.prioridade},
-    )
+    resultado = _confirmar_alteracao(db, feedback, dados.atualizadoEm)
+    _auditar_se_disponivel(audit_db, acao="feedback_prioridade_alterada", recurso_tipo="feedback",
+                           recurso_id=feedback.id, resultado="sucesso", detalhes={"nova_prioridade": dados.prioridade})
     return resultado
 
 
@@ -375,30 +408,18 @@ def responder_feedback(
     db: Session = Depends(get_feedback_db),
     audit_db: Session = Depends(get_db),
 ):
-    feedback = _buscar(db, feedback_id)
+    feedback = _rascunho(_buscar(db, feedback_id))
     respostas = _ler_json(feedback.respostas_json)
-    respostas.append(
-        {
-            "id": f"resp-{uuid.uuid4()}",
-            "autor": "Equipe JurisHome",
-            "papel": "administrador",
-            "mensagem": dados.mensagem,
-            "criadoEm": _iso(_agora()),
-        }
-    )
+    respostas.append({"id": f"resp-{uuid.uuid4()}", "autor": "Equipe JurisHome",
+                      "papel": "administrador", "mensagem": dados.mensagem, "criadoEm": _iso(_agora())})
     feedback.respostas_json = _salvar_json(respostas)
     feedback.status = "Respondido"
     feedback.arquivado = False
     feedback.novo = False
     _adicionar_historico(feedback, "resposta", "Resposta enviada.", "publica")
-    resultado = _confirmar_alteracao(db, feedback)
-    _auditar_se_disponivel(
-        audit_db,
-        acao="feedback_respondido",
-        recurso_tipo="feedback",
-        recurso_id=feedback.id,
-        resultado="sucesso",
-    )
+    resultado = _confirmar_alteracao(db, feedback, dados.atualizadoEm)
+    _auditar_se_disponivel(audit_db, acao="feedback_respondido", recurso_tipo="feedback",
+                           recurso_id=feedback.id, resultado="sucesso")
     return resultado
 
 
@@ -409,64 +430,45 @@ def adicionar_observacao(
     db: Session = Depends(get_feedback_db),
     audit_db: Session = Depends(get_db),
 ):
-    feedback = _buscar(db, feedback_id)
+    feedback = _rascunho(_buscar(db, feedback_id))
     observacoes = _ler_json(feedback.observacoes_json)
-    observacoes.append(
-        {
-            "id": f"obs-{uuid.uuid4()}",
-            "autor": "Administrador JurisHome",
-            "mensagem": dados.mensagem,
-            "criadoEm": _iso(_agora()),
-        }
-    )
+    observacoes.append({"id": f"obs-{uuid.uuid4()}", "autor": "Administrador JurisHome",
+                        "mensagem": dados.mensagem, "criadoEm": _iso(_agora())})
     feedback.observacoes_json = _salvar_json(observacoes)
     _adicionar_historico(feedback, "observacao", "Observação adicionada.", "interna")
-    resultado = _confirmar_alteracao(db, feedback)
-    _auditar_se_disponivel(
-        audit_db,
-        acao="feedback_observacao_adicionada",
-        recurso_tipo="feedback",
-        recurso_id=feedback.id,
-        resultado="sucesso",
-    )
+    resultado = _confirmar_alteracao(db, feedback, dados.atualizadoEm)
+    _auditar_se_disponivel(audit_db, acao="feedback_observacao_adicionada", recurso_tipo="feedback",
+                           recurso_id=feedback.id, resultado="sucesso")
     return resultado
 
 
 @admin_router.patch("/{feedback_id}/visto")
 def marcar_como_visto(
     feedback_id: str,
+    atualizadoEm: str = Query(..., min_length=20, max_length=50),
     db: Session = Depends(get_feedback_db),
     audit_db: Session = Depends(get_db),
 ):
-    feedback = _buscar(db, feedback_id)
+    feedback = _rascunho(_buscar(db, feedback_id))
     feedback.novo = False
-    resultado = _confirmar_alteracao(db, feedback)
-    _auditar_se_disponivel(
-        audit_db,
-        acao="feedback_marcado_visto",
-        recurso_tipo="feedback",
-        recurso_id=feedback.id,
-        resultado="sucesso",
-    )
+    resultado = _confirmar_alteracao(db, feedback, atualizadoEm)
+    _auditar_se_disponivel(audit_db, acao="feedback_marcado_visto", recurso_tipo="feedback",
+                           recurso_id=feedback.id, resultado="sucesso")
     return resultado
 
 
 @admin_router.patch("/{feedback_id}/arquivar")
 def arquivar_feedback(
     feedback_id: str,
+    atualizadoEm: str = Query(..., min_length=20, max_length=50),
     db: Session = Depends(get_feedback_db),
     audit_db: Session = Depends(get_db),
 ):
-    feedback = _buscar(db, feedback_id)
+    feedback = _rascunho(_buscar(db, feedback_id))
     feedback.status = "Arquivado"
     feedback.arquivado = True
     _adicionar_historico(feedback, "status", "Status: Arquivado.", "publica")
-    resultado = _confirmar_alteracao(db, feedback)
-    _auditar_se_disponivel(
-        audit_db,
-        acao="feedback_arquivado",
-        recurso_tipo="feedback",
-        recurso_id=feedback.id,
-        resultado="sucesso",
-    )
+    resultado = _confirmar_alteracao(db, feedback, atualizadoEm)
+    _auditar_se_disponivel(audit_db, acao="feedback_arquivado", recurso_tipo="feedback",
+                           recurso_id=feedback.id, resultado="sucesso")
     return resultado

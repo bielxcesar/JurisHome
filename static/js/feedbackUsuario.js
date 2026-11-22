@@ -252,7 +252,7 @@
                         evento.preventDefault(); if (enviar.disabled) return;
                         if (!campo.value.trim()) { retorno.textContent = 'Digite uma mensagem.'; return; }
                         enviar.disabled = true;
-                        try { await service.complementar(feedback.id, campo.value.trim()); campo.value = ''; retorno.textContent = 'Mensagem enviada. A equipe receberá sua atualização.'; await carregarHistorico(); }
+                        try { await service.complementar(feedback.id, campo.value.trim(), feedback.atualizadoEm); campo.value = ''; retorno.textContent = 'Mensagem enviada. A equipe receberá sua atualização.'; await carregarHistorico(); }
                         catch (erro) { retorno.textContent = erro.message; }
                         finally { enviar.disabled = false; }
                     });

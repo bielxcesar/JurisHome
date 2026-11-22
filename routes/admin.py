@@ -1,5 +1,5 @@
 from typing import Optional, Literal
-from fastapi import APIRouter, Request, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Request, Depends, HTTPException, UploadFile, File, Query
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import Field, ConfigDict, field_validator, model_validator
@@ -204,6 +204,7 @@ class MateriaSchema(ModeloSeguro):
 
 
 class MateriaUpdateSchema(MateriaSchema):
+    versao: int = Field(strict=True, ge=0)
     titulo: Optional[str] = Field(default=None, max_length=180)
     sub_titulo: Optional[str] = Field(default=None, max_length=500)
     resumo_home: Optional[str] = Field(default=None, max_length=500)
@@ -335,12 +336,16 @@ def listar_tabela_noticias(request: Request, db: Session = Depends(get_db), usua
         raise HTTPException(status_code=403, detail="Acesso negado.")
     
     materias = db.query(Conteudo).order_by(Conteudo.criado_em.desc()).all()
-    
+    ids_materias = [materia.uuid for materia in materias]
+    curadorias = (db.query(CuradoriaMateria).filter(CuradoriaMateria.conteudo_id.in_(ids_materias)).all()
+                  if ids_materias else [])
+    versoes_materias = {curadoria.conteudo_id: curadoria.versao for curadoria in curadorias}
+
     # Envia as informações do usuário atual para a template
     return templates.TemplateResponse(
         request=request,
         name="tabelaNoticias.html",
-        context={"materias": materias, "usuario": usuario_logado}
+        context={"materias": materias, "versoes_materias": versoes_materias, "usuario": usuario_logado}
     )
 
 @router.get("/admin-feedbacks", response_class=HTMLResponse)
@@ -458,15 +463,20 @@ def resetar_2fa(
 @router.delete("/deletar-materia/{id_da_materia}")
 def deletar_materia(
     id_da_materia: str,
+    versao: int = Query(..., ge=0),
     usuario_logado: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     if not usuario_logado.e_root_admin and usuario_logado.tipo_usuario != TipoUsuario.ADMINISTRADOR:
         raise HTTPException(status_code=403, detail="Acesso negado.")
 
-    materia = db.query(Conteudo).filter(Conteudo.uuid == id_da_materia).first()
+    materia = db.query(Conteudo).filter(Conteudo.uuid == id_da_materia).with_for_update().first()
     if not materia:
         raise HTTPException(status_code=404, detail="Matéria não encontrada.")
+    curadoria = db.query(CuradoriaMateria).filter_by(conteudo_id=materia.uuid).with_for_update().first()
+    versao_atual = curadoria.versao if curadoria else 0
+    if versao != versao_atual:
+        raise HTTPException(409, "A matéria foi alterada em outra sessão. Atualize a tabela antes de excluir.")
 
     db.query(ConteudoLeitura).filter_by(conteudo_id=materia.uuid).delete(synchronize_session=False)
     db.query(CuradoriaMateria).filter_by(conteudo_id=materia.uuid).delete(synchronize_session=False)
@@ -534,8 +544,10 @@ def criar_materia(
 def editar_materia(uuid: str, dados: MateriaUpdateSchema, db: Session = Depends(get_db),
                    usuario: Usuario = Depends(get_current_user)):
     materia, curadoria = materia_para_curadoria(db, uuid, usuario)
+    if dados.versao != curadoria.versao:
+        raise HTTPException(409, "A matéria foi alterada em outra sessão. Atualize antes de salvar.")
 
-    alteracoes = dados.model_dump(exclude_unset=True)
+    alteracoes = dados.model_dump(exclude_unset=True, exclude={"versao"})
     categoria = db.get(Categoria, alteracoes.get("categoria_id", materia.categoria_id))
     if categoria is None or ("categoria_id" in alteracoes and not categoria_disponivel(categoria.nome)):
         raise HTTPException(status_code=422, detail="Selecione uma categoria válida.")
@@ -549,7 +561,7 @@ def editar_materia(uuid: str, dados: MateriaUpdateSchema, db: Session = Depends(
     materia.status = StatusConteudo.EM_ANALISE
     curadoria.versao += 1
     db.commit()
-    return {"mensagem": "Matéria atualizada e enviada para análise."}
+    return {"mensagem": "Matéria atualizada e enviada para análise.", "versao": curadoria.versao}
 
 @router.put("/aprovar-materia/{id_da_materia}")
 def aprovar_materia_legada(

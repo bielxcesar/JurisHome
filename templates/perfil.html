@@ -18,7 +18,7 @@
             }
         })();
     </script>
-<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav"><link rel="stylesheet" href="/static/css/home.css?v=20261108-nav"><script src="/static/js/session.js?v=validacao-20261121" defer></script><script src="/static/js/curiosidades.js?v=20261108-nav" defer></script>
+<link rel="stylesheet" href="/static/css/juris-ui.css?v=20261108-nav"><link rel="stylesheet" href="/static/css/avatares-perfil.css?v=20261121-1"><link rel="stylesheet" href="/static/css/home.css?v=20261108-nav"><script src="/static/js/session.js?v=validacao-20261121" defer></script><script src="/static/js/curiosidades.js?v=20261108-nav" defer></script>
 {% if mostrar_dashboard %}<link rel="stylesheet" href="/static/css/perfil-dashboard.css?v=20261107-1"><script src="/static/js/perfil-dashboard.js?v=20261107-1" defer></script>{% endif %}
     {% include "_favicon.html" %}
 </head>
@@ -46,17 +46,13 @@
                 
                 <div class="relative group">
                     <div class="w-24 h-24 rounded-full border-[3px] border-amber-500 bg-[#1e1e1e] flex items-center justify-center text-4xl text-amber-500 font-bold overflow-hidden shadow-inner">
-                        {% if usuario.foto_perfil %}
-                            <img id="avatar-preview" src="{{ usuario.foto_perfil }}" alt="Sua foto" class="w-full h-full object-cover">
+                        {% if foto_perfil_url %}
+                            <img id="avatar-preview" src="{{ foto_perfil_url }}" alt="Avatar atual" class="w-full h-full object-cover">
                         {% else %}
                             <span id="avatar-inicial">{{ usuario.nome[0]|upper if usuario.nome else 'G' }}</span>
-                            <img id="avatar-preview" src="" alt="Sua foto" class="w-full h-full object-cover hidden">
+                            <img id="avatar-preview" src="" alt="Avatar selecionado" class="w-full h-full object-cover hidden">
                         {% endif %}
                     </div>
-                    <label for="upload-foto" class="absolute bottom-0 right-0 w-8 h-8 bg-[#25262a] border border-gray-500 hover:border-amber-500 hover:text-amber-500 rounded-full flex items-center justify-center cursor-pointer transition shadow-md">
-                        <i class="fa-solid fa-pen-to-square text-xs"></i>
-                    </label>
-                    <input type="file" id="upload-foto" name="foto" form="form-perfil" accept="image/jpeg,image/png,image/webp" class="hidden">
                 </div>
 
                 <div class="text-center md:text-left">
@@ -75,6 +71,7 @@
             </div>
 
             <form id="form-perfil" class="space-y-6">
+                <input type="hidden" name="versao" value="{{ usuario.atualizado_em.isoformat() if usuario.atualizado_em else '' }}">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     
                     <div class="flex flex-col gap-2">
@@ -95,6 +92,21 @@
 
                     <div class="flex flex-col gap-2"><label for="interesse" class="text-gray-300 font-medium text-lg">Área de interesse</label><select id="interesse" name="interesse" class="bg-[#25262a] border border-amber-500 rounded-xl px-4 py-3 text-white"><option value="">Selecione uma área</option>{% for area in categorias_perfil %}<option value="{{ area }}" {% if usuario.especialidade_juridica == area %}selected{% endif %}>{{ area }}</option>{% endfor %}</select></div>
                 </div>
+
+                <fieldset class="avatar-galeria">
+                    <legend>Avatar do perfil</legend>
+                    <p id="avatar-ajuda">Escolha uma ilustração pronta para seu perfil.</p>
+                    <div class="avatar-opcoes" aria-describedby="avatar-ajuda">
+                        {% for avatar in avatares %}
+                        <label class="avatar-opcao">
+                            <input type="radio" name="avatar_id" value="{{ avatar.id }}" data-avatar-url="{{ avatar.url }}" {% if avatar_atual_id == avatar.id %}checked{% endif %}>
+                            <span class="avatar-opcao-cartao"><img src="{{ avatar.url }}" alt=""><span>{{ avatar.nome }}</span></span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+
+                <p id="perfil-erro" class="perfil-erro" role="alert" hidden></p>
 
                 <div class="flex justify-end pt-4">
                     <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-black font-bold text-lg py-3 px-8 rounded-xl transition shadow-lg w-full md:w-auto">
@@ -189,57 +201,42 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            // Preview da Nova Foto de Perfil
-            const inputFoto = document.getElementById("upload-foto");
             const imgPreview = document.getElementById("avatar-preview");
             const avatarInicial = document.getElementById("avatar-inicial");
-
-            inputFoto.addEventListener("change", function(event) {
-                const file = event.target.files[0];
-                if (file) {
-                    if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024) { alert('Escolha uma imagem JPEG, PNG ou WebP de até 2 MB.'); inputFoto.value=''; return; }
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        imgPreview.src = e.target.result;
-                        imgPreview.classList.remove("hidden");
-                        if(avatarInicial) avatarInicial.classList.add("hidden");
-                    };
-                    reader.readAsDataURL(file);
-                }
+            document.querySelectorAll('input[name="avatar_id"]').forEach(opcao => {
+                opcao.addEventListener("change", () => {
+                    imgPreview.src = opcao.dataset.avatarUrl;
+                    imgPreview.classList.remove("hidden");
+                    if (avatarInicial) avatarInicial.classList.add("hidden");
+                });
             });
 
-            // Submissão real do Formulário com Fetch para o Banco de Dados
             const formPerfil = document.getElementById("form-perfil");
             const toastSucesso = document.getElementById("toast-sucesso");
-
+            const mensagemErro = document.getElementById("perfil-erro");
             formPerfil.addEventListener("submit", async (e) => {
                 e.preventDefault();
-                
-                const formData = new FormData(formPerfil);
-                if (!inputFoto.files.length) formData.delete('foto');
-
+                mensagemErro.hidden = true;
+                const botao = formPerfil.querySelector('button[type="submit"]');
+                botao.disabled = true;
+                const textoOriginal = botao.textContent;
+                botao.textContent = "Salvando…";
                 try {
                     const resposta = await fetch("/api/perfil/atualizar", {
                         method: "POST",
-                        body: formData
+                        body: new FormData(formPerfil),
+                        credentials: "same-origin"
                     });
-
                     const dados = await resposta.json().catch(() => ({}));
-                    if (resposta.ok && dados.status === "sucesso") {
-                        toastSucesso.classList.remove("hidden");
-                        toastSucesso.classList.add("animate-pulse");
-
-                        // Recarrega a página após 1.5 segundo para atualizar o nome no topo
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1500);
-                    } else {
-                        const erro = dados;
-                        alert(typeof erro.detail === 'string' ? erro.detail : 'Confira os campos do perfil.');
-                    }
+                    if (!resposta.ok) throw new Error(typeof dados.detail === "string" ? dados.detail : "Confira os campos e tente novamente.");
+                    toastSucesso.classList.remove("hidden");
+                    setTimeout(() => window.location.reload(), 900);
                 } catch (erro) {
-                    console.error("Erro na requisição:", erro);
-                    alert("Erro de conexão com o servidor.");
+                    mensagemErro.textContent = erro.message || "Não foi possível salvar suas alterações.";
+                    mensagemErro.hidden = false;
+                } finally {
+                    botao.disabled = false;
+                    botao.textContent = textoOriginal;
                 }
             });
         });

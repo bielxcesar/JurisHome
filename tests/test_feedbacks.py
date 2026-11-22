@@ -1,6 +1,7 @@
 import unittest
 
 from pydantic import ValidationError
+from fastapi import HTTPException
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -97,22 +98,40 @@ class FeedbackApiTests(unittest.TestCase):
 
         atualizado = alterar_status(
             criado["id"],
-            AlteracaoStatus(status="Em análise"),
+            AlteracaoStatus(status="Em análise", atualizadoEm=criado["atualizadoEm"]),
             self.db,
         )
         self.assertEqual("Em análise", atualizado["status"])
 
         respondido = responder_feedback(
             criado["id"],
-            MensagemAdministrativa(mensagem="O glossário está disponível no menu superior."),
+            MensagemAdministrativa(mensagem="O glossário está disponível no menu superior.", atualizadoEm=atualizado["atualizadoEm"]),
             self.db,
         )
         self.assertEqual("Respondido", respondido["status"])
         self.assertEqual(1, len(respondido["respostas"]))
 
+    def test_edicao_com_versao_antiga_retorna_conflito_sem_perder_alteracao(self):
+        criado = criar_feedback(
+            FeedbackCriacao(tipo="Dúvida", assunto="Conflito de edição",
+                            mensagem="Verificando atualização concorrente."),
+            self.db,
+        )
+        versao_antiga = criado["atualizadoEm"]
+        atualizado = alterar_status(
+            criado["id"], AlteracaoStatus(status="Em análise", atualizadoEm=versao_antiga), self.db
+        )
+        with self.assertRaises(HTTPException) as contexto:
+            alterar_status(
+                criado["id"], AlteracaoStatus(status="Resolvido", atualizadoEm=versao_antiga), self.db
+            )
+        self.assertEqual(409, contexto.exception.status_code)
+        self.assertEqual("Em análise", listar_feedbacks(self.db)[0]["status"])
+        self.assertNotEqual(versao_antiga, atualizado["atualizadoEm"])
+
     def test_api_rejeita_dados_invalidos(self):
         with self.assertRaises(ValidationError):
-            MensagemAdministrativa(mensagem="    ")
+            MensagemAdministrativa(mensagem="    ", atualizadoEm="2026-11-21T00:00:00+00:00")
         with self.assertRaises(ValidationError):
             FeedbackCriacao(tipo="Inexistente", assunto="Oi", mensagem="Curta")
 

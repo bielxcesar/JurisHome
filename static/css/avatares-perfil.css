@@ -1,0 +1,12 @@
+.avatar-galeria { min-width: 0; padding: 1rem; border: 1px solid #5b4b2f; border-radius: 1rem; }
+.avatar-galeria legend { padding: 0 .45rem; color: #fbbf24; font-weight: 700; }
+.avatar-galeria > p { margin: 0 0 1rem; color: #b8bdc8; font-size: .875rem; }
+.avatar-opcoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: .75rem; }
+.avatar-opcao { position: relative; display: block; cursor: pointer; }
+.avatar-opcao input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.avatar-opcao-cartao { display: grid; justify-items: center; gap: .45rem; padding: .75rem .45rem; border: 1px solid #52525b; border-radius: .85rem; color: #e5e7eb; font-size: .8rem; transition: border-color .16s ease, background-color .16s ease; }
+.avatar-opcao img { display: block; width: 54px; height: 54px; border-radius: 50%; }
+.avatar-opcao input:checked + .avatar-opcao-cartao { border: 2px solid #fbbf24; background: #f59e0b18; }
+.avatar-opcao input:focus-visible + .avatar-opcao-cartao { outline: 3px solid #fbbf24; outline-offset: 3px; }
+.perfil-erro { padding: .8rem 1rem; border: 1px solid #f87171; border-radius: .7rem; background: #451a1a; color: #fee2e2; }
+@media (prefers-reduced-motion: reduce) { .avatar-opcao-cartao { transition: none; } }
