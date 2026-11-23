@@ -1,7 +1,7 @@
 """Correção explícita de duplicidade legada; não escolhe um root automaticamente."""
 import argparse
 from database import Base, SessionLocal, engine
-from model import models
+from model import models  # noqa: F401 — registra os modelos no Base.
 from services.root_unico import corrigir_duplicidade, roots
 
 

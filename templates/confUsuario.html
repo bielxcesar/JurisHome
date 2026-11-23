@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ titulo_configuracao }} | JurisHome</title>
-<!-- Tailwind via CDN substituindo os CSS bloqueados -->
+<!-- Classes utilitárias do Tailwind. -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -22,14 +22,14 @@
         })();
     </script>
 
-    <!-- Pequeno estilo para garantir que a classe .active do seu JS funcione com o visual novo -->
+    <!-- Destaque do item selecionado no menu. -->
     <style>
         .sidebar-item.active {
-            background-color: #374151; /* bg-gray-700 */
-            color: #f59e0b; /* text-amber-500 */
+            background-color: #374151; /* Fundo do item selecionado. */
+            color: #f59e0b; /* Texto do item selecionado. */
             border-left: 4px solid #f59e0b;
         }
-        /* Ajuste simples para as estrelas de avaliação brilharem ao clicar */
+        /* Destaque das estrelas selecionadas na avaliação. */
         .feedback-stars label { cursor: pointer; transition: color 0.2s; }
         .feedback-stars label.selecionada, .feedback-stars label.hovered { color: #f59e0b !important; }
         .feedback-stars input[type="radio"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
@@ -272,7 +272,7 @@
     <script src="/static/js/feedbackUsuario.js?v=20261030-3"></script>
     {% endif %}
 
-    <!-- Lógica visual das Estrelas (Para substituir o CSS antigo) -->
+    <!-- Eventos das estrelas de avaliação. -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const stars = document.querySelectorAll('.feedback-stars label');

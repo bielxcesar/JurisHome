@@ -105,7 +105,7 @@
                     <p id="j-final-texto"></p>
                     <strong class="quiz-score" id="j-placar"></strong>
                     <p class="quiz-small">Seu próximo desafio chega na próxima virada, às 5h de Brasília.</p>
-                    <a class="quiz-outline" href="/glossario">Continuar estudando ↗</a>
+                    <a class="quiz-outline" href="{{ '/home_admin' if tipo_usuario == 'administrador' else '/home_usuario' }}">Continuar estudando ↗</a>
                 </section>
                 <div class="quiz-arena-footer">
                     <i class="fa-solid fa-lightbulb" aria-hidden="true"></i>
@@ -113,12 +113,12 @@
                 </div>
             </section>
             <div class="quiz-bottom-grid">
-                <details class="quiz-panel">
-                    <summary>Como funciona o Juridle?</summary>
+                <section class="quiz-panel" aria-labelledby="j-regras-titulo">
+                    <h2 id="j-regras-titulo">Regras do jogo</h2>
                     <p>Você tem uma rodada com cinco perguntas por dia, tanto como leitor quanto como administrador. Pode sair e continuar até a próxima virada, às 5h de Brasília. Começar a rodada já reserva o desafio do dia.</p>
-                    <p>As perguntas e a ordem das alternativas são sorteadas pelo servidor. Questões aprovadas não se repetem para você durante 30 dias. Se faltarem cinco questões inéditas, o jogo aguarda a ampliação do banco.</p>
+                    <p>As perguntas e a ordem das alternativas são sorteadas pelo servidor. Uma questão sorteada pode voltar a aparecer 30 dias após o uso. Se faltarem cinco questões aprovadas disponíveis para você, o jogo aguarda a ampliação do banco.</p>
                     <p>Concluir rodadas em dias consecutivos aumenta sua frequência. Acertar as cinco perguntas vale uma coroa. A coroa apaga às 5h. Você tem até a próxima virada para renová-la e manter a sequência. Seu recorde pessoal fica salvo.</p>
-                </details>
+                </section>
                 <section class="quiz-panel">
                     <h2>Suas últimas rodadas</h2>
                     <ul id="j-historico">

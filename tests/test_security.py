@@ -32,10 +32,8 @@ from model.models import TipoUsuario, Usuario
 from routes.auth import (
     Codigo2FA,
     CadastroUsuario,
-    Credenciais,
     NovaSenhaRecuperacao,
     alterar_senha_recuperada,
-    cadastrar_usuario,
     iniciar_recuperacao_senha,
     validar_recuperacao_senha,
 )
@@ -266,6 +264,20 @@ class TestesSeguranca(unittest.TestCase):
             feedback.close()
             feedback_engine.dispose()
 
+    def test_suporte_nao_redefine_2fa_de_outro_administrador(self):
+        suporte = self._usuario(TipoUsuario.ADMINISTRADOR)
+        alvo = self._usuario(TipoUsuario.ADMINISTRADOR)
+        segredo_anterior = alvo.totp_secret
+        token_alvo = criar_access_token(alvo)
+        token_suporte = criar_access_token(suporte)
+
+        status, _, _ = self._request('POST', '/api/admin/resetar-2fa/' + alvo.uuid, token=token_suporte)
+        self.assertEqual(403, status)
+        self.db.expire_all()
+        self.assertTrue(self.db.get(Usuario, alvo.uuid).is_2fa_enabled)
+        self.assertEqual(segredo_anterior, self.db.get(Usuario, alvo.uuid).totp_secret)
+        self.assertEqual(200, self._request('GET', '/api/usuarios/me', token=token_alvo)[0])
+
     def test_documentacao_exclusiva_do_administrador_principal(self):
         leitor = self._usuario()
         suporte = self._usuario(TipoUsuario.ADMINISTRADOR)
@@ -483,10 +495,12 @@ class TestesSeguranca(unittest.TestCase):
         from threading import Barrier
         from pathlib import Path
         from services import juridle
+        from services.glossario import instalar_catalogo_inicial
         with TemporaryDirectory() as pasta:
             engine = create_engine('sqlite:///' + (Path(pasta) / 'concorrencia.db').as_posix(), connect_args={'check_same_thread': False})
             try:
                 Base.metadata.create_all(engine)
+                instalar_catalogo_inicial(engine)
                 fabrica = sessionmaker(bind=engine)
                 with fabrica() as db:
                     juridle.garantir_banco_inicial(db)
@@ -799,7 +813,9 @@ class TestesSeguranca(unittest.TestCase):
 
     def test_juridle_trinta_dias_150_itens_sem_repetir_e_retorno_no_31(self):
         from services import juridle
-        for i in range(125):
+        # Mantém exatamente 150 questões elegíveis, independentemente do catálogo inicial.
+        self.db.query(models.JuridleQuestao).update({'status': 'arquivada'})
+        for i in range(150):
             self.db.add(models.JuridleQuestao(enunciado=f'Questão de teste {i}', area='Teste', opcoes_json='["A","B","C","D"]',
                 correta=0, explicacao='Explicação fictícia para teste automatizado.', fonte_url='https://example.test',
                 status='aprovada', criada_em=juridle.agora(), atualizada_em=juridle.agora()))
@@ -821,13 +837,13 @@ class TestesSeguranca(unittest.TestCase):
             rodada = juridle.iniciar(self.db, jogador.uuid)
             self.assertEqual({q['questaoId'] for q in json.loads(rodada.perguntas_json)}, primeira)
 
-    def test_juridle_brasilia_meia_noite_renova_sem_responder_ontem(self):
+    def test_juridle_brasilia_cinco_horas_renova_sem_responder_ontem(self):
         from services import juridle
         jogador = self._usuario()
-        with patch('services.juridle.agora', return_value=datetime(2026, 11, 6, 2, 59)):
+        with patch('services.juridle.agora', return_value=datetime(2026, 11, 6, 7, 59)):
             antiga = juridle.iniciar(self.db, jogador.uuid)
-            self.assertEqual(antiga.expira_em, datetime(2026, 11, 6, 3))
-        with patch('services.juridle.agora', return_value=datetime(2026, 11, 6, 3)):
+            self.assertEqual(antiga.expira_em, datetime(2026, 11, 6, 8))
+        with patch('services.juridle.agora', return_value=datetime(2026, 11, 6, 8)):
             nova = juridle.iniciar(self.db, jogador.uuid)
             self.assertNotEqual(antiga.uuid, nova.uuid)
             from fastapi import HTTPException
@@ -865,8 +881,11 @@ class TestesSeguranca(unittest.TestCase):
         q = self.db.query(models.JuridleQuestao).first()
         q.status = 'arquivada'
         self.db.commit()
-        juridle.garantir_banco_inicial(self.db)
-        self.assertEqual(self.db.query(models.JuridleQuestao).count(), 25)
+        total_inicial = self.db.query(models.JuridleQuestao).count()
+        # O catálogo deve vir da sessão recebida, sem abrir o banco padrão.
+        with patch('services.glossario.SessionLocal', side_effect=AssertionError('Banco padrão não deve ser aberto')):
+            juridle.garantir_banco_inicial(self.db)
+        self.assertEqual(self.db.query(models.JuridleQuestao).count(), total_inicial)
         self.assertEqual(self.db.get(models.JuridleQuestao, q.uuid).status, 'arquivada')
 
     def test_juridle_banco_restrito_revisao_root_e_versao(self):
@@ -1590,6 +1609,24 @@ class TestesSeguranca(unittest.TestCase):
             with self.subTest(caminho=caminho):
                 status, _, _ = self._request("GET", caminho)
                 self.assertEqual(401, status)
+
+    def test_rotas_administrativas_bloqueiam_leitor_e_desafio_2fa(self):
+        leitor = self._usuario()
+        administrador = self._usuario(TipoUsuario.ADMINISTRADOR)
+        credenciais = (None, criar_access_token(leitor), criar_token_2fa_pendente(administrador))
+        rotas = (
+            ('GET', '/home_admin'), ('GET', '/nova-materia'),
+            ('GET', '/admin/tabela-noticias'), ('GET', '/admin/auditoria'),
+            ('GET', '/api/admin/usuarios'), ('GET', '/api/admin/feedbacks'),
+            ('GET', '/api/admin/auditoria'), ('GET', '/juridle/ampliar'),
+            ('GET', '/api/juridle/questoes'),
+            ('POST', '/api/admin/resetar-2fa/' + leitor.uuid),
+        )
+        for token in credenciais:
+            for metodo, caminho in rotas:
+                with self.subTest(metodo=metodo, caminho=caminho, token=bool(token)):
+                    status, _, _ = self._request(metodo, caminho, token=token)
+                    self.assertIn(status, (401, 403, 404))
 
     def test_escrita_rejeita_origem_externa_inclusive_no_login(self):
         for origem in (b"https://malicioso.test", b"http://testserver.malicioso.test", b"null"):

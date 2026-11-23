@@ -168,6 +168,8 @@ A documentação Swagger é restrita a administradores.
 
 Os testes usam SQLite em memória e não dependem do banco utilizado pela aplicação.
 
+Para criar até 100 contas sintéticas em um banco SQLite separado, consulte [`docs/USUARIOS_FICTICIOS.md`](docs/USUARIOS_FICTICIOS.md).
+
 **Windows — PowerShell:**
 
 ```powershell

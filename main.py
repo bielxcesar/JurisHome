@@ -3,7 +3,6 @@ import os
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.exception_handlers import http_exception_handler
-from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.responses import RedirectResponse, JSONResponse
@@ -27,7 +26,7 @@ from services.logs_operacionais import (
     restaurar_correlacao_operacional,
 )
 from feedback_database import criar_tabela_feedback
-from model.models import Base, Usuario, Conteudo, Categoria, StatusConteudo, LogOperacional
+from model.models import Base, LogOperacional
 from auth.security import get_current_admin
 from routes import admin, auditoria, auth, conteudos, feedbacks, glossario, juridle, legal, perfil, rotas
 from services.auditoria import iniciar_contexto_auditoria, finalizar_contexto_auditoria

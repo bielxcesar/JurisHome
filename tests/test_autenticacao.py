@@ -7,7 +7,6 @@ import os
 import unittest
 from datetime import datetime, timezone
 from http.cookies import SimpleCookie
-from unittest.mock import patch
 
 os.environ.setdefault("JurisHome_senha", "segredo-de-teste-jurishome-com-mais-de-32-bytes")
 os.environ.setdefault("TOTP_ENCRYPTION_KEY", base64.urlsafe_b64encode(b"t" * 32).decode("ascii"))

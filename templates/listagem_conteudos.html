@@ -6,7 +6,7 @@
     <meta name="description" content="Matérias jurídicas recentes e organizadas por categoria no JurisHome">
     <title>{% if visao == 'recentes' %}Exibir mais{% else %}Categorias{% endif %} | JurisHome</title>
 <link rel="stylesheet" href="/static/css/legal.css?v=20260925-3">
-    <!-- Tailwind via CDN substituindo os CSS bloqueados -->
+    <!-- Classes utilitárias do Tailwind. -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -29,7 +29,7 @@
 </head>
 <body class="juris-ui juris-list bg-[#1e1e1e] text-gray-200 font-sans antialiased min-h-screen flex flex-col" data-visao="{{ visao }}" data-tipo-usuario="{{ tipo_usuario }}">
     
-    <!-- Barra de Navegação Padronizada -->
+    <!-- Barra de navegação. -->
     {% include "_juris_nav.html" %}
 
     <!-- Área Principal -->
@@ -41,7 +41,7 @@
                 <p class="text-gray-400 text-sm">{% if visao == 'recentes' %}Acompanhe o acervo completo do JurisHome.{% else %}Filtre o acervo por áreas do Direito.{% endif %}</p>
             </div>
 
-            <!-- Filtros Condicionais (Recentes vs Categorias) -->
+            <!-- Filtros da listagem. -->
             <div class="w-full md:w-auto">
                 {% if visao == 'recentes' %}
                 <div class="relative group">
@@ -57,7 +57,7 @@
                     <i class="fa-solid fa-filter absolute left-4 top-1/2 -translate-y-1/2 text-amber-500"></i>
                     <select id="categoria-materias" class="w-full md:w-64 bg-[#25262a] border border-gray-700 rounded-xl py-3 pl-12 pr-10 text-white appearance-none focus:outline-none focus:border-amber-500 transition cursor-pointer">
                         <option value="">Todas as categorias</option>
-                        <!-- Preenchido via JS -->
+                        <!-- Opções preenchidas pelo script. -->
                     </select>
                     <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
                 </div>
@@ -105,10 +105,10 @@
 
     {% include "_legal_links.html" %}
 
-    <!-- Script Embutido (Substitui o listagemConteudos.js para aplicar as classes Tailwind) -->
+    <!-- Filtros e cartões de matérias. -->
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            // Lógica do Header
+            // Alterna o menu do perfil.
             const botaoPerfil = document.getElementById("btn-perfil");
             const menuPerfil = document.getElementById("dropdown-perfil");
             
@@ -149,7 +149,7 @@
                 });
             });
 
-            // LÓGICA DE LISTAGEM (O que antes ficava no listagemConteudos.js)
+            // Carrega as matérias e prepara a lista.
             const visao = document.body.dataset.visao;
             const containerLista = document.getElementById("lista-materias");
             const statusTexto = document.getElementById("status-listagem");
@@ -239,7 +239,7 @@
             }
 
             function preencherFiltroCategorias() {
-                // Pega categorias únicas que não sejam vazias
+                // Remove categorias vazias e repetidas.
                 const selecionada = seletorCategoria.value || new URLSearchParams(location.search).get('categoria');
                 seletorCategoria.replaceChildren(new Option('Todas as categorias', ''));
                 const categoriasUnicas = [...new Set([...catalogoCategorias.map(c => c.nome), ...acervoCompleto.map(m => m.categoria)].filter(Boolean))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
@@ -259,13 +259,12 @@
                 apresentarCategoria();
                 let resultados = [...acervoCompleto];
 
-                // Filtra por Categoria (se estiver na página categorias)
+                // Filtra pela categoria selecionada.
                 if (visao === 'categorias' && seletorCategoria && seletorCategoria.value) {
                     resultados = resultados.filter(m => m.categoria === seletorCategoria.value);
                 }
 
-                // Ordena por data (se estiver na página recentes)
-                // Como não temos a data exata no objeto simples, usamos a ordem do array (simulando recente/antigo)
+                // Inverte a ordem para mostrar primeiro as mais antigas.
                 if (visao === 'recentes' && seletorOrdem) {
                     if (seletorOrdem.value === 'antiga') {
                         resultados.reverse(); // Inverte para simular as mais antigas primeiro
@@ -338,11 +337,11 @@
                 });
             }
 
-            // Listeners para os filtros
+            // Atualiza a lista quando um filtro muda.
             if (seletorOrdem) seletorOrdem.addEventListener("change", processarERenderizar);
             if (seletorCategoria) seletorCategoria.addEventListener("change", processarERenderizar);
 
-            // Inicia o processo
+            // Carrega os dados iniciais.
             carregarDados();
         });
     </script>

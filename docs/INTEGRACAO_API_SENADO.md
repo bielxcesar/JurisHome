@@ -2,13 +2,13 @@
 
 ## Objetivo
 
-O Glossário permite consultar dados básicos de uma lei federal ou lei complementar informando o tipo da norma, o número e o ano. A consulta complementa o catálogo de termos jurídicos do JurisHome e apresenta a ementa e, quando a fonte retorna o endereço, um link para o texto oficial.
+O Glossário permite consultar dados básicos de uma lei federal, lei complementar ou decreto-lei informando o tipo da norma, o número e o ano. A consulta complementa o catálogo de termos jurídicos do JurisHome e apresenta a ementa e, quando a fonte retorna o endereço, um link para o texto oficial.
 
 A API é mantida pelo Senado Federal, tem acesso público e oferece respostas em JSON e XML. A documentação oficial está em [Dados Abertos Legislativos — Senado Federal](https://legis.senado.leg.br/dadosabertos/api-docs/swagger-ui/index.html).
 
 ## Fluxo no JurisHome
 
-1. O usuário informa o tipo (Lei ou Lei Complementar), o número e o ano na página `/glossario`.
+1. O usuário autenticado informa o tipo (Lei, Lei Complementar ou Decreto-Lei), o número e o ano na página `/glossario`.
 2. O navegador envia esses três campos em JSON para `POST /api/glossario/legislacao`.
 3. O backend valida os valores e consulta a lista de normas no Senado:
 
@@ -28,7 +28,7 @@ O navegador não acessa diretamente o serviço do Senado. A chamada externa é f
 
 ## Campos e validação
 
-- `tipo`: `LEI` ou `LCP` (lei complementar).
+- `tipo`: `LEI`, `LCP` (lei complementar) ou `DEL` (decreto-lei).
 - `numero`: de um a oito algarismos.
 - `ano`: número entre 1800 e 2100.
 
@@ -67,7 +67,7 @@ Exemplo de resposta resumida:
 }
 ```
 
-Os dados apresentados são normalizados a partir de `ListaDocumento.documentos.documento` e, na consulta de detalhes, `DetalheDocumento.documentos.documento[].identificacao`. O link exibido só é aceito quando usa HTTPS e o domínio `normas.leg.br`.
+Os dados apresentados são normalizados a partir de `ListaDocumento.documentos.documento` e, na consulta de detalhes, `DetalheDocumento.documentos.documento[].identificacao`. A interface exibe o link apenas quando usa HTTPS e o domínio `normas.leg.br` ou `www.planalto.gov.br`.
 
 ## Respostas e indisponibilidade
 
@@ -80,9 +80,9 @@ A documentação do Senado informa que a API aplica limites de requisição e qu
 
 ## Persistência e dados enviados
 
-A busca é transitória: o JurisHome não salva os parâmetros nem os resultados em tabelas. A API externa recebe somente tipo, número e ano da norma. Nenhum dado de cadastro é necessário para a consulta.
+A busca é transitória: o JurisHome não salva os parâmetros nem os resultados em tabelas. Na busca inicial, a API externa recebe tipo, número e ano da norma; caso haja resultado, uma segunda chamada pode enviar o identificador da norma retornado pelo próprio Senado. Dados de cadastro não são encaminhados; o serviço externo pode receber o IP técnico do servidor.
 
-O catálogo local do Glossário é mantido em `data/glossario.json`. Ele contém definições, exemplos e referências; a pesquisa desse catálogo funciona sem depender da conexão externa. A API do Senado é usada apenas pelo formulário separado de consulta de legislação.
+O catálogo do Glossário é persistido no banco de dados. O arquivo `data/glossario_inicial.sql` fornece a carga inicial, aplicada uma vez; as consultas posteriores usam os registros no banco. O catálogo contém definições, exemplos e referências, e sua pesquisa não depende da conexão com o Senado. A API do Senado é usada pelo formulário separado de consulta de legislação.
 
 ## Como consultar manualmente
 
@@ -100,4 +100,5 @@ O resultado deve identificar o Código de Processo Civil. Consulte o link oficia
 - `services/legislacao_senado.py`: chamadas HTTP, leitura da resposta e tratamento de falhas.
 - `templates/glossario.html`: formulário e campos de resultado.
 - `static/js/legislacao-senado.js`: envio do formulário e exibição segura dos dados.
-- `data/glossario.json`: catálogo de termos mantido pelo JurisHome.
+- `data/glossario_inicial.sql`: carga inicial do catálogo no banco de dados.
+- `services/glossario.py`: instalação inicial e consulta do catálogo persistido.

@@ -192,7 +192,7 @@ class MateriaUpdateSchema(MateriaSchema):
     tags: Optional[str] = Field(default=None, max_length=500)
 
 
-# MOLDES DE DADOS ATUALIZADOS (Compatível com novaMateriaEX.html)
+# Dados aceitos no formulário de matéria.
 class MateriaCreate(MateriaSchema):
     titulo: Optional[str] = Field(default=None, max_length=180)
     sub_titulo: Optional[str] = Field(default=None, max_length=500)
@@ -200,12 +200,12 @@ class MateriaCreate(MateriaSchema):
     corpo_texto: str = Field(min_length=1, max_length=50000)
     categoria_id: str = Field(min_length=1, max_length=36)
     
-    # Capa (Aceita ambos os nomes)
+    # Aceita os dois nomes de campo usados pelas telas.
     imagem_miniatura: Optional[str] = None
     miniatura: Optional[str] = None
     imagem_principal: Optional[str] = None
     
-    # Imagens do corpo (Aceita ambos os nomes)
+    # Aceita os dois nomes de campo usados pelas telas.
     imagem_corpo: Optional[str] = None
     corpo_1: Optional[str] = None
     
@@ -274,7 +274,7 @@ def upload_imagem(
         raise HTTPException(status_code=422, detail=str(erro)) from erro
 
 # ==============================================================================
-# 2. ROTAS DE PÁGINAS VISUAIS (Frontend)
+# Páginas do administrador.
 # ==============================================================================
 @router.get("/home_admin", response_class=HTMLResponse)
 def pagina_home_admin(request: Request):
@@ -318,7 +318,7 @@ def listar_tabela_noticias(request: Request, db: Session = Depends(get_db), usua
                   if ids_materias else [])
     versoes_materias = {curadoria.conteudo_id: curadoria.versao for curadoria in curadorias}
 
-    # Envia as informações do usuário atual para a template
+    # Inclui os dados do administrador no template.
     return templates.TemplateResponse(
         request=request,
         name="tabelaNoticias.html",
@@ -331,7 +331,7 @@ def pagina_feedbacks_administrativos(request: Request):
 
 
 # ==============================================================================
-# 3. ROTAS DE AÇÃO (Backend / API) - USUÁRIOS E 2FA
+# Ações administrativas: usuários e autenticação em duas etapas.
 # ==============================================================================
 
 @router.get("/api/admin/usuarios", response_class=JSONResponse)
@@ -401,6 +401,10 @@ def resetar_2fa(
             detail="Ação proibida! A conta do Administrador Principal (Root) não pode ser modificada por suporte."
         )
 
+    # Esta rota antiga recupera contas de leitores; o root gerencia administradores.
+    if usuario_alvo.tipo_usuario != TipoUsuario.ESTUDANTE:
+        raise HTTPException(status_code=403, detail="A recuperação de administradores é restrita ao administrador principal.")
+
     usuario_alvo.totp_secret = None
     usuario_alvo.is_2fa_enabled = False
     usuario_alvo.token_validos_apos = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -425,7 +429,7 @@ def resetar_2fa(
     return {"mensagem": f"O 2FA de {usuario_alvo.nome} foi desativado com sucesso."}
 
 # ==============================================================================
-# 3. ROTAS DE AÇÃO (Backend / API) - MATÉRIAS
+# Ações administrativas: matérias.
 # ==============================================================================
 
 @router.delete("/deletar-materia/{id_da_materia}")

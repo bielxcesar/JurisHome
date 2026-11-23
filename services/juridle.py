@@ -37,7 +37,7 @@ def limites_dia(instante=None):
 
 def garantir_banco_inicial(db):
     """Migra os termos já publicados, sem alterar questões existentes ou revisadas."""
-    catalogo = consultar_glossario()['itens']
+    catalogo = consultar_glossario(db=db)['itens']
     existentes = set(db.scalars(select(JuridleQuestao.chave_origem).where(JuridleQuestao.chave_origem.is_not(None))))
     rng = secrets.SystemRandom()
     for item in catalogo:

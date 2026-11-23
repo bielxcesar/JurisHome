@@ -48,7 +48,7 @@ function usuarios() {
    const excluir=criar('button','Excluir usuário','danger');excluir.type='button';excluir.setAttribute('aria-label','Excluir usuário '+u.nome);excluir.addEventListener('click',()=>abrirExclusaoAdmin(u));
    grupo.append(editar,excluir);acoes.append(grupo);
   }
-  else if(!root && (u.is_2fa_enabled || u.solicitou_ajuda)) { const b=criar('button','Resetar 2FA','danger');b.addEventListener('click',()=>executar(b,async()=>{if(!confirm('O autenticador atual será revogado. Continuar?'))return;await requisitar('/api/admin/resetar-2fa/'+encodeURIComponent(u.uuid),'POST');aviso('Autenticador revogado. O usuário deverá configurar o 2FA novamente.');await carregar();}));acoes.append(b); }
+  else if(!root && u.tipo === 'estudante' && (u.is_2fa_enabled || u.solicitou_ajuda)) { const b=criar('button','Resetar 2FA','danger');b.addEventListener('click',()=>executar(b,async()=>{if(!confirm('O autenticador atual será revogado. Continuar?'))return;await requisitar('/api/admin/resetar-2fa/'+encodeURIComponent(u.uuid),'POST');aviso('Autenticador revogado. O usuário deverá configurar o 2FA novamente.');await carregar();}));acoes.append(b); }
   else acoes.append(criar('span','Somente leitura'));
   tr.append(acoes);body.append(tr);
  }

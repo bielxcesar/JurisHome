@@ -1,5 +1,4 @@
 import asyncio
-import json
 import unittest
 from pydantic import ValidationError
 from services.validacao import ModeloSeguro, email_valido, nome_pessoa, nova_senha, busca_segura, fonte_http

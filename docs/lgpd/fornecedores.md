@@ -12,7 +12,7 @@ O grupo limita a coleta ao necessário, usa contas fictícias nas apresentaçõe
 |---|---|---|
 | Railway | Hospedagem, banco, requisições técnicas e dados armazenados | Confirmar contrato, papel de operador para hospedagem, suboperadores, região, transferências internacionais, logs, backups e descarte. A aplicação não controla as cópias do provedor. |
 | Google Fonts e cdnjs/Cloudflare | Fontes/ícones; IP e metadados de requisição | Não presumir operador contratado; conferir políticas próprias e necessidade de carregar recursos externos. |
-| API de Dados Abertos do Senado | Tipo, número e ano de norma | Serviço externo consultado pelo backend; sem envio intencional de conta/e-mail. Pode receber IP técnico do servidor. |
+| API de Dados Abertos do Senado | Tipo, número e ano de norma e, quando houver, o identificador retornado pela própria API | Serviço externo consultado pelo backend; sem envio intencional de conta/e-mail. Pode receber IP técnico do servidor. |
 | WhatsApp | Título e URL pública por iniciativa do usuário | Serviço escolhido pelo titular, sujeito às próprias condições; não recebe cadastro pelo JurisHome. |
 | Origem de imagem legada | Metadados da requisição do navegador à URL | Conferir origem; imagens novas em Base64 ficam no banco. Não presumir contrato de operador. |
 

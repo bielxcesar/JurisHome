@@ -78,7 +78,7 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- 1. CONFIGURAÇÃO DAS DATAS ---
+        // Define as datas exibidas na matéria.
         const dataHoje = new Intl.DateTimeFormat("pt-BR").format(new Date());
 
         const elData = document.getElementById("data-atual");
@@ -99,20 +99,19 @@
             return urlSegura(valor);
         }
 
-        // CORRIGIDO O ID AQUI: de "ex-data-criacao" para "data-criacao-materia"
+        // Exibe a data de criação da matéria.
         const elDataCriacao = document.getElementById("data-criacao-materia");
         if(elDataCriacao) {
             const dataDaMateria = dados.data_criacao || dados.data_publicacao || dataHoje;
             elDataCriacao.textContent = dataDaMateria;
         }
 
-        // --- 2. CONFIGURAÇÃO DO AUTOR ---
-        // Ajustado para priorizar o nome que você criou ("Admin doidao") se não achar outro no navegador
+        // Define o nome do autor.
         const usuarioLogado = localStorage.getItem('nome_usuario') || 'Admin doidao';
         const elAutor = document.getElementById('ex-autor');
         if(elAutor) elAutor.textContent = usuarioLogado;
 
-        // --- 3. PREENCHIMENTO DE TÍTULOS E FONTES ---
+        // Exibe o título, subtítulo e fonte.
         const elTitulo = document.getElementById('ex-titulo');
         if(elTitulo) elTitulo.textContent = dados.titulo || 'Título não informado';
 
@@ -139,23 +138,23 @@
             }
         }
 
-        // --- 4. GERAÇÃO DE TAGS DINÂMICAS POR CATEGORIA ---
+        // Monta as tags da matéria.
         const containerTags = document.getElementById('ex-tags-container');
         if (containerTags) {
             const tagsParaExibir = Array.isArray(dados.tags) ? dados.tags.filter(tag => typeof tag === 'string').slice(0, 30) : [];
 
-            // Cria o HTML das tags e insere na tela
+            // Insere as tags na tela.
             containerTags.innerHTML = ''; // Limpa o container
             tagsParaExibir.forEach(tag => {
                 const spanTag = document.createElement('span');
-                // Estilo da Tag usando Tailwind (Fundo escuro, texto ambar)
+                // Define a aparência da tag.
                 spanTag.className = "bg-[#25262a] border border-gray-700 text-amber-500 text-xs font-semibold px-3 py-1 rounded-full cursor-pointer hover:bg-gray-800 transition-colors";
                 spanTag.textContent = "#" + tag;
                 containerTags.appendChild(spanTag);
             });
         }
 
-        // --- 5. IMAGENS E TEXTO (Mantido do seu código original) ---
+        // Exibe a miniatura, as imagens e o texto da matéria.
         const miniaturaUrl = dados.miniatura || dados.imagem_principal;
         const miniaturaFonte = dados.fonte_miniatura || dados.fonte_imagem_principal;
         const imgPrincipal = document.getElementById('ex-img-principal');

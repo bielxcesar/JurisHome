@@ -1,6 +1,6 @@
 """Respostas de erro sem detalhes internos e sem depender de acesso ao banco."""
 import uuid
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 
 templates = Jinja2Templates(directory='templates')
