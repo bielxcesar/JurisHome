@@ -34,7 +34,7 @@ if len(SECRET_KEY.encode("utf-8")) < 32 or SECRET_KEY == "__GERAR_CHAVE_LOCAL__"
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
-PRESENCA_SESSAO_SEGUNDOS = 120
+PRESENCA_SESSAO_SEGUNDOS = ACCESS_TOKEN_EXPIRE_MINUTES * 60
 SESSAO_PERSISTENTE_MINUTOS = 15
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
@@ -81,7 +81,7 @@ def verificar_senha(senha: str, senha_hash: str) -> bool:
 
 
 def prazo_sessao(sessao: SessaoAutenticada) -> datetime:
-    return min(sessao.expira_em, sessao.criada_em + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    return sessao.expira_em
 
 
 def criar_access_token(

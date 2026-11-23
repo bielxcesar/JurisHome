@@ -1151,6 +1151,86 @@ class TestesSeguranca(unittest.TestCase):
         self.assertEqual("Texto corrigido", materia.titulo)
         self.assertEqual("Chamada corrigida", materia.editorial.titulo_home)
 
+    def test_atividade_renova_mesma_sessao_apos_15_minutos_do_login(self):
+        usuario = self._usuario()
+        token = criar_access_token(usuario)
+        sid = security._decodificar_token(token)["sid"]
+        sessao = self.db.get(models.SessaoAutenticada, sid)
+        sessao.criada_em -= timedelta(minutes=30)
+        sessao.expira_em = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(seconds=45)
+        self.db.commit()
+        status, headers, _ = self._request("POST", "/api/auth/presenca", {"atividade": True},
+            cookie="jurishome_access_token="+token, extra_headers=((b"origin", b"http://testserver"),))
+        self.assertEqual(204, status)
+        self.db.refresh(sessao)
+        restante = (sessao.expira_em - datetime.now(timezone.utc).replace(tzinfo=None)).total_seconds()
+        self.assertGreater(restante, 880)
+        self.assertLessEqual(restante, 900)
+        self.assertIn("HttpOnly", headers["set-cookie"])
+        from http.cookies import SimpleCookie
+        cookies = SimpleCookie()
+        cookies.load(headers["set-cookie"])
+        novo = cookies["jurishome_access_token"].value
+        self.assertEqual(sid, security._decodificar_token(novo)["sid"])
+        self.assertEqual(200, self._request("GET", "/api/usuarios/me", token=novo)[0])
+        self.assertEqual(1, self.db.query(models.SessaoAutenticada).filter_by(usuario_id=usuario.uuid).count())
+
+    def test_presenca_sem_atividade_nao_prolonga_prazo(self):
+        usuario = self._usuario()
+        token = criar_access_token(usuario)
+        sid = security._decodificar_token(token)["sid"]
+        sessao = self.db.get(models.SessaoAutenticada, sid)
+        sessao.expira_em = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=3)
+        self.db.commit()
+        prazo = sessao.expira_em
+        for dados in (None, {"atividade": False}):
+            status, headers, _ = self._request("POST", "/api/auth/presenca", dados,
+                cookie="jurishome_access_token="+token, extra_headers=((b"origin", b"http://testserver"),))
+            self.assertEqual(204, status)
+            self.assertNotIn("set-cookie", headers)
+            self.db.refresh(sessao)
+            self.assertEqual(prazo, sessao.expira_em)
+
+    def test_atividade_nao_reativa_sessao_expirada_ou_substituida(self):
+        usuario = self._usuario()
+        token = criar_access_token(usuario)
+        sid = security._decodificar_token(token)["sid"]
+        sessao = self.db.get(models.SessaoAutenticada, sid)
+        sessao.expira_em = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=1)
+        self.db.commit()
+        prazo = sessao.expira_em
+        self.assertEqual(401, self._request("POST", "/api/auth/presenca", {"atividade": True},
+            cookie="jurishome_access_token="+token, extra_headers=((b"origin", b"http://testserver"),))[0])
+        self.db.refresh(sessao)
+        self.assertEqual(prazo, sessao.expira_em)
+        primeiro = criar_access_token(usuario)
+        criar_access_token(usuario)
+        status, headers, _ = self._request("POST", "/api/auth/presenca", {"atividade": True},
+            cookie="jurishome_access_token="+primeiro, extra_headers=((b"origin", b"http://testserver"),))
+        self.assertEqual(401, status)
+        self.assertEqual("novo_acesso", headers["x-session-reason"])
+
+    def test_atividade_exige_autenticacao_origem_e_booleano(self):
+        usuario = self._usuario()
+        token = criar_access_token(usuario)
+        cookie = "jurishome_access_token="+token
+        self.assertEqual(401, self._request("POST", "/api/auth/presenca", {"atividade": True},
+            extra_headers=((b"origin", b"http://testserver"),))[0])
+        self.assertEqual(403, self._request("POST", "/api/auth/presenca", {"atividade": True}, cookie=cookie,
+            extra_headers=((b"origin", b"https://outro.example"),))[0])
+        self.assertEqual(422, self._request("POST", "/api/auth/presenca", {"atividade": "sim"}, cookie=cookie,
+            extra_headers=((b"origin", b"http://testserver"),))[0])
+
+    def test_aba_pausada_por_dois_minutos_pode_voltar_dentro_do_prazo(self):
+        usuario = self._usuario()
+        token = criar_access_token(usuario)
+        sid = security._decodificar_token(token)["sid"]
+        presenca = self.db.get(models.PresencaSessao, sid)
+        presenca.confirmada_em -= timedelta(minutes=3)
+        self.db.commit()
+        self.assertEqual(204, self._request("POST", "/api/auth/presenca", {"atividade": True},
+            cookie="jurishome_access_token="+token, extra_headers=((b"origin", b"http://testserver"),))[0])
+
     def test_presenca_expirada_nao_pode_ser_reativada(self):
         usuario = self._usuario()
         token = criar_access_token(usuario)
@@ -1162,7 +1242,7 @@ class TestesSeguranca(unittest.TestCase):
         )
         self.assertEqual(204, status)
         presenca = self.db.get(models.PresencaSessao, sid)
-        presenca.confirmada_em = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=121)
+        presenca.confirmada_em = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=security.PRESENCA_SESSAO_SEGUNDOS + 1)
         self.db.commit()
         status, _, _ = self._request("GET", "/api/usuarios/me", token=token)
         self.assertEqual(401, status)
@@ -1967,14 +2047,14 @@ class TestesSeguranca(unittest.TestCase):
         status, _, _ = self._request("GET", "/", cookie=cookies)
         self.assertEqual(200, status)
 
-    def test_sessao_persistente_antiga_respeita_novo_prazo(self):
+    def test_sessao_inativa_nao_pode_ser_renovada(self):
         from fastapi import HTTPException
         from auth.sessions import renovar_sessao
 
         _, acesso, refresh, sid = self._sessao_renovavel()
         sessao = self.db.get(models.SessaoAutenticada, sid)
         sessao.criada_em -= timedelta(minutes=16)
-        sessao.expira_em = sessao.criada_em + timedelta(days=14)
+        sessao.expira_em = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=1)
         self.db.commit()
 
         status, _, _ = self._request("GET", "/api/usuarios/me", token=acesso)

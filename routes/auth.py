@@ -973,9 +973,14 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
     return {"autenticado": True}
 
 
+class AtividadeSessao(ModeloSeguro):
+    atividade: Annotated[bool, Field(strict=True)] = False
+
+
 @router.post("/auth/presenca", status_code=204)
 def confirmar_presenca(
     request: Request,
+    dados: AtividadeSessao | None = None,
     usuario: Usuario = Depends(get_current_user_sem_aceite),
     db: Session = Depends(get_db),
 ):
@@ -983,21 +988,38 @@ def confirmar_presenca(
     if not token:
         raise HTTPException(401, "Entre novamente para continuar.")
     payload = _decodificar_token(token)
-    # UPDATE condicional evita prolongar uma sessão encerrada por outro login.
+    agora = _agora_sem_fuso()
+    filtro_sessao = (
+        SessaoAutenticada.id == payload["sid"],
+        SessaoAutenticada.usuario_id == usuario.uuid,
+        SessaoAutenticada.revogada.is_(False),
+        SessaoAutenticada.expira_em > agora,
+    )
+    # Só atividade explícita renova a validade. A consulta periódica não renova.
+    if dados is not None and dados.atividade:
+        atualizadas = db.query(SessaoAutenticada).filter(*filtro_sessao).update(
+            {"expira_em": agora + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)},
+            synchronize_session=False,
+        )
+        if atualizadas != 1:
+            db.rollback()
+            raise HTTPException(401, "Entre novamente para continuar.")
+    # O filtro impede que atividade de outra aba reative uma sessão revogada.
     atualizadas = db.query(PresencaSessao).filter(
         PresencaSessao.sessao_id == payload["sid"],
-        PresencaSessao.sessao_id.in_(
-            db.query(SessaoAutenticada.id).filter(
-                SessaoAutenticada.usuario_id == usuario.uuid,
-                SessaoAutenticada.revogada.is_(False),
-            )
-        ),
-    ).update({"confirmada_em": _agora_sem_fuso()}, synchronize_session=False)
+        PresencaSessao.sessao_id.in_(db.query(SessaoAutenticada.id).filter(*filtro_sessao)),
+    ).update({"confirmada_em": agora}, synchronize_session=False)
     if atualizadas != 1:
         db.rollback()
         raise HTTPException(401, "Entre novamente para continuar.")
+    resposta = Response(status_code=204, headers={"X-Legal-Acceptance": "required"} if aceite_pendente(db, usuario) else {})
+    if dados is not None and dados.atividade:
+        sessao = db.get(SessaoAutenticada, payload["sid"])
+        db.refresh(sessao)
+        acesso = criar_access_token(usuario, sessao=sessao)
+        _salvar_cookie_de_sessao(resposta, acesso, validade_renovada=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
     db.commit()
-    return Response(status_code=204, headers={"X-Legal-Acceptance": "required"} if aceite_pendente(db, usuario) else {})
+    return resposta
 
 
 class RevogacaoAceite(ModeloSeguro):

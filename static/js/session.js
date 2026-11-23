@@ -8,6 +8,8 @@
     let pendente;
     let verificando = false;
     let encerrada = false;
+    let atividadePendente = !document.hidden;
+    let ultimaAtividadeEnviada = 0;
     const paginaProtegida = /^(\/(home_admin|home_usuario|perfil|configuracao|configuracoes-usuario|exibir-mais|categorias|pesquisa|feedback|admin-feedbacks|juridle|conhecimento|curiosidades|nova-materia|aceitar-documentos)(\/|$)|\/(admin|materia)\/)/.test(location.pathname);
     function exigirAceite() {
         if (paginaProtegida && location.pathname !== '/aceitar-documentos') location.assign('/aceitar-documentos');
@@ -22,24 +24,40 @@
     async function confirmarPresenca() {
         if (verificando || encerrada) return;
         verificando = true;
+        const atividade = atividadePendente;
+        atividadePendente = false;
+        if (atividade) ultimaAtividadeEnviada = Date.now();
         try {
             const resposta = await originalFetch('/api/auth/presenca', {
                 method: 'POST', credentials: 'same-origin',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({atividade}),
             });
             if (resposta.headers.get('X-Legal-Acceptance') === 'required' || resposta.status === 428) exigirAceite();
             if (resposta.status === 401) {
                 encerrar(resposta);
             }
         } catch {
-            // O servidor encerra a sessão após o prazo sem confirmação.
+            atividadePendente = atividadePendente || atividade;
+            // Falhas de rede não removem os limites verificados pelo servidor.
         } finally {
             verificando = false;
         }
     }
     const presencaTimer = setInterval(confirmarPresenca, 15000);
-    window.addEventListener('pageshow', confirmarPresenca);
+    function registrarAtividade(evento) {
+        if (document.hidden || encerrada || (evento && !evento.isTrusted)) return;
+        atividadePendente = true;
+        // Movimento contínuo não deve gerar uma requisição a cada evento.
+        if (Date.now() - ultimaAtividadeEnviada >= 15000) confirmarPresenca();
+    }
+    ['mousemove', 'pointerdown', 'keydown', 'scroll', 'touchstart'].forEach(tipo => {
+        document.addEventListener(tipo, registrarAtividade, {passive: true});
+    });
+    window.addEventListener('focus', registrarAtividade);
+    window.addEventListener('pageshow', registrarAtividade);
     document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) confirmarPresenca();
+        if (!document.hidden) registrarAtividade();
     });
     confirmarPresenca();
     async function renovar() {
