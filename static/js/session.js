@@ -10,7 +10,7 @@
     let encerrada = false;
     let atividadePendente = !document.hidden;
     let ultimaAtividadeEnviada = 0;
-    const paginaProtegida = /^(\/(home_admin|home_usuario|perfil|configuracao|configuracoes-usuario|exibir-mais|categorias|pesquisa|feedback|admin-feedbacks|juridle|conhecimento|curiosidades|nova-materia|aceitar-documentos)(\/|$)|\/(admin|materia)\/)/.test(location.pathname);
+    const paginaProtegida = /^(\/(home_admin|home_usuario|perfil|configuracao|configuracoes-usuario|exibir-mais|categorias|pesquisa|feedback|admin-feedbacks|juridle|conhecimento|curiosidades|nova-materia|aceitar-documentos|glossario|consulta-lei)(\/|$)|\/(admin|materia)\/)/.test(location.pathname);
     function exigirAceite() {
         if (paginaProtegida && location.pathname !== '/aceitar-documentos') location.assign('/aceitar-documentos');
     }

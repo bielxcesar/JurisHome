@@ -37,3 +37,6 @@ backups/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Ajuda do terminal salva acidentalmente
+/tes-locais

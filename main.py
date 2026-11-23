@@ -134,7 +134,7 @@ async def adicionar_cabecalhos_seguranca(request: Request, call_next):
         "camera=(), geolocation=(), microphone=()",
     )
 
-    if request.url.path.startswith(("/api/auth/", "/api/usuarios/me", "/api/admin/", "/api/juridle/", "/api/perfil/", "/api/feedbacks", "/api/conteudos/em-alta", "/api/conteudos/interesse", "/admin/auditoria", "/admin/tabela-noticias", "/admin/administradores/")) or request.url.path in {"/home_admin", "/home_usuario", "/home_Usuario.html", "/templates/home_Usuario.html", "/perfil", "/juridle", "/juridle/ampliar", "/conhecimento", "/curiosidades", "/configuracoes-usuario", "/templates/confUsuario.html", "/configuracao", "/admin-feedbacks", "/feedback"} or request.url.path in {"/glossario", "/consulta-lei", "/preview-materia"} or request.url.path.startswith("/materia/") or (request.cookies.get('jurishome_access_token') and response.headers.get('content-type', '').startswith('text/html')):
+    if request.url.path.startswith(("/api/auth/", "/api/usuarios/me", "/api/admin/", "/api/juridle/", "/api/perfil/", "/api/glossario", "/api/feedbacks", "/api/conteudos/em-alta", "/api/conteudos/interesse", "/admin/auditoria", "/admin/tabela-noticias", "/admin/administradores/")) or request.url.path in {"/home_admin", "/home_usuario", "/home_Usuario.html", "/templates/home_Usuario.html", "/perfil", "/juridle", "/juridle/ampliar", "/conhecimento", "/curiosidades", "/configuracoes-usuario", "/templates/confUsuario.html", "/configuracao", "/admin-feedbacks", "/feedback"} or request.url.path in {"/glossario", "/consulta-lei", "/preview-materia"} or request.url.path.startswith("/materia/") or (request.cookies.get('jurishome_access_token') and response.headers.get('content-type', '').startswith('text/html')):
         response.headers["Cache-Control"] = "no-store, max-age=0"
         response.headers["Pragma"] = "no-cache"
     return response
@@ -152,7 +152,7 @@ async def tratar_erro_http(request: Request, erro: StarletteHTTPException):
         "/home_usuario", "/home_Usuario.html", "/templates/home_Usuario.html",
         "/configuracoes-usuario", "/templates/confUsuario.html",
         "/home_admin", "/configuracao", "/admin-feedbacks", "/admin/auditoria",
-        "/exibir-mais", "/categorias",
+        "/exibir-mais", "/categorias", "/glossario", "/consulta-lei",
         "/perfil", "/pesquisa", "/feedback", "/juridle", "/juridle/ampliar", "/curiosidades", "/conhecimento", "/admin/tabela-noticias",
     }
     if erro.status_code == 401 and (erro.headers or {}).get("X-Session-Reason") == "novo_acesso" and eh_pagina(request):

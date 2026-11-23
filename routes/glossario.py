@@ -5,7 +5,7 @@ from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import Field
-from auth.security import get_current_user_optional
+from auth.security import get_current_user
 from model.models import Usuario
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -15,7 +15,7 @@ from database import get_db
 from services.glossario import consultar_glossario
 from services.legislacao_senado import buscar_legislacao
 
-router = APIRouter(tags=["Glossário"])
+router = APIRouter(tags=["Glossário"], dependencies=[Depends(get_current_user)])
 templates = Jinja2Templates(directory="templates")
 
 Busca = Annotated[TextoBusca, Query(max_length=80, description="Termo ou palavra da definição")]
@@ -61,7 +61,7 @@ def pagina_glossario(
     q: Busca = "",
     letra: Letra = "",
     origem: str = Query(default="", max_length=10, pattern=r"^(usuario)?$"),
-    usuario: Usuario | None = Depends(get_current_user_optional),
+    usuario: Usuario = Depends(get_current_user),
     pagina: Pagina = 1,
     db: Session = Depends(get_db),
 ):

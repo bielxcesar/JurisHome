@@ -977,20 +977,52 @@ class TestesSeguranca(unittest.TestCase):
         status, _, _ = self._request('GET', '/api/admin/auditoria?limite=7', token=token)
         self.assertEqual(status, 422)
 
+    def test_glossario_sem_login_nao_expoe_pagina_api_nem_sql(self):
+        for url in ("/glossario", "/consulta-lei", "/data/glossario_inicial.sql", "/glossario_inicial.sql", "/tes-locais"):
+            status, _, corpo = self._request("GET", url)
+            self.assertEqual(404, status, url)
+            self.assertNotIn(b"INSERT INTO", corpo)
+            self.assertNotIn(b"Meio de pedir ao Poder", corpo)
+        for url in ("/api/glossario", "/api/glossario?q=acordao"):
+            status, headers, corpo = self._request("GET", url)
+            self.assertEqual(401, status)
+            self.assertIn("no-store", headers["cache-control"])
+            self.assertNotIn(b"itens", corpo)
+        with patch("routes.glossario.buscar_legislacao") as buscar:
+            self.assertEqual(401, self._request("POST", "/api/glossario/legislacao", {"tipo": "LEI", "numero": "15211", "ano": 2025})[0])
+            buscar.assert_not_called()
+
+    def test_glossario_leitor_e_admin_autenticados_acessam_e_aceite_pendente_bloqueia(self):
+        for papel in (TipoUsuario.ESTUDANTE, TipoUsuario.ADMINISTRADOR):
+            usuario = self._usuario(papel)
+            token = criar_access_token(usuario)
+            for url in ("/glossario", "/api/glossario"):
+                status, headers, _ = self._request("GET", url, token=token)
+                self.assertEqual(200, status)
+                self.assertIn("no-store", headers["cache-control"])
+            with patch("routes.glossario.buscar_legislacao", return_value={"encontrado": False}) as buscar:
+                self.assertEqual(200, self._request("POST", "/api/glossario/legislacao", {"tipo": "LEI", "numero": "15211", "ano": 2025}, token=token)[0])
+                buscar.assert_called_once()
+            usuario.consentimento_lgpd = False
+            self.db.commit()
+            self.assertEqual(428, self._request("GET", "/api/glossario", token=token)[0])
+            self.assertEqual(303, self._request("GET", "/glossario", token=token)[0])
+
     def test_glossario_paginado_busca_e_pagina_invalida(self):
-        status, _, corpo = self._request('GET', '/api/glossario')
+        token = criar_access_token(self._usuario())
+        status, _, corpo = self._request('GET', '/api/glossario', token=token)
         self.assertEqual(status, 200)
         primeira = json.loads(corpo)
         self.assertEqual(len(primeira['itens']), 6)
-        status, _, corpo = self._request('GET', '/api/glossario?pagina=2')
+        status, _, corpo = self._request('GET', '/api/glossario?pagina=2', token=token)
         segunda = json.loads(corpo)
         self.assertEqual(len(segunda['itens']), 6)
         self.assertFalse({i['id'] for i in primeira['itens']} & {i['id'] for i in segunda['itens']})
-        status, _, corpo = self._request('GET', '/api/glossario?q=acordao&pagina=99')
+        status, _, corpo = self._request('GET', '/api/glossario?q=acordao&pagina=99', token=token)
         filtrada = json.loads(corpo)
         self.assertEqual(filtrada['pagina'], 1)
         self.assertEqual(filtrada['itens'][0]['id'], 'acordao')
-        status, _, _ = self._request('GET', '/glossario?pagina=0')
+        status, _, _ = self._request('GET', '/glossario?pagina=0', token=token)
         self.assertEqual(status, 422)
 
     def test_cadastro_novo_guarda_interesse_limita_campos_e_nao_reflete_senha(self):
@@ -1042,7 +1074,7 @@ class TestesSeguranca(unittest.TestCase):
             self.assertEqual(status,200)
             self.assertEqual(len(json.loads(corpo)),esperado)
         for caminho in ('/api/conteudos?busca=%7B%22x%22%3A1%7D','/api/glossario?q=%3Cscript%3E','/api/conteudos?busca='+'a'*81):
-            status,_,_=self._request('GET',caminho)
+            status,_,_=self._request('GET',caminho, token=criar_access_token(usuario))
             self.assertEqual(status,422)
         self.assertEqual(self.db.query(Usuario).count(),1)
         self.assertEqual(self.db.query(models.Conteudo).count(),3)
